@@ -580,7 +580,7 @@
     .dark {
       color: var(--dark);
     }
-    
+
     .black {
       color: black !important;
       font-weight: bold;
@@ -683,9 +683,10 @@
       z-index: 10;
     }
 
-    .dropdown:hover .dropdown-content {
+    /* for further info, see the dropdown function notes */
+    /* .dropdown:hover .dropdown-content {
       display: flex;
-    }
+    } */
 
     .dropdown:hover .dropbtn {
       border-radius: 5px 5px 0 0;
@@ -726,7 +727,7 @@
       display: flex;
       justify-content: flex-start;
       align-items: flex-start;
-      overflow: inherit; 
+      overflow: inherit;
       padding: 3px;
       /* background-color: red; */
     }
@@ -737,7 +738,7 @@
       flex-grow: 1;
       /*overflow-y: visible;*/
     }
-    
+
     #backup_0, #backup_1 {
       background-color: white;
       border: none;
@@ -747,7 +748,7 @@
       overflow-x: hidden;
       text-overflow: ellipsis;
     }
-    
+
     #backup_0:enabled:hover, #backup_1:enabled:hover {
       /* font-weight: bold; */
       background-color: var(--light);
@@ -768,7 +769,7 @@
           <button class="dropbtn" id="reset_button" type="button">Clear</button>
           <div class="spacer">&nbsp;</div>
           <!-- adapted from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_dropdown_right -->
-          <div class="dropdown">
+          <div class="dropdown" id="dropdown">
             <button class="dropbtn" type="button">Settings</button>
             <div class="dropdown-content" id="settings-content">
               <select name="set-font" id="set-font">
@@ -10023,9 +10024,10 @@
       finalInfoDiv: document.getElementById("t2_final_info"),
       backupButton: document.getElementById("backup-btn"),
       backupDialog: document.getElementById("backup-dlg"),
-      backupSave: document.getElementById("backup-save")
+      backupSave: document.getElementById("backup-save"),
+      settingsContent: document.getElementById("settings-content")
     };
-    
+
 
 
 
@@ -10726,7 +10728,7 @@
       ])
     }
 
-    
+
     // ## Global constants
     const C = {
       ID: 0,
@@ -10755,13 +10757,13 @@
       level_subs: lookup.level_headings.concat(lookup.offlist_subs)
     }
 
-    if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent",C.backupIDs[0]);   
-    
+    if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent",C.backupIDs[0]);
+
     </script>
 
     <script data-title="main.js">
     function buildListOfCompoundWords(dB) {
-      /* ## 
+      /* ##
       A) goes through currentDb and checks for compounds (words containing spaces / hyphens)
       These are a problem as spaces are used to divide words;
       This function creates a table of items (compounds) to be checked against the text
@@ -10777,7 +10779,7 @@
         const id = entry[C.ID];
         // let safeWord = word.replace(/-/g, "##").replace(/ /g, "@@");
         // let safeWord = id;
-        // ## add extra isCOMPOUND entry to db; || ensures no overwriting 
+        // ## add extra isCOMPOUND entry to db; || ensures no overwriting
         entry[C.isCOMPOUND] = dealWithCompounds(" ", word, id, compounds);
         entry[C.isCOMPOUND] = dealWithCompounds("-", word, id, compounds) || entry[C.isCOMPOUND];
         if (word.includes("'")) {
@@ -10858,6 +10860,18 @@
 
       HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
       HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
+      document.getElementById("dropdown").addEventListener("mouseenter",dropdown)
+      document.getElementById("dropdown").addEventListener("mouseleave",dropdown)
+    }
+
+    function dropdown(e) {
+      // ## toggle visibility of settings dropdown
+      // ## was originally handled in css but firefox has weird mouseout quirks
+      // ## https://stackoverflow.com/questions/46831247/select-triggers-mouseleave-event-on-parent-element-in-mozilla-firefox
+      if (event.relatedTarget === null) {
+        return;
+      }
+      HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
     }
 
     function finalInit() {
@@ -10870,7 +10884,7 @@
     // *****  FUNCTIONS
 
     function showBackups(e) {
-      /* 
+      /*
       1) on refresh, swap backup_0 to backup_1
       2) close backup dialog on mouseout
       3) close settings dialog when backup opens
@@ -10883,7 +10897,7 @@
         let content = (lsContent) ? lsContent.trim() : "";
         if (content) {
           if (localStorage.getItem("mostRecent") == id) content = "<span class='level-o'>Most Recent: </span>" + content;
-          backup.innerHTML = content; 
+          backup.innerHTML = content;
           backup.disabled = false;
         } else {
           backup.innerHTML = "[empty]";
@@ -10902,7 +10916,7 @@
       if (swap) localStorage.setItem(id, swap);
       closeDialog("backup-dlg");
     }
-    
+
     function updateBackup(id){
       // ## current logic: 0=from last refresh, 1=regularly updated (if longer than prev)
       if (window.localStorage.getItem(id)) {
@@ -10914,13 +10928,13 @@
         }
         if (window.localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
         localStorage.setItem("mostRecent", id);
-      } else { 
-        window.localStorage.setItem(id, " ") 
+      } else {
+        window.localStorage.setItem(id, " ")
       }
     }
 
     function resetBackup() {
-      // ## logic: put current OR most recent change in first backup (2nd backup is constantly updated) 
+      // ## logic: put current OR most recent change in first backup (2nd backup is constantly updated)
       let mostRecent = HTM.rawDiv.innerText.trim();
       if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
       if (!mostRecent || !mostRecent.trim().length) return;
@@ -11132,7 +11146,7 @@
       }
       return "<table>" + output + "</table>";
     }
-    
+
     function format_results_table(col1,col2,class1,class2,row) {
       class1 = (class1) ? ` class="${class1}"` : "";
       class2 = (class2) ? ` class="${class2}"` : "";
@@ -11262,7 +11276,7 @@
     function processText(raw) {
       // ## reset V.wordStats
       V.wordStats = {};
-      // ## need to distinguish between typed / button / pasted input 
+      // ## need to distinguish between typed / button / pasted input
       // ## and interact with auto-refresh toggle
       const isTyped = (raw.type === 'input' || raw.type === 'paste');
       const isClick = (raw.type === 'click');
@@ -11293,7 +11307,7 @@
 
     function splitText(raw_text) {
       /* Divides text on spaces. Creates an array of words.
-          Each word is a sub array: 
+          Each word is a sub array:
           1) normalized word
           2) word with caps + punctuation for display
       */
@@ -11359,7 +11373,7 @@
       /* textArr = array of [normalized, raw]
       return => processedTextArr, array of [normalized-word, raw-word, [[matched-ID, duplicate-count], ...]]
         Words are counted + line breaks dealt with
-        Normalized word sent to be checked against wordlist 
+        Normalized word sent to be checked against wordlist
         WordStats records the number of times a word is repeated: {word-id: count}
       */
       let processedTextArr = [];
@@ -11431,7 +11445,7 @@
     // }
 
     function lookUpWord([word, raw_word]) {
-      /* 
+      /*
       returns => array of matched ids
       NB. always returns a match, even if it is just "offlist"
       */
@@ -11473,7 +11487,7 @@
           else if (word.slice(-1) == "r") {
             /* ## test = "longer hotter prettier closer sooner" */
             addToMatches(word,matches,lookup.er_subs,"ad");
-          } 
+          }
           else if (word.slice(-1) == "s") {
             /* ## test: families tries potatoes scarves crises boxes dogs ## Filter out adjs (can't take '-s') */
             const candidates = findBaseForm(word, lookup.s_subs);
