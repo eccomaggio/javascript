@@ -892,7 +892,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    document.getElementById("version-no").innerHTML = "Version 4-8.4"
+    document.getElementById("version-no").innerHTML = "Version 4-8.5"
   </script>
 
   <script data-title="touch.js">
@@ -11257,11 +11257,11 @@
       // HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
       // HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
       if (raw.innerText.trim()) {
-        let textArr = splitText(raw.innerText);
-        textArr = findCompounds(textArr);
         let processedTextArr;
         let wordCount = 0;
-        [processedTextArr, wordCount] = addLookUp(textArr);
+        let textArr = splitText(raw.innerText);
+        textArr = findCompounds(textArr);
+        [processedTextArr, wordCount] = addLookUps(textArr);
         const htmlString = convertToHTML(processedTextArr);
         const listOfRepeats = buildRepeatList(wordCount);
         displayCheckedText(htmlString, listOfRepeats, wordCount)
@@ -11342,7 +11342,7 @@
       return tmp;
     }
 
-    function addLookUp(textArr) {
+    function addLookUps(textArr) {
       /* textArr = array of [normalized, raw]
       return => processedTextArr, array of [normalized-word, raw-word, [[matched-ID, duplicate-count], ...]]
         Words are counted + line breaks dealt with
@@ -11436,15 +11436,14 @@
         // console.log("name:",word, raw_word[0], /^[A-Z]*$/.test(raw_word[0]),raw_word[0] === raw_word[0].toUpperCase());
         matches.push(markOfflist(word, "proper name"))
       }
-      // else if (raw_word[0] === raw_word[0].toUpperCase() && lookup.setOfCommonNames.has(word)) {
-      //   matches.push(markOfflist(word, "name"));
-      // }
-      else {
+      // else {
+      else if (V.currentDb.language == "en") {
         matches = dbLookup(word);
         if (lookup.irregVerb[word]) {
           /* ## test = hidden written stole lain */
           const candidate = dbLookup(lookup.irregVerb[word])[0];
-          matches.push(candidate);
+          // ## Check for GEPTKids to ensure word is in the very limited wordlist
+          if (candidate) matches.push(candidate);
         }
         if (word.slice(-3) == "ing") {
           /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
@@ -11763,7 +11762,6 @@
       if (choice === 0) {
         V.currentDb = {
           name: "GEPT",
-          // db: makeGEPTdb(),
           db: indexDb(makeGEPTdb()),
           isKids: false,
           // ## show / hide are arrays so that multiple sections can be added if necessary
@@ -11780,7 +11778,6 @@
       } else {
         V.currentDb = {
           name: "GEPTKids",
-          // db: makeKIDSdb(),
           db: indexDb(makeKIDSdb()),
           isKids: true,
           show: [HTM.K_theme],
@@ -11794,6 +11791,7 @@
         };
         V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
       }
+      V.currentDb.language = "en";
       for (let key in V.currentDb.css) {
         const property = key[0] == "_" ? `--${key.slice(1)}` : key;
         HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
