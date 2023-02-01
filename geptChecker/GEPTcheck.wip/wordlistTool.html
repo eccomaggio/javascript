@@ -11288,6 +11288,8 @@
         .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
         .replace(/…/g, "...")
         .replace(/[\n\r]+/g, " *EOL ") // encode EOLs
+        // .replace(/\u2014/g, " -- ")
+        .replace(/–/g, " -- ")  // pasted in em-dashes
         .replace(/—/g, " - ")
         .replace(/(\w)\/(\w)/g, "$1 / $2");
       const raw_chunks = raw_text
