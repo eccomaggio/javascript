@@ -1,6 +1,7 @@
 import csv
 import os
 import re
+import string
 
 cat_lookup = [
   'elementary',
@@ -76,16 +77,32 @@ with open(os.path.join(os.getcwd(),tsv_filename), "r") as tsv_file, open(os.path
   tsv_file.seek(0)
   POVs = list(dict.fromkeys([col[2] for col in tsv_reader if col[2] and re.match(alpha, col[2])]))
   tsv_file.seek(0)
+  """
+  Tests here to:
+  1) weed out chinese headings
+  2) split alternate entries (in the form "coke/cola")
+  3) ignore occasional inconsistencies (i.e. 'adv.' vs 'adv')
+  """
   for row in tsv_reader:
-    lemma = row[0]
-    if (lemma.isalpha() and lemma.isascii()):
+    lemmaRaw = row[0]
+    lemma = lemmaRaw.split("/")
+    # normalizedLemma = lemma.replace("-","")
+    normalizedLemma = lemma[0].translate(str.maketrans('', '', string.punctuation))
+    normalizedLemma = normalizedLemma.replace(" ","")
+    if (normalizedLemma.isalpha() and normalizedLemma.isascii()):
       tmpPov = row[2].replace(".","")
       pov = [pov_lookup[el.strip().replace(".","")] for el in row[2].split("/")]
       cat = cat_lookup.index(row[1])
       notes = row[3]
       # print(f"[{sep}{lemma}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],")
-      out_file.write(f"[{sep}{lemma}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],\n")
+      out_file.write(f"[{sep}{lemma[0]}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],\n")
+      try:
+        lemma[1]
+        out_file.write(f"[{sep}{lemma[1]}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],\n")
+      except Exception:
+        pass
 
-# print(f"cats: {categories}")
+
+print(f"cats: {categories}")
 # print(f"POVs: {POVs}")
 
