@@ -1,4 +1,5 @@
 #! /bin/awk -f
+# superceded by python file; for interest only
 
 BEGIN { 
 	FS = "\t"

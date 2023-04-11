@@ -808,8 +808,9 @@
                 <select name="theme" id="t1_theme_select" onchange="this.dataset.chosen=this.value;" data-chosen="-1">
                   <option value="-1" selected="" class="default">any</option>
 
+                  <option value="3">Animals &amp; insects (動物/昆蟲)</option>
                   <option value="4">Articles &amp; determiners (冠詞/限定詞)</option>
-                  <option value="5">Be &amp; auxiliarie (be動詞/助動詞)</option>
+                  <option value="5">Be &amp; auxiliaries (be動詞/助動詞)</option>
                   <option value="6">Clothing &amp; accessories (衣服/配件)</option>
                   <option value="7">Colors (顏色)</option>
                   <option value="8">Conjunctions (連接詞)</option>
@@ -900,7 +901,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    document.getElementById("version-no").innerHTML = "Version 4-8.6"
+    document.getElementById("version-no").innerHTML = "Version 4-8.7"
   </script>
 
   <script data-title="touch.js">
@@ -9280,6 +9281,7 @@
 
     function makeKIDSdb() {
       return [
+        ["", "", [0], "dummy entry: 0 easily confused with undefined :S"],
         ["animal", "noun", [3], "動物"],
         ["bear", "noun", [3], "熊"],
         ["bee", "noun", [3], "蜜蜂"],
