@@ -4,19 +4,26 @@
 Purpose: Toggle an html file between using file-internal resources
 and external files (applies to none-http(s) .js & .css files only)
 
+Output:
+1) in deconstruct mode, it outputs out.min.html with links to css&js AND independent css&js files
+2) in assemble mode, it outputs a single, integrated file called out.htm
+These html files can be further renamed as desired
+
+Command line: toggleWordlistHTML.py <optional filename> (defaults to wordlistCheck.html)
+
 Logic:
 open geptchecker
 read through each line
 ignore anything commented out (in html / css / javascript) EXCEPT:
 
-create files if hit:
+create files if encounter:
 <script blah title="blah.js"></script>
 —> <script blah src="blah.js"></script>
 
 <style blah title="blah.css"></style>
 —> <link href="blah.css" rel="stylesheet" />
 
-OR if finds above links to external files, 
+OR if finds above links to external files,
 open filename & replace link with contents into tags
 
 DONE: implement splitting into separate files
@@ -27,7 +34,7 @@ DONE: implement importing files
 import sys
 import os.path
 import re
-from tkinter import W
+# from tkinter import W
 
 isSplitMode = True
 isInComment = False
@@ -57,7 +64,7 @@ def get_file_name(prog_file_name=''):
   OR if none, default to default_file_name
   """
   ## Establish name
-  default_file_name = "gept.v4-2.html"
+  default_file_name = "wordlistTool.html"
   try:
     file_name = sys.argv[1]
   except IndexError:
@@ -65,8 +72,8 @@ def get_file_name(prog_file_name=''):
     file_name = prog_file_name if prog_file_name else default_file_name
 
   ## Establish file exists
-  if os.path.isfile(file_name): 
-    print(f"file_name:",file_name)
+  if os.path.isfile(file_name):
+    print("file_name:",file_name)
     return file_name
   else:
     print(f'Sorry. "{file_name}" could not be found.')
@@ -86,6 +93,7 @@ def build_files(file_name):
     else:
       out_file_name = "out.html"
     print("isSplitMode:",isSplitMode)
+    print(f"Your HTML file is: {out_file_name}")
     # file in write mode
     with open(out_file_name, "w") as html_out:
       # Write each line from input file to html_out file using loop
@@ -98,7 +106,7 @@ def build_files(file_name):
 
 def assemble_file(raw_line,html_out):
   """
-  
+
   """
   global buffer
   global rx
@@ -127,26 +135,26 @@ def assemble_file(raw_line,html_out):
         return
   html_out.write(raw_line)
 
-  
+
 def disassemble_file(raw_line,html_out):
   global isInStyle
   global isInScript
-  toPrint = ""
-  isSkip = False
+  to_print = ""
+  is_skip = False
   line = remove_comments(raw_line)
   if line:
     if not isInStyle:
-      (toPrint,isInScript,isSkip) = export_parts(line,raw_line,"script",isInScript)
-    if not (isInScript or isSkip):
-      (toPrint,isInStyle,isSkip) = export_parts(line,raw_line,"style",isInStyle)
-  if not (isInScript or isInStyle or isSkip):
+      (to_print,isInScript,is_skip) = export_parts(line,raw_line,"script",isInScript)
+    if not (isInScript or is_skip):
+      (to_print,isInStyle,is_skip) = export_parts(line,raw_line,"style",isInStyle)
+  if not (isInScript or isInStyle or is_skip):
     html_out.write(raw_line)
-  elif toPrint:
-    html_out.write(toPrint)
+  elif to_print:
+    html_out.write(to_print)
 
 def set_mode(html_file):
   """
-  Checks through file for either: 
+  Checks through file for either:
   <link rel="stylesheet" href=
   <script src=
   WITHOUT http(s): (i.e. an external link)
@@ -165,7 +173,7 @@ def set_mode(html_file):
         if match and not re.search(rx["external_link"],line):
           # print(item,line)
           isSplitMode = False
-  ## reset to beginning of file 
+  ## reset to beginning of file
   html_file.seek(0)
 
 
@@ -190,7 +198,7 @@ def remove_comments(line):
     match = re.search(rx["html_open_comment"],line)
     if match:
       """
-      check if comment ends on same line: 
+      check if comment ends on same line:
       return any surrounding non-comment text
       ELSE
       return only beginning text and declare in-comment
@@ -206,7 +214,7 @@ def remove_comments(line):
 
 
 
-def export_parts(line,raw_line,mode,isInPart):
+def export_parts(line,raw_line,mode,is_in_part):
   """
   look for style / script elements (@title contains file name)
   replace them with links to files
@@ -216,38 +224,37 @@ def export_parts(line,raw_line,mode,isInPart):
   global current_external_file
   global buffer
   global rx
-  isStyle = (mode == "style")
-  if isStyle:
+  is_style = (mode == "style")
+  if is_style:
     re_opener = rx["opener_style"]
     re_close = rx["close_style"]
   else:
     re_opener = rx["opener_script"]
     re_close = rx["close_script"]
-  toPrint = ""
-  isSkip = False
-  if isInPart:
+  to_print = ""
+  is_skip = False
+  if is_in_part:
     match = re.search(re_close,line)
     if match:
-      isInPart = False
-      isSkip = True
+      is_in_part = False
+      is_skip = True
       write_part()
     else:
       # print(f"export:{current_external_file}",line)
-      buffer += raw_line 
-      pass
+      buffer += raw_line
   else:
     match = re.search(re_opener,line)
     if match:
       file_name = match.group(2)
       print(mode, file_name)
-      isInPart = True
+      is_in_part = True
       current_external_file = file_name
-      if isStyle:
+      if is_style:
         link = f'{match.group(1)}<link rel="stylesheet" href="{file_name}">\n'
       else:
         link = f'{match.group(1)}<script src="{file_name}"></script>\n'
-      toPrint = link
-  return (toPrint,isInPart,isSkip)
+      to_print = link
+  return (to_print,is_in_part,is_skip)
 
 def write_part():
   global buffer
