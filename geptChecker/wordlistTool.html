@@ -901,7 +901,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    document.getElementById("version-no").innerHTML = "Version 4-8.8"
+    document.getElementById("version-no").innerHTML = "Version 4-8.9"
   </script>
 
   <script data-title="touch.js">
@@ -10747,6 +10747,7 @@
       // ## removed hyphen & bar (- |)
       NBSP: String.fromCharCode(160),
       backupIDs: ["backup_0", "backup_1"]
+      // compoundMaxLen: 1
     }
 
     // ## Global variables
@@ -10782,31 +10783,17 @@
       for (let entry of dB) {
         const word = entry[C.LEMMA].toLowerCase();
         const id = entry[C.ID];
-        if (word.search(/[-'\s]/) >= 0) {
-          entry[C.isCOMPOUND] = dealWithCompounds(" ", word, id, compounds);
-          entry[C.isCOMPOUND] = dealWithCompounds("-", word, id, compounds) || entry[C.isCOMPOUND];
-          entry[C.isCOMPOUND] = dealWithCompounds("'", word, id, compounds) || entry[C.isCOMPOUND];
+        const splitWord = word.split(/[-'\s]/g);
+        // if (word.search(/[-'\s]/) >= 0) {
+        if (splitWord.length > 1) {
+          // if (splitWord.length > C.compoundMaxLen) C.compoundMaxLen = splitWord.length;
+          const newCompound = splitWord.join("");
+          entry[C.isCOMPOUND] = true;
+          compounds[newCompound] = id;
         }
       }
       // console.log("compounds:", compounds)
       return compounds;
-    }
-
-    function dealWithCompounds(separator, word, id, compounds) {
-      if (word.includes(separator)) {
-        let tmp = word.split(separator);
-        compounds[word] = id;
-        if (tmp[2]) {
-          compounds[`${tmp[0]}${tmp[1]}${tmp[2]}`] = id;
-          compounds[`${tmp[0]}-${tmp[1]}-${tmp[2]}`] = id;
-          compounds[`${tmp[0]} ${tmp[1]} ${tmp[2]}`] = id;
-        } else {
-          compounds[`${tmp[0]}${tmp[1]}`] = id;
-          compounds[`${tmp[0]}-${tmp[1]}`] = id;
-          compounds[`${tmp[0]} ${tmp[1]}`] = id;
-        }
-        return true;
-      } else return false;
     }
 
 
@@ -10867,7 +10854,7 @@
       // ## toggle visibility of settings dropdown
       // ## was originally handled in css but firefox has weird mouseout quirks
       // ## https://stackoverflow.com/questions/46831247/select-triggers-mouseleave-event-on-parent-element-in-mozilla-firefox
-      if (event.relatedTarget === null) {
+      if (e.relatedTarget === null) {
         return;
       }
       HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
@@ -11255,8 +11242,8 @@
     // ## if text is pasted in, this is where processing starts
     function normalizePastedText(e) {
       // ## preventDefault needed to prevent cursor resetting to start of div at every paste
-      event.preventDefault();
-      let paste = (event.clipboardData || window.clipboardData).getData('text');
+      e.preventDefault();
+      let paste = (e.clipboardData || window.clipboardData).getData('text');
       const selection = window.getSelection();
       paste = paste.replace(/[\n\r]+/g, "\n\n");
       selection.getRangeAt(0).insertNode(document.createTextNode(paste));
@@ -11349,18 +11336,16 @@
         /* for each word, checks normalized words to end of chunk in search of compound match
         then adds this as a match
         */
-        for (let word_i = 0; word_i < chunk.length; word_i++) {
+        for (let word_i = 0; word_i < chunk.length - 1; word_i++) {
           let tail = [];
           for (let j = word_i; j < chunk.length; j++) {
             tail.push(chunk[j][0])
           }
-          tail = tail.join(" ");
           let matches = [];
           for (let compound in V.currentDb.compounds) {
             if (V.currentDb.compounds.hasOwnProperty(compound)) {
               const [c_lemma, c_id] = [compound, V.currentDb.compounds[compound]];
-              // if (tail.startsWith(c_lemma)) matches.push([c_id,updateWordStats(c_id)]);
-              if (tail.startsWith(c_lemma)) addMatch(matches, c_id);
+              if (tail.join("").startsWith(c_lemma)) addMatch(matches, c_id);
             }
           }
           chunk[word_i].push(matches);
@@ -11502,7 +11487,7 @@
             const candidates = findBaseForm(word, lookup.s_subs);
             for (const id of candidates) {
               const candidate = getDbEntry(id);
-              if (candidate.length > 0 && !candidate[C.POS] !== "adj.") {
+              if (candidate.length > 0 && candidate[C.POS] !== "adj.") {
                 matches.push(id);
               }
             }

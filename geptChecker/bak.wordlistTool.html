@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en-us">
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -10782,18 +10782,13 @@
       for (let entry of dB) {
         const word = entry[C.LEMMA].toLowerCase();
         const id = entry[C.ID];
-        // let safeWord = word.replace(/-/g, "##").replace(/ /g, "@@");
-        // let safeWord = id;
-        // ## add extra isCOMPOUND entry to db; || ensures no overwriting
-        entry[C.isCOMPOUND] = dealWithCompounds(" ", word, id, compounds);
-        entry[C.isCOMPOUND] = dealWithCompounds("-", word, id, compounds) || entry[C.isCOMPOUND];
-        if (word.includes("'")) {
-          const noApostrophe = word.replace(/\'/g, "");
-          dealWithCompounds(" ", noApostrophe, id, compounds);
-          dealWithCompounds("-", noApostrophe, id, compounds);
+        if (word.search(/[-'\s]/) >= 0) {
+          entry[C.isCOMPOUND] = dealWithCompounds(" ", word, id, compounds);
+          entry[C.isCOMPOUND] = dealWithCompounds("-", word, id, compounds) || entry[C.isCOMPOUND];
+          entry[C.isCOMPOUND] = dealWithCompounds("'", word, id, compounds) || entry[C.isCOMPOUND];
         }
-        // console.log("> >", entry)
       }
+      // console.log("compounds:", compounds)
       return compounds;
     }
 
@@ -11080,14 +11075,14 @@
       if (!searchTerms) {
         errorMsg = "Please enter at least one search term to restrict the number of results.";
       }
-      else if (term.search(/[^a-zA-Z\s\-]/g) > -1) {
-        errorMsg = "The only non-alphabetic character you can search for is the hyphen (-).";
+      else if (term.search(/[^a-zA-Z\s\-\s\']/g) > -1) {
+        errorMsg = "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.";
       }
       else {
         const checkTerm = term.split(" ");
         // console.log("debug *submitForm*2",checkTerm,checkTerm.length)
         if (checkTerm.length > 1) {
-          errorMsg = "You can only search for one word at a time.<br>";
+          // errorMsg = "You can only search for one word at a time.<br>";
           term = checkTerm[0];
         }
         const context = data.match.join().split(":");
@@ -11132,7 +11127,6 @@
         output = "<tr><td></td><td class='error'>No matching words found.</td></tr>";
       } else {
         for (const entry of results.sort(compareByLemma)) {
-          /* currentInitial = entry[C.LEMMA][0].toLowerCase();*/
           currentInitial = (entry[C.LEMMA]) ? entry[C.LEMMA][0].toLowerCase() : "";
           if (currentInitial !== previousInitial) {
             output += format_results_as_tablerows(currentInitial.toLocaleUpperCase(), "", "black", "");
@@ -11144,7 +11138,8 @@
           let note = entry[C.NOTE].trim();
           note = note ? `, ${note}` : "";
           const col2 = `${lemma} <span class="pos">${pos}</span> ${level}${note}`;
-          const class2 = `level-${level[0]}`;
+          let class2 = (V.currentDb.name === "GEPTKids") ? "level-e" : `level-${level[0]}`;
+          // const class2 = `level-${level[0]}`;
           output += format_results_as_tablerows(i + 1, col2, "", class2);
           previousInitial = currentInitial;
           i++;
@@ -11293,34 +11288,30 @@
       if ((isTyped && V.isAutoRefresh) || isClick || !raw.type) {
         raw = HTM.rawDiv;
       } else return;
-      // HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
-      // HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
       if (raw.innerText.trim()) {
-        let processedTextArr;
-        let wordCount = 0;
-        let textArr = splitText(raw.innerText);
-        textArr = findCompounds(textArr);
-        [processedTextArr, wordCount] = addLookUps(textArr);
+        const chunkedText = splitText(raw.innerText);
+        const textArr = findCompounds(chunkedText);
+        const [processedTextArr, wordCount] = addLookUps(textArr);
         const htmlString = convertToHTML(processedTextArr);
         const listOfRepeats = buildRepeatList(wordCount);
         displayCheckedText(htmlString, listOfRepeats, wordCount)
-        // HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
-        // HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
 
         updateBackup(C.backupIDs[1]);
       } else {
         displayCheckedText();
       }
-
     }
 
     function splitText(raw_text) {
-      /* Divides text on spaces. Creates an array of words.
+      /* To narrow down the hunt for compound words,
+      the normalized text is first split into
+      independent chunks by punctuation (which compounds can't cross)
+      i.e. period, comma, brackets, ? ! (semi-)colons
+      then divided on spaces. Creates an array of phrases > words.
           Each word is a sub array:
           1) normalized word
           2) word with caps + punctuation for display
       */
-      // let EOLcount = 0;
       // ## text = [processed word for lookup + tagging, raw word for display]
       raw_text = raw_text
         .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
@@ -11333,7 +11324,7 @@
         .replace(/(\w)\/(\w)/g, "$1 / $2");
       const raw_chunks = raw_text
         .trim()
-        .replace(/([\.,;\:\?\!])\s+/gi, "$1@@")
+        .replace(/([\.,;()\:\?\!])\s+/gi, "$1@@")
         .split("@@");
 
       let chunks = [];
@@ -11389,7 +11380,6 @@
         WordStats records the number of times a word is repeated: {word-id: count}
       */
       let processedTextArr = [];
-      // let outputText = "";
       let wordCount = 0;
       let matches = [];
       // ## capture EOL and insert <br>
@@ -11597,7 +11587,7 @@
           }
           let localWord = rawWord;
           const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
-          if (origLemma.includes(" ") || origLemma.includes("-")) localWord = origLemma;
+          if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
           displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${anchor}>${localWord + showDuplicateCount}</span>`;
           if (matchCount < matches.length - 1) displayWord += " /" + (leaveSpace ? "" : " ");
           htmlString += displayWord;
@@ -11782,11 +11772,8 @@
       const duplicate = document.getElementById(id);
       if (duplicate) {
         duplicate.classList.add(cssClass);
-        // const url = location.href;
-        // location.href = "#" + id;
         duplicate.scrollIntoView({ behavior: "smooth", block: "center" });
       } else console.log("eh-jumpToDupe", id)
-      // history.replaceState(null, null, url);
     }
 
     // ## COMMON ELEMENTS ######################################
@@ -11878,7 +11865,6 @@
         HTM.backupSave.style.display = "block";
 
       }
-      // document.getElementById("set-refresh").style.display = (isTab1()) ? "none" : "block";
     }
 
     function isTab1() {
