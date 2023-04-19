@@ -1,4 +1,5 @@
-AWL = [
+function makeAWL() {
+  return [
   ["analyse", "", [1], "AWL-1"],
   ["analysed", "", [1], "AWL-1"],
   ["analyser", "", [1], "AWL-1"],
@@ -581,7 +582,7 @@ AWL = [
   ["targeted", "", [1], "AWL-5"],
   ["transited", "", [1], "AWL-5"],
   ["transitional", "", [1], "AWL-5"],
-  ["transitory", "", [1], "AWL-5"]
+  ["transitory", "", [1], "AWL-5"],
 
   ["abstractly", "", [2], "AWL-6"],
   ["accurately", "", [2], "AWL-6"],
@@ -779,7 +780,6 @@ AWL = [
   ["conformist", "", [2], "AWL-8"],
   ["conformity", "", [2], "AWL-8"],
   ["non-conformist", "", [2], "AWL-8"],
-  ["non-conformists", "", [2], "AWL-8"],
   ["non-conformity", "", [2], "AWL-8"],
   ["nonconformist", "", [2], "AWL-8"],
   ["nonconformity", "", [2], "AWL-8"],
@@ -946,6 +946,6 @@ AWL = [
   ["persistently", "", [2], "AWL-10"],
   ["posed", "", [2], "AWL-10"],
   ["reluctance", "", [2], "AWL-10"],
-  ["reluctantly", "", [2], "AWL-10"],
-  ["undergone", "", [2], "AWL-10"]
+  ["reluctantly", "", [2], "AWL-10"]
 ];
+}
