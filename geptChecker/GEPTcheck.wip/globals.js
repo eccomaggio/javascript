@@ -24,7 +24,7 @@
       backupDialog: document.getElementById("backup-dlg"),
       backupSave: document.getElementById("backup-save")
     };
-    
+
 
 
 
@@ -326,7 +326,7 @@
         frozen: "freeze",
         gave: "give",
         given: "give",
-        given: "give",
+        // given: "give",
         gone: "go",
         got: "get",
         gotten: "get",
@@ -336,7 +336,7 @@
         hanged: "hang",
         heard: "hear",
         held: "hold",
-        held: "hold",
+        // held: "hold",
         hid: "hide",
         hidden: "hide",
         hung: "hang",
@@ -719,7 +719,7 @@
       ])
     }
 
-    
+
     const C = {
       ID: 0,
       LEMMA: 1,

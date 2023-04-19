@@ -203,7 +203,9 @@
     <!-- <script src="touch.js"></script> -->
 
     <script src="dbs.js"></script>
-    <script src="AWLheadwords.js"></script>
+    <!-- <script src="AWLheadwords.js"></script> -->
+    <script src="AWL.Hi-int.js"></script>
+    <script src="AWL.Int.js"></script>
 
     <script src="globals.js"></script>
 
@@ -211,25 +213,59 @@
     <script src="main.js"></script>
 
     <script>
+// for (let el of awlInt){
+//   let all = [el[0]].concat(el[2]);
+//   for (word of all) {
+//     let output = "";
+//     const awlLevel = "AWL-" + el[1]
+//     let checkLevel = V.currentDb.db.findIndex(x => x[1] === word)
+//     if (checkLevel >= 0) {
+//       if (V.currentDb.db[checkLevel][C.LEVEL] > 1) {
+//         // output = `["${word}", "", [2], "${awlLevel}"] (different level)`;
+//       } else {
+//         // output = `["${word}", "", [1], "${awlLevel}"] (level agrees with GEPT)`;
+//       }
+//     } else {
+//       // NOT IN GEPT WORDLIST
+//       // output = `["${word}", "", [1], "${awlLevel}"] (not in GEPT wordlist)`;
+//       output = `["${word}", "", [1], "${awlLevel}"]`;
+//     }
+//     if (output) console.log(output)
+//   }
+// }
 
-      let inGEPT = [];
-      let notInGEPT = [];
-for (let el of awl){
-  // console.log(el[0])
 
-  if (V.currentDb.db.find(x => x[1] === el[0])){
-    inGEPT.push(el)
-    // break;
-    // console.log(el[0],"is not in GEPT")
-  } else {
-    notInGEPT.push(el)
-    console.log(el[0])
+for (let el of awlHi){
+  let all = [el[0]].concat(el[2]);
+  for (word of all) {
+    let output = "";
+    const awlLevel = "AWL-" + el[1]
+    let checkLevel = V.currentDb.db.findIndex(x => x[1] === word)
+    if (checkLevel === -1) {
+      output = `["${word}", "", [2], "${awlLevel}"]`;
+    }
+    if (output) console.log(output)
   }
 }
-console.log("awl:", awl)
-console.log("not in GEPT:", notInGEPT)
-console.log("in GEPT:", inGEPT)
-// console.log(awl[1])
+
+
+
+      // let inGEPT = [];
+      // let notInGEPT = [];
+// for (let el of awl){
+
+//   if (V.currentDb.db.find(x => x[1] === el[0])){
+//     inGEPT.push(el)
+//     // break;
+//     // console.log(el[0],"is not in GEPT")
+//   } else {
+//     notInGEPT.push(el)
+//     console.log(el[0])
+//   }
+// }
+// console.log("awl:", awl)
+// console.log("not in GEPT:", notInGEPT)
+// console.log("in GEPT:", inGEPT)
     </script>
 
   </body>
