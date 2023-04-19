@@ -901,7 +901,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    document.getElementById("version-no").innerHTML = "Version 4-8.9"
+    document.getElementById("version-no").innerHTML = "Version 4-8.10"
   </script>
 
   <script data-title="touch.js">
@@ -10796,14 +10796,11 @@
       return compounds;
     }
 
-
     // ## TAB1 (words) SETUP ############################################
 
 
     addListeners();
     finalInit();
-
-
 
 
     // TAB1 (words) CODE ## ############################################
@@ -11392,6 +11389,7 @@
           processedTextArr.push([word, wordArr[1], preMatchArr]);
         }
       }
+      // console.log("processedT arr:", processedTextArr)
       return [processedTextArr, wordCount];
     }
 
@@ -11503,7 +11501,10 @@
           for (const match of checkForeignPlurals(word)) {
             matches.push(...match)
           }
-          if (!matches.length) matches.push(markOfflist(word, "offlist"));
+          // if (!(matches.length || matches[0])) {
+          if (typeof matches[0] === 'undefined') {
+            matches.push(markOfflist(word, "offlist"));
+          }
         }
       }
       return matches;
@@ -11531,12 +11532,10 @@
       for each word, repeat the raw-word for each match, but with different interpretations
       */
       if (!textArr.length) console.log("nowt doin'!")
-      // console.log("textArr",textArr, textArr.length)
       let htmlString = "";
       let isFirstWord = true;
       let wasEOL = false;
       for (let wordArr of textArr) {
-        // const word = wordArr[0];
         let word = wordArr[0];
         if (word === "*EOL") {
           htmlString += "<br><br>";
@@ -11571,6 +11570,7 @@
             anchor = ` id='all_${id}_${duplicateCount}'`;
           }
           let localWord = rawWord;
+          // console.log("Localword:",localWord,id)
           const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
           if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
           displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${anchor}>${localWord + showDuplicateCount}</span>`;
