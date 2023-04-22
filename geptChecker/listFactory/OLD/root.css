@@ -1,0 +1,17 @@
+    :root {
+      --light: #cfe0e8;
+      --medium: #87bdd8;
+      --dark: #3f7fbf;
+      --accent: #ddeedd;
+      --font-size: 14px;
+      --sep-width: 6px;
+
+      /* --elem: DarkSeaGreen;
+      --int: CadetBlue;
+      --high: GoldenRod;
+      --offlist: IndianRed; */
+      --elem: DarkOliveGreen;
+      --int: DarkCyan;
+      --high: DarkGoldenRod;
+      --offlist: FireBrick;
+    }
