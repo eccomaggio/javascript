@@ -285,10 +285,17 @@
 
       let term = data.term.join().toLowerCase();
       // ** Tempory arrangement for AWL sublist search
-      let awl;
-      [term, awl] = term.split("@");
-      awl = parseInt(awl)
-      if (isNaN(awl)) awl = -1;
+      let awl = [];
+      // [term, awl] = term.split("@");
+      awl_raw = term.split("@")[1];
+      term = term.split("@")[0];
+      if (awl_raw) {
+        for (let el of awl_raw.split(",")){
+          awl.push(parseInt(el) + C.awl_index0)
+        }
+      }
+      // awl = parseInt(awl)
+      // if (isNaN(awl)) awl = -1;
       // ** Substitute theme data for level in GEPTKids search
       // ** otherwise theme data is disregarded
       let level = data.level;
@@ -325,6 +332,7 @@
     }
 
     function get_results(find) {
+      console.log("get results:",find)
       const regex = new RegExp(find.term, 'i');
       let results = V.currentDb.db.filter(el => el[C.LEMMA].search(regex) != -1);
       if (find.level.length) {
@@ -338,9 +346,12 @@
       if (find.pos) {
         results = results.filter(el => el[C.POS].search(find.pos) != -1);
       }
-      if (V.isBEST && find.awl >= 0) {
-        const target_awl = parseInt(find.awl) + C.awl_index0;
-        results = results.filter(el => el[C.LEVEL][1] === target_awl);
+      if (V.isBEST && find.awl.length) {
+        // const target_awl = parseInt(find.awl) + C.awl_index0;
+        // results = results.filter(el => el[C.LEVEL][1] === target_awl);
+        console.log(">>",find.awl)
+        // const normalized_level = el[C.LEVEL][1] - C.awl_index0;
+        results = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
       }
       // ## remove the dummy 0 entry from results
       if (results.length && !results[0][0]) {
