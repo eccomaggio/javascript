@@ -263,13 +263,17 @@
         match: [],
         level: [],
         theme: [],
+        awl: [],
         pos: []
       };
       for (let [key, value] of raw_data) {
         // ## default value of option (but screws up db lookup)
         if (value === "-1") value = "";
-        if (key === "level" && V.currentDb.name === "GEPTKids") continue;
-        if (key === "theme" && V.currentDb.name === "GEPT") continue;
+        // if (key === "level" && V.currentDb.name === "GEPTKids") continue;
+        // if (key === "theme" && V.currentDb.name === "GEPT") continue;
+        if (key === "level" && V.currentDb.isKids) continue;
+        if (key === "theme" && V.currentDb.isGEPT) continue;
+        if (key === "awl" && !V.currentDb.isBEST) continue;
 
         if (key == "level" || key == "theme") {
           if (value) data[key].push(parseInt(value.trim()));
@@ -280,6 +284,11 @@
       // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, ""));
 
       let term = data.term.join().toLowerCase();
+      // ** Tempory arrangement for AWL sublist search
+      let awl;
+      [term, awl] = term.split("@");
+      awl = parseInt(awl)
+      if (isNaN(awl)) awl = -1;
       // ** Substitute theme data for level in GEPTKids search
       // ** otherwise theme data is disregarded
       let level = data.level;
@@ -295,6 +304,7 @@
       else {
         const checkTerm = term.split(" ");
         // console.log("debug *submitForm*2",checkTerm,checkTerm.length)
+
         if (checkTerm.length > 1) {
           // errorMsg = "You can only search for one word at a time.<br>";
           term = checkTerm[0];
@@ -305,6 +315,7 @@
         results = get_results({
           term: term,
           level: level,
+          awl: awl,
           pos: pos
         });
         resultString = format_results(results);
@@ -317,18 +328,30 @@
       const regex = new RegExp(find.term, 'i');
       let results = V.currentDb.db.filter(el => el[C.LEMMA].search(regex) != -1);
       if (find.level.length) {
-        let tmpResults = [];
-        for (let i of find.level) {
-          tmpResults = tmpResults.concat(results.filter(el => el[C.LEVEL].includes(i)));
-        }
-        results = tmpResults;
+        // let tmpResults = [];
+        // for (let i of find.level) {
+        //   tmpResults = tmpResults.concat(results.filter(el => el[C.LEVEL].includes(i)));
+        // }
+        // results = tmpResults;
+        results = results.filter(el => el[C.LEVEL][0] === find.level[0]);
       }
       if (find.pos) {
         results = results.filter(el => el[C.POS].search(find.pos) != -1);
       }
+      if (V.isBEST && find.awl >= 0) {
+        const target_awl = parseInt(find.awl) + C.awl_index0;
+        results = results.filter(el => el[C.LEVEL][1] === target_awl);
+      }
       // ## remove the dummy 0 entry from results
-      if (results.length && !results[0][0]) results.shift();
+      if (results.length && !results[0][0]) {
+        results.shift();
+      }
       return results;
+    }
+
+    function getAwlSublist(level_arr) {
+      return (level_arr[1] && V.isBEST) ? level_arr[1] - C.awl_index0 : -1;
+
     }
 
     function format_results(results) {
@@ -347,14 +370,21 @@
           }
           const lemma = `<strong>${entry[C.LEMMA]}</strong>`;
           const pos = `[${entry[C.POS].trim()}]`;
-          let level = V.level_subs[entry[C.LEVEL][0]];
+          const level_arr = entry[C.LEVEL];
+          const awl_sublist = getAwlSublist(level_arr);
+          // const awl_indicator = (awl_sublist >= 0) ? `; AWL${awl_sublist}` : "";
+          let level = V.level_subs[level_arr[0]];
+          if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
           if (!level) continue;
           let note = entry[C.NOTE].trim();
           note = note ? `, ${note}` : "";
-          const col2 = `${lemma} <span class="pos">${pos}</span> ${level}${note}`;
-          let class2 = (V.currentDb.name === "GEPTKids") ? "level-e" : `level-${level[0]}`;
+          // const col2 = `${lemma}${awl_indicator} <span class="pos">${pos}</span> ${level}${note}`;
+          const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}`;
+          // let class2 = (V.currentDb.name === "GEPTKids") ? "level-e" : `level-${level[0]}`;
+          let class2 = (V.currentDb.isKids) ? "level-e" : `level-${level[0]}`;
           // const class2 = `level-${level[0]}`;
-          output += format_results_as_tablerows(i + 1, col2, "", class2);
+          // output += format_results_as_tablerows(`${i + 1}${awl_indicator}`, col2, "", class2);
+          output += format_results_as_tablerows(`${i + 1}`, col2, "", class2);
           previousInitial = currentInitial;
           i++;
         }
@@ -452,14 +482,24 @@
         lemma = (normalizedWord && normalizedWord !== entry[C.LEMMA]) ? `${normalizedWord} (${entry[C.LEMMA]})` : entry[C.LEMMA];
         lemma = `<strong>${lemma}</strong>: `;
       }
-      let level = "";
-      if (parseInt(id) >= 0) {
-        let tmp = [];
-        for (const i of entry[C.LEVEL]) {
-          tmp.push(V.level_subs[i]);
-        }
-        level = `<em>${tmp.join()}</em>`;
+      let level_arr = entry[C.LEVEL];
+      let level = V.level_subs[level_arr[0]];
+      // let awl_sublist = getAwlSublist(level_arr);
+      // if (awl_sublist >= 0){
+      if (getAwlSublist(level_arr) >= 0) {
+        level += `; ${V.level_subs[level_arr[1]]}`;
       }
+      level = `<em>${level}</em>`;
+      // console.log("db: gept, best, kids:",V.currentDb.isGEPT,V.currentDb.isBEST,V.currentDb.isKids)
+      // console.log("entry:", awl_sublist,level)
+
+      // if (parseInt(id) >= 0) {
+      //   let tmp = [];
+      //   for (const i of entry[C.LEVEL]) {
+      //     tmp.push(V.level_subs[i]);
+      //   }
+      //   level = `<em>${tmp.join()}</em>`;
+      // }
       const pos = `[${entry[C.POS]}]`;
       const notes = (entry[C.NOTE]) ? ` ${entry[C.NOTE]}` : "";
       const html = `${level}<span>${lemma}${pos}${notes}</span>`;
@@ -786,7 +826,8 @@
           const match = getDbEntry(id);
           let displayWord = "";
           const ignoreRepeats = lookup.repeatableWords.includes(match[C.LEMMA]);
-          const level_num = match[C.LEVEL][0];
+          const level_arr = match[C.LEVEL];
+          const level_num = level_arr[0];
           const levelClass = "level-" + getLevelPrefix(level_num);
           const totalRepeats = V.wordStats[id];
           let duplicateClass = "";
@@ -1005,13 +1046,10 @@
 
     function changeDb_shared(e) {
       let choice = (e.target) ? parseInt(e.target.value) : e;
-      // console.log("changedb",choice)
-      // if (choice === 0) {
+      V.currentDb = [];
       if (choice <= 1) {
         V.currentDb = {
           name: "GEPT",
-          // db: indexDb(makeGEPTdb()),
-          isKids: false,
           // ## show / hide are arrays so that multiple sections can be added if necessary
           show: [HTM.G_level],
           hide: [HTM.K_theme],
@@ -1022,6 +1060,9 @@
             _accent: "#daebe8"
           }
         }
+        V.isKids = false;
+        V.isBEST = false;
+        V.isGEPT = true;
         let tmpDb = makeGEPTdb();
         if (choice === 1) {
           V.currentDb.name = "BEST";
@@ -1032,6 +1073,9 @@
             _accent: "#d98284"
           }
           tmpDb = tmpDb.concat(makeAWL());
+          // V.isKids = false;
+          V.isBEST = true;
+          V.isGEPT = false;
         }
         V.currentDb.db = indexDb(tmpDb);
         tmpDb = undefined;
@@ -1040,7 +1084,6 @@
         V.currentDb = {
           name: "GEPTKids",
           db: indexDb(makeKIDSdb()),
-          isKids: true,
           show: [HTM.K_theme],
           hide: [HTM.G_level],
           css: {
@@ -1050,6 +1093,9 @@
             _accent: "#fbefcc"
           }
         };
+        V.isKids = true;
+        V.isBEST = false;
+        V.isGEPT = false;
         V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
       }
       V.currentDb.language = "en";

@@ -298,8 +298,12 @@
       color: salmon;
     }
 
-    .pos {
+    .show-pos {
       color: dimgray;
+    }
+
+    .show-level {
+      background-color: whitesmoke;
     }
 
     /* numbers */
@@ -426,6 +430,10 @@
 
     .wrong {
       text-decoration: line-through;
+    }
+
+    .awl-sublist {
+      font-size: xx-small;
     }
 
     /* ## Tab2 (text) lookup ############################################## */

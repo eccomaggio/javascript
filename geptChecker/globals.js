@@ -52,9 +52,12 @@
 
       // ## These correlate with the numbers in the dBs
       level_headings: [
-        "elementary",
-        "intermediate",
-        "high-intermediate",
+        // "elementary",
+        // "intermediate",
+        // "high-intermediate",
+        "elem",
+        "int",
+        "hi-int",
         "Animals & insects (動物/昆蟲)",
         "Articles & determiners (冠詞/限定詞)",
         "Be & auxiliarie (be動詞/助動詞)",
@@ -89,7 +92,17 @@
         "Time (時間)",
         "Transportation (運輸)",
         "Weather & nature (天氣/自然)",
-        "Wh-words (疑問詞)"
+        "Wh-words (疑問詞)",
+        "AWL 1",
+        "AWL 2",
+        "AWL 3",
+        "AWL 4",
+        "AWL 5",
+        "AWL 6",
+        "AWL 7",
+        "AWL 8",
+        "AWL 9",
+        "AWL 10"
  ],
 
       // ## Computed levels
@@ -770,7 +783,8 @@
       // punctuation: new RegExp('[!"#$%&\'()*+,./:;<=>?@[\]^_`{}~]','g'),
       // ## removed hyphen & bar (- |)
       NBSP: String.fromCharCode(160),
-      backupIDs: ["backup_0", "backup_1"]
+      backupIDs: ["backup_0", "backup_1"],
+      awl_index0: 37
       // compoundMaxLen: 1
     }
 

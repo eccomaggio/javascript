@@ -222,9 +222,10 @@ def add_gept_level(awl_list, gept_list):
 
 
 
-def update_gept_list(gept_list, awl_list):
+def deal_with_duplicates(gept_list, awl_list):
   """
   Update GEPT list to show AWL sublist number if entry also in AWL
+  Mark duplicate entry in AWL for deletion
   """
   global shared_words
   count = 0
@@ -232,6 +233,7 @@ def update_gept_list(gept_list, awl_list):
     for awl_line in awl_list:
       if gept_line[LEMMA] == awl_line[LEMMA]:
         gept_line[LEVEL] += [awl_line[LEVEL][1]]
+        awl_line[POS] += " " + Pos.DEL.value
         count += 1
         shared_words[gept_line[LEMMA]] += 1
         # gept_line[NOTES] += f" (AWL-{awl_line[LEVEL][1]-AWL_INDEX})"
@@ -308,7 +310,7 @@ if __name__ == "__main__":
   #### Add in mutual references between the two lists
   awl_list = add_gept_level(awl_list,gept_list)
   # save_list(awl_list, awl_full_json)
-  gept_list = update_gept_list(gept_list, awl_list)
+  gept_list = deal_with_duplicates(gept_list, awl_list)
 
   #### Check for internal consistency (expand this) & generate stats
   print("shared words:",len(shared_words))
