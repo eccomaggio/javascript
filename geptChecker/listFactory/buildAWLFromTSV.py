@@ -104,14 +104,16 @@ level_headings = [
 AWL_INDEX = 37
 
 class Pos(Enum):
-  N = "noun "
-  V = "verb "
-  ADJ = "adj "
-  ADV = "adv "
-  S = "flexion "
-  H = "headword "
-  VPP = "Vpp "
-  VING = "Ving "
+  N = "noun"
+  V = "verb"
+  ADJ = "adj"
+  ADV = "adv"
+  S = "flexion"
+  H = "headword"
+  VPP = "Vpp"
+  VING = "Ving"
+  UK = "UK"
+  DEL = "DEL"
 
 LEMMA = 0
 POS = 1
@@ -120,6 +122,7 @@ NOTES = 3
 
 SEP = "\""
 # ALPHA = "[a-zA-Z]"
+shared_words = {}
 
 
 def create_awl_from_tsv(tsv_filename):
@@ -129,51 +132,57 @@ def create_awl_from_tsv(tsv_filename):
     tsv_reader = csv.reader(tsv_file, delimiter="\t")
     for row in tsv_reader:
       if row:
-        entries = [row[0]]
+        headword = row[0]
         level = int(row[1])
-        # print(f'["{headword}","",[{level}],"headword"]')
+        entries = [headword]
         try:
           entries += row[2].split(",")
         except IndexError:
           pass
         for (i, entry) in enumerate(entries):
-          notes = f"AWL-{level} "
-          if i == 0:
-            notes += "headword "
+          notes = []
+          # notes += [f"AWL_{level}"]
+          notes += ["headword"] if i == 0 else [f"headword_{headword}"]
           gept_level = 1 if level <= 5 else 2
-          pos = ""
+          pos = []
           display = entry
           if entry.endswith("s"):
-            notes += "flexion "
-            entry = entry[:-1]
+            # notes += [Pos.S.value]
+            pos += [Pos.S.value]
+            pos += [Pos.DEL.value]
+            entry = entry[:-1] ## Remove '-s' to reveal root
           if re.search("is[eia]", entry):
-            notes += "UK "
+            # notes += [Pos.UK.value]
+            pos += [Pos.UK.value]
+            pos += [Pos.DEL.value]
           if entry.endswith("ing"):
-            pos += Pos.VING.value
+            pos += [Pos.VING.value]
+            pos += [Pos.DEL.value]
           elif entry.endswith("ed"):
-            pos += Pos.VPP.value
+            pos += [Pos.VPP.value]
+            pos += [Pos.DEL.value]
           elif entry.endswith("ly"):
-            pos += Pos.ADV.value
+            pos += [Pos.ADV.value]
+            pos += [Pos.DEL.value]
           elif entry.endswith("ble"):
-            pos += Pos.ADJ.value
+            pos += [Pos.ADJ.value]
           elif entry.endswith("al"):
-            pos += Pos.ADJ.value
+            pos += [Pos.ADJ.value]
           elif entry.endswith("ic"):
-            pos += Pos.ADJ.value
+            pos += [Pos.ADJ.value]
           elif entry.endswith("ion"):
-            pos += Pos.N.value
+            pos += [Pos.N.value]
           elif entry.endswith("ty"):
-            pos += Pos.N.value
+            pos += [Pos.N.value]
           elif entry.endswith("ment"):
-            pos += Pos.N.value
+            pos += [Pos.N.value]
           elif entry.endswith("ize"):
-            pos += Pos.V.value
-          elif entry.endswith("ise"):
-            pos += Pos.V.value
+            pos += [Pos.V.value]
+          # elif entry.endswith("ise"):
+          #   pos += [Pos.V.value]
 
-          # print(f'["{display.strip()}","",[{level}],"{notes.strip()}"]')
-          # AWL_list += [[display.strip(),pos.strip(),[GEPTlevel,level],notes.strip()]]
-        awl_list += [[display.strip(),pos.strip(),[gept_level,37 + level],notes.strip()]]
+          awl_list += [[display.strip()," ".join(pos),[gept_level,37 + level]," ".join(notes)]]
+
     return awl_list
 
 
@@ -181,13 +190,8 @@ def create_awl_from_tsv(tsv_filename):
 def create_awl_list(awl_json, awl_tsv):
   awl_list = []
   full_path = os.path.join(os.getcwd(),awl_json)
-  # if os.path.isfile(os.path.join(os.getcwd(),awl_all_filename)):
   if os.path.isfile(full_path):
     print("Grabbing AWL list from JSON...")
-    # with open(os.path.join(os.getcwd(), awl_all_filename), "r") as awl_file:
-    # with open(full_path) as awl_file:
-    #   awl_list = json.load(awl_file)
-      # awl_list = json.load(awl_file)
     awl_list = get_list_from_json(awl_json)
   else:
     print("Creating AWL list from CSV...")
@@ -202,17 +206,18 @@ def add_gept_level(awl_list, gept_list):
   """
   Add GEPT level to AWL entry (if word in GEPT list)
   """
+  global shared_words
   count = 0
-  for (i, entry) in enumerate(awl_list):
-    for line in gept_list:
-      if line[LEMMA] == entry[LEMMA]:
+  for awl_line in awl_list:
+    for gept_line in gept_list:
+      if gept_line[LEMMA] == awl_line[LEMMA]:
+        awl_line[LEVEL][0] = gept_line[LEVEL][0]
+        if "gept" not in awl_line[NOTES].split(" "):
+          awl_line[NOTES] += " gept"
         count += 1
-        # print(count, line[2], entry)
-        # entry[LEVEL] = line[LEVEL]
-        entry[LEVEL][0] = line[LEVEL][0]
-        entry[NOTES] += " gept"
+        shared_words[gept_line[LEMMA]] = 1
         break
-  print(f"There are {count} GEPT words in the AWL wordlist")
+  print(f"There are {count} GEPT words in the AWL wordlist.")
   return awl_list
 
 
@@ -221,14 +226,47 @@ def update_gept_list(gept_list, awl_list):
   """
   Update GEPT list to show AWL sublist number if entry also in AWL
   """
+  global shared_words
+  count = 0
   for gept_line in gept_list:
     for awl_line in awl_list:
       if gept_line[LEMMA] == awl_line[LEMMA]:
         gept_line[LEVEL] += [awl_line[LEVEL][1]]
+        count += 1
+        shared_words[gept_line[LEMMA]] += 1
         # gept_line[NOTES] += f" (AWL-{awl_line[LEVEL][1]-AWL_INDEX})"
       # gept_line[NOTES] = gept_line[NOTES].strip()
+  print(f"There are {count} AWL words in the GEPT wordlist.")
   return gept_list
 
+
+def get_homonyms(list):
+  lemmas = {}
+  for el in list:
+    lemmas[el[LEMMA]] = 0
+  for el in list:
+    lemmas[el[LEMMA]] += 1
+  homonyms = [x for x in lemmas if lemmas[x] > 1]
+  # check how many of these homonyms there are in the AWL (should = discrepancy 967-958 = 9)
+  # print("count of homonyms in gept:", len(homonyms_in_gept))
+  # print(f"Homonyms in GEPT list = {homonyms_in_gept}")
+  return homonyms
+
+
+
+def add_pos_corrections(list, pos_corrections_filename):
+  # awl_pos_corrections = [[line[LEMMA], line[POS]] for line in awl_list]
+  # save_list(awl_pos_corrections,pos_corrections_filename)
+  awl_pos_corrections = get_list_from_json(pos_corrections_filename)
+  # print("compare master with corrections:",len(awl_list), len(awl_pos_corrections))
+  # print("before:", list[6])
+  list_of_corrected_ids = []
+  for (i,entry) in enumerate(list):
+    if entry[POS] != awl_pos_corrections[i][POS]:
+      list_of_corrected_ids += [i]
+      entry[POS] = awl_pos_corrections[i][POS]
+  # print("after:", list[6])
+  return (list, list_of_corrected_ids)
 
 
 
@@ -260,11 +298,38 @@ if __name__ == "__main__":
   awl_gept_json = "AWLlist.gept.json"
   gept_json = "dbGEPT.json"
   new_gept_json = "dbGEPT.new.json"
+  awl_for_gept_json = "dbAWL.new.json"
+  pos_corrections_filename = "awl_pos_corrections.json"
 
+  #### Load the two wordlists (if awl wordlist json does not exist, create it)
   awl_list = create_awl_list(awl_full_json, awl_tsv)
   gept_list = get_list_from_json(gept_json)
+
+  #### Add in mutual references between the two lists
   awl_list = add_gept_level(awl_list,gept_list)
-  save_list(awl_list, awl_full_json)
+  # save_list(awl_list, awl_full_json)
   gept_list = update_gept_list(gept_list, awl_list)
-  save_list(gept_list, new_gept_json)
+
+  #### Check for internal consistency (expand this) & generate stats
+  print("shared words:",len(shared_words))
+  homonyms_in_gept = get_homonyms(gept_list)
+  print("homonyms in gept:", len(homonyms_in_gept))
+  # print(homonyms_in_gept)
+
+  #### Make (automated) manual corrections
+  #### Manually adjust corrections list to implement corrects. "DEL" = delete this entry
+  awl_list, corrected_ids = add_pos_corrections(awl_list, pos_corrections_filename)
+
+  awl_raw_count = len(awl_list)
+  print(f"AWL list total: {awl_raw_count}; Corrected entries:")
+  for i in corrected_ids:
+    print(f"*{awl_list[i]}")
+  awl_list = [entry for entry in awl_list if Pos.DEL.value not in entry[POS].split(" ")]
+  awl_final_count = len(awl_list)
+  print(f"Total AWL list entries after thinning: {awl_final_count} ({awl_final_count - awl_raw_count} entries removed from total of {awl_final_count + awl_raw_count})")
+
+  #### Output final awl list & updated GEPT list
+  # save_list(gept_list, new_gept_json)
+  save_list(awl_list, awl_for_gept_json)
+
 
