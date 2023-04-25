@@ -126,7 +126,8 @@
     }
 
     .t1_form_in {
-      height: 250px;
+      /* height: 250px; */
+      height: auto;
       flex-shrink: 0;
     }
 
@@ -252,7 +253,8 @@
 
       .t1_form_in,
       .t1_form_out {
-        height: inherit;
+        /* height: inherit; */
+        height: auto;
         width: 50%;
       }
     }

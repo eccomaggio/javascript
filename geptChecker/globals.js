@@ -10,6 +10,7 @@
     const HTM = {
       G_level: document.getElementById("t1_level"),
       K_theme: document.getElementById("t1_theme"),
+      B_AWL: document.getElementById("t1_awl"),
       form: document.getElementById("t1_form"),
       resultsLegend: document.getElementById("t1_results_legend"),
       resultsText: document.getElementById("t1_results_text"),

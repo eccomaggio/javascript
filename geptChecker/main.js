@@ -269,36 +269,25 @@
       for (let [key, value] of raw_data) {
         // ## default value of option (but screws up db lookup)
         if (value === "-1") value = "";
-        // if (key === "level" && V.currentDb.name === "GEPTKids") continue;
-        // if (key === "theme" && V.currentDb.name === "GEPT") continue;
         if (key === "level" && V.currentDb.isKids) continue;
-        if (key === "theme" && V.currentDb.isGEPT) continue;
-        if (key === "awl" && !V.currentDb.isBEST) continue;
-
-        if (key == "level" || key == "theme") {
-          if (value) data[key].push(parseInt(value.trim()));
-        } else {
+        if (key === "theme" && (V.currentDb.isGEPT || V.currentDb.isBEST)) continue;
+        if (key === "awl" && (V.currentDb.isGEPT || V.currentDb.isKids)) continue;
+        const digit = parseInt(value);
+        if (Number.isInteger(digit)) {
+          // console.log("digit:",digit)
+          data[key].push(digit);
+        } else if (value.trim()) {
           data[key].push(value.trim());
         }
       }
       // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, ""));
 
       let term = data.term.join().toLowerCase();
-      // ** Tempory arrangement for AWL sublist search
-      let awl = [];
-      // [term, awl] = term.split("@");
-      awl_raw = term.split("@")[1];
-      term = term.split("@")[0];
-      if (awl_raw) {
-        for (let el of awl_raw.split(",")){
-          awl.push(parseInt(el) + C.awl_index0)
-        }
-      }
-      // awl = parseInt(awl)
-      // if (isNaN(awl)) awl = -1;
       // ** Substitute theme data for level in GEPTKids search
       // ** otherwise theme data is disregarded
       let level = data.level;
+      const awl = data.awl.map(x => x + C.awl_index0);
+      // console.log({awl})
       if (V.currentDb.isKids) level = data.theme;
       const pos = data.pos.join("|");
       const searchTerms = term + level + pos;
@@ -332,26 +321,22 @@
     }
 
     function get_results(find) {
-      console.log("get results:",find)
       const regex = new RegExp(find.term, 'i');
       let results = V.currentDb.db.filter(el => el[C.LEMMA].search(regex) != -1);
       if (find.level.length) {
-        // let tmpResults = [];
-        // for (let i of find.level) {
-        //   tmpResults = tmpResults.concat(results.filter(el => el[C.LEVEL].includes(i)));
-        // }
-        // results = tmpResults;
-        results = results.filter(el => el[C.LEVEL][0] === find.level[0]);
+        results = results.filter(el => find.level.indexOf(el[C.LEVEL][0]) > -1);
       }
       if (find.pos) {
         results = results.filter(el => el[C.POS].search(find.pos) != -1);
       }
       if (V.isBEST && find.awl.length) {
-        // const target_awl = parseInt(find.awl) + C.awl_index0;
-        // results = results.filter(el => el[C.LEVEL][1] === target_awl);
-        console.log(">>",find.awl)
-        // const normalized_level = el[C.LEVEL][1] - C.awl_index0;
-        results = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
+        const resultsInAWL = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
+        let resultsInGEPT = [];
+        // ** Add in GEPT list words if required
+        if (find.awl.indexOf(100 + C.awl_index0) >= 0) {
+          resultsInGEPT = results.filter(el => typeof el[C.LEVEL][1] === 'undefined');
+        }
+        results = resultsInAWL.concat(resultsInGEPT);
       }
       // ## remove the dummy 0 entry from results
       if (results.length && !results[0][0]) {
@@ -426,17 +411,6 @@
       HTM.resultsText.innerHTML = "";
     }
 
-    function changeDb_words() {
-      document.getElementById('db_name1').textContent = V.currentDb.name;
-      // ## Allows for multiple elements to be toggled
-      for (let el of V.currentDb.show) {
-        el.style.setProperty("display", "block");
-      }
-      for (let el of V.currentDb.hide) {
-        el.style.setProperty("display", "none");
-      }
-      submitForm();
-    }
 
 
 
@@ -501,16 +475,6 @@
         level += `; ${V.level_subs[level_arr[1]]}`;
       }
       level = `<em>${level}</em>`;
-      // console.log("db: gept, best, kids:",V.currentDb.isGEPT,V.currentDb.isBEST,V.currentDb.isKids)
-      // console.log("entry:", awl_sublist,level)
-
-      // if (parseInt(id) >= 0) {
-      //   let tmp = [];
-      //   for (const i of entry[C.LEVEL]) {
-      //     tmp.push(V.level_subs[i]);
-      //   }
-      //   level = `<em>${tmp.join()}</em>`;
-      // }
       const pos = `[${entry[C.POS]}]`;
       const notes = (entry[C.NOTE]) ? ` ${entry[C.NOTE]}` : "";
       const html = `${level}<span>${lemma}${pos}${notes}</span>`;
@@ -1004,13 +968,6 @@
     //   return (typeof n === 'number' || !isNaN(parseInt(n)))
     // }
 
-    function changeDb_text() {
-      //rawDiv.dispatchEvent(new Event("input"));
-      const dbNameText = document.getElementById('db_name2');
-      // document.getElementById('db_name2').textContent = currentDb.name;
-      if (dbNameText) dbNameText.textContent = V.currentDb.name;
-      processText(HTM.rawDiv);
-    }
 
     // ## SLIDER code ############################################
 
@@ -1055,48 +1012,49 @@
       }
     }
 
+
     function changeDb_shared(e) {
       let choice = (e.target) ? parseInt(e.target.value) : e;
       V.currentDb = [];
-      if (choice <= 1) {
+      if (choice === 0) {
         V.currentDb = {
           name: "GEPT",
-          // ## show / hide are arrays so that multiple sections can be added if necessary
+          db: indexDb(makeGEPTdb()),
           show: [HTM.G_level],
-          hide: [HTM.K_theme],
+          hide: [HTM.K_theme,HTM.B_AWL],
           css: {
             _light: "#cfe0e8",
             _medium: "#87bdd8",
             _dark: "#3F7FBF",
             _accent: "#daebe8"
           }
-        }
+        };
         V.isKids = false;
         V.isBEST = false;
         V.isGEPT = true;
+      } else if (choice === 1) {
         let tmpDb = makeGEPTdb();
-        if (choice === 1) {
-          V.currentDb.name = "BEST";
-          V.currentDb.css = {
+        V.currentDb = {
+          name: "BEST",
+          db: indexDb(tmpDb.concat(makeAWL())),
+          show: [HTM.G_level,HTM.B_AWL],
+          hide: [HTM.K_theme],
+          css: {
             _light: "#e1e5bb",
             _medium: "#d6c373",
             _dark: "#3e4820",
             _accent: "#d98284"
           }
-          tmpDb = tmpDb.concat(makeAWL());
-          // V.isKids = false;
-          V.isBEST = true;
-          V.isGEPT = false;
-        }
-        V.currentDb.db = indexDb(tmpDb);
-        tmpDb = undefined;
-        V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
+        };
+        V.isKids = false;
+        V.isBEST = true;
+        V.isGEPT = false;
       } else {
         V.currentDb = {
           name: "GEPTKids",
           db: indexDb(makeKIDSdb()),
           show: [HTM.K_theme],
-          hide: [HTM.G_level],
+          hide: [HTM.G_level,HTM.B_AWL],
           css: {
             _light: "#f9ccac",
             _medium: "#f4a688",
@@ -1107,15 +1065,35 @@
         V.isKids = true;
         V.isBEST = false;
         V.isGEPT = false;
-        V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
       }
       V.currentDb.language = "en";
+      V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
       for (let key in V.currentDb.css) {
         const property = key[0] == "_" ? `--${key.slice(1)}` : key;
         HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
       }
       changeDb_text();
       changeDb_words();
+    }
+
+    function changeDb_words() {
+      document.getElementById('db_name1').textContent = V.currentDb.name;
+      // ## Allows for multiple elements to be toggled
+      for (let el of V.currentDb.show) {
+        el.style.setProperty("display", "block");
+      }
+      for (let el of V.currentDb.hide) {
+        el.style.setProperty("display", "none");
+      }
+      submitForm();
+    }
+
+    function changeDb_text() {
+      //rawDiv.dispatchEvent(new Event("input"));
+      const dbNameText = document.getElementById('db_name2');
+      // document.getElementById('db_name2').textContent = currentDb.name;
+      if (dbNameText) dbNameText.textContent = V.currentDb.name;
+      processText(HTM.rawDiv);
     }
 
     // ## TABS ############################################
