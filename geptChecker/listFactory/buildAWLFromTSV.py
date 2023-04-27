@@ -164,18 +164,39 @@ def create_awl_from_tsv(tsv_filename):
           elif entry.endswith("ly"):
             pos += [Pos.ADV.value]
             pos += [Pos.DEL.value]
+
           elif entry.endswith("ble"):
+            pos += [Pos.ADJ.value]
+          elif entry.endswith("ive"):
             pos += [Pos.ADJ.value]
           elif entry.endswith("al"):
             pos += [Pos.ADJ.value]
           elif entry.endswith("ic"):
             pos += [Pos.ADJ.value]
+          elif entry.endswith("nt"):
+            pos += [Pos.ADJ.value]
+          elif entry.endswith("ful"):
+            pos += [Pos.ADJ.value]
+          elif entry.endswith("less"):
+            pos += [Pos.ADJ.value]
+
           elif entry.endswith("ion"):
+            pos += [Pos.N.value]
+          elif entry.endswith("ism"):
+            pos += [Pos.N.value]
+          elif entry.endswith("ncy"):
             pos += [Pos.N.value]
           elif entry.endswith("ty"):
             pos += [Pos.N.value]
+          elif entry.endswith("or"):
+            pos += [Pos.N.value]
+          elif entry.endswith("er"):
+            pos += [Pos.N.value]
           elif entry.endswith("ment"):
             pos += [Pos.N.value]
+          elif entry.endswith("ness"):
+            pos += [Pos.N.value]
+
           elif entry.endswith("ize"):
             pos += [Pos.V.value]
           # elif entry.endswith("ise"):
