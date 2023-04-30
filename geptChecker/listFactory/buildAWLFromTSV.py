@@ -28,6 +28,7 @@ output file as a .json file (so it can be used by javascript)
 import csv
 import json
 import os
+import sys
 import re
 import string
 from enum import Enum
@@ -114,6 +115,10 @@ class Pos(Enum):
   VING = "Ving"
   UK = "UK"
   DEL = "DEL"
+  AWL_ONLY = 1
+  GEPT_ONLY = 2
+  AWL_AND_GEPT = 3
+  # AWL_OR_GEPT = 4 ## overlaps all others!
 
 LEMMA = 0
 POS = 1
@@ -121,6 +126,7 @@ LEVEL = 2
 NOTES = 3
 
 SEP = "\""
+NOTES_SEP = "|"
 # ALPHA = "[a-zA-Z]"
 shared_words = {}
 
@@ -142,7 +148,12 @@ def create_awl_from_tsv(tsv_filename):
         for (i, entry) in enumerate(entries):
           notes = []
           # notes += [f"AWL_{level}"]
-          notes += ["headword"] if i == 0 else [f"headword_{headword}"]
+          # awl_info = NOTES_SEP + "headword"
+          # if i > 0:
+          #   awl_info += f"_{headword}"
+          awl_info = f"{NOTES_SEP}{headword} {Pos.AWL_ONLY.value}"
+          # notes += ["headword"] if i == 0 else [f"headword_{headword}"]
+          notes += [awl_info]
           gept_level = 1 if level <= 5 else 2
           pos = []
           display = entry
@@ -202,21 +213,27 @@ def create_awl_from_tsv(tsv_filename):
           # elif entry.endswith("ise"):
           #   pos += [Pos.V.value]
 
-          awl_list += [[display.strip()," ".join(pos),[gept_level,37 + level]," ".join(notes)]]
+          awl_list += [[display.strip()," ".join(pos),[gept_level,37 + level], " ".join(notes)]]
 
     return awl_list
 
 
 
 def create_awl_list(awl_json, awl_tsv):
+  """
+  If pre-complied json file exists, it reads that
+  otherwise create the list
+  """
   awl_list = []
-  full_path = os.path.join(os.getcwd(),awl_json)
-  if os.path.isfile(full_path):
-    print("Grabbing AWL list from JSON...")
-    awl_list = get_list_from_json(awl_json)
-  else:
-    print("Creating AWL list from CSV...")
-    awl_list = create_awl_from_tsv(awl_tsv)
+  # full_path = os.path.join(os.getcwd(),awl_json)
+  # if os.path.isfile(full_path):
+  #   print("Grabbing AWL list from JSON...")
+  #   awl_list = get_list_from_json(awl_json)
+  # else:
+  #   print("Creating AWL list from CSV...")
+  #   awl_list = create_awl_from_tsv(awl_tsv)
+  awl_list = create_awl_from_tsv(awl_tsv)
+  save_list(awl_list, awl_json)
   # pprint(AWL_list)
   print(f"AWL contains {len(awl_list)} entries")
   return awl_list
@@ -231,36 +248,48 @@ def add_gept_level(awl_list, gept_list):
   count = 0
   for awl_line in awl_list:
     for gept_line in gept_list:
-      if gept_line[LEMMA] == awl_line[LEMMA]:
-        awl_line[LEVEL][0] = gept_line[LEVEL][0]
-        if "gept" not in awl_line[NOTES].split(" "):
-          awl_line[NOTES] += " gept"
-        count += 1
-        shared_words[gept_line[LEMMA]] = 1
-        break
-  print(f"There are {count} GEPT words in the AWL wordlist.")
-  return awl_list
-
-
-
-def deal_with_duplicates(gept_list, awl_list):
-  """
-  Update GEPT list to show AWL sublist number if entry also in AWL
-  Mark duplicate entry in AWL for deletion
-  """
-  global shared_words
-  count = 0
-  for gept_line in gept_list:
-    for awl_line in awl_list:
-      if gept_line[LEMMA] == awl_line[LEMMA]:
+      # if len(gept_line[LEMMA]) == 0:
+      #   print("Hallloooo!!!")
+      #   continue
+      if gept_line[LEMMA] == awl_line[LEMMA] and Pos.DEL.value not in awl_line[POS].split(" "):
+        """
+        LOGIC: if entry in both lists, update GEPT, delete AWL
+        (because GEPT list is used as a stand alone; AWL only in combination with GEPT)
+        """
+        gept_line[POS] = awl_line[POS] # prefer manually corrected version
+        word_provenance = f"{awl_line[NOTES][:-1]}{Pos.AWL_AND_GEPT.value}"
+        gept_line[NOTES] = f"{gept_line[NOTES]}{word_provenance}"
+        # gept_line[NOTES] += awl_line[NOTES]
         gept_line[LEVEL] += [awl_line[LEVEL][1]]
         awl_line[POS] += " " + Pos.DEL.value
         count += 1
-        shared_words[gept_line[LEMMA]] += 1
-        # gept_line[NOTES] += f" (AWL-{awl_line[LEVEL][1]-AWL_INDEX})"
-      # gept_line[NOTES] = gept_line[NOTES].strip()
-  print(f"There are {count} AWL words in the GEPT wordlist.")
-  return gept_list
+        shared_words[gept_line[LEMMA]] = 1
+  print(f"There are {count} GEPT words in the AWL wordlist.")
+  for gept_line in gept_list:
+    if NOTES_SEP not in gept_line[NOTES]:
+      gept_line[NOTES] += f"{NOTES_SEP}- {Pos.GEPT_ONLY.value}"
+  return (awl_list, gept_list)
+
+
+
+# def deal_with_duplicates(gept_list, awl_list):
+#   """
+#   Update GEPT list to show AWL sublist number if entry also in AWL
+#   Mark duplicate entry in AWL for deletion
+#   """
+#   global shared_words
+#   count = 0
+#   for gept_line in gept_list:
+#     for awl_line in awl_list:
+#       if gept_line[LEMMA] == awl_line[LEMMA]:
+#         gept_line[LEVEL] += [awl_line[LEVEL][1]]
+#         awl_line[POS] += " " + Pos.DEL.value
+#         count += 1
+#         shared_words[gept_line[LEMMA]] += 1
+#         # gept_line[NOTES] += f" (AWL-{awl_line[LEVEL][1]-AWL_INDEX})"
+#       # gept_line[NOTES] = gept_line[NOTES].strip()
+#   print(f"There are {count} AWL words in the GEPT wordlist.")
+#   return gept_list
 
 
 def get_homonyms(list):
@@ -278,19 +307,69 @@ def get_homonyms(list):
 
 
 def add_pos_corrections(list, pos_corrections_filename):
+  """
+  AWL list & corrected list should same number of entries.
+  The corrected list is automatically compiled but manually corrected.
+  This routine implements the manual corrections
+  """
   # awl_pos_corrections = [[line[LEMMA], line[POS]] for line in awl_list]
   # save_list(awl_pos_corrections,pos_corrections_filename)
   awl_pos_corrections = get_list_from_json(pos_corrections_filename)
+
   # print("compare master with corrections:",len(awl_list), len(awl_pos_corrections))
   # print("before:", list[6])
+
+  """ to debug: for some reason, the automated process drops
+{'conceptualisation', 'derivation', 'derivations', 'conceptualise', 'undefined', 'derive'}
+from the corrections list
+as the following 4 lines of test show:
+  """
+  # awl_set = set([el[0] for el in list])
+  # corr_set = set([el[0] for el in awl_pos_corrections])
+  # print("difference:",awl_set.difference(corr_set))
+  # sys.exit()
   list_of_corrected_ids = []
   for (i,entry) in enumerate(list):
-    if entry[POS] != awl_pos_corrections[i][POS]:
+    tmp = [el for el in awl_pos_corrections if el[LEMMA] == entry[LEMMA]]
+    # print("test:",entry, tmp)
+    if not len(tmp):
+      print(entry)
+      continue
+    # corrected_entry = awl_pos_corrections[i]
+    corrected_entry = tmp[0]
+    # if corrected_entry[LEMMA].find("estimat") != -1:
+    #   print("compare: id=", i, entry[:2], corrected_entry, entry[POS] != corrected_entry[POS])
+    if entry[POS] != corrected_entry[POS]:
       list_of_corrected_ids += [i]
-      entry[POS] = awl_pos_corrections[i][POS]
+      entry[POS] = corrected_entry[POS]
   # print("after:", list[6])
+  # sys.exit()
   return (list, list_of_corrected_ids)
 
+
+def create_additions_list(pos_corrections_filename, additions_filename):
+  """
+  Extract a list of all potential missing entries (as marked with @ during manual correction)
+  Create a json list for manual adjustment.
+  The entries in this file will then be added to the master AWL list.
+  (Missing entries consist of:
+  1) words which have Vpp/Ving/Vs but not infinitive.
+  As the GEPT list infers inflections from infinitive, this version of the AWL
+  replaces all inflected forms with a single infinitive form
+  2) words which have UK spelling -ise, but do not consistently include US -ize spelling)
+
+  """
+  corrections = get_list_from_json(pos_corrections_filename)
+  additions = []
+  if os.path.exists(awl_additions_filename):
+    additions = get_list_from_json(additions_filename)
+  else:
+    additions_raw = [entry[LEMMA] for entry in corrections if entry[POS].find("@") != -1]
+    additions = [entry for entry in awl_list if entry[LEMMA] in additions_raw]
+  # print("additions",additions)
+  # print("to add:", additions_list)
+  # save_list(additions, additions_filename)
+  return additions
 
 
 def get_list_from_json(json_filename):
@@ -323,36 +402,43 @@ if __name__ == "__main__":
   new_gept_json = "dbGEPT.new.json"
   awl_for_gept_json = "dbAWL.new.json"
   pos_corrections_filename = "awl_pos_corrections.json"
+  awl_additions_filename = "awl_additions.json"
 
   #### Load the two wordlists (if awl wordlist json does not exist, create it)
   awl_list = create_awl_list(awl_full_json, awl_tsv)
   gept_list = get_list_from_json(gept_json)
 
-  #### Add in mutual references between the two lists
-  awl_list = add_gept_level(awl_list,gept_list)
-  # save_list(awl_list, awl_full_json)
-  gept_list = deal_with_duplicates(gept_list, awl_list)
-
-  #### Check for internal consistency (expand this) & generate stats
-  print("shared words:",len(shared_words))
-  homonyms_in_gept = get_homonyms(gept_list)
-  print("homonyms in gept:", len(homonyms_in_gept))
-  # print(homonyms_in_gept)
-
   #### Make (automated) manual corrections
   #### Manually adjust corrections list to implement corrects. "DEL" = delete this entry
   awl_list, corrected_ids = add_pos_corrections(awl_list, pos_corrections_filename)
 
+  #### Add in mutual references between the two lists
+  # awl_list = add_gept_level(awl_list,gept_list)
+  awl_list, gept_json = add_gept_level(awl_list,gept_list)
+  # save_list(awl_list, awl_full_json)
+  # gept_list = deal_with_duplicates(gept_list, awl_list)
+
+  #### Check for internal consistency (expand this) & generate stats
+  # print("shared words:",len(shared_words))
+  # homonyms_in_gept = get_homonyms(gept_list)
+  # print("homonyms in gept:", len(homonyms_in_gept))
+
+  #### Make additions list if necessary
+  # make it so that it just loads the file if additions.json already exists.
+  infinitives_to_add = create_additions_list(pos_corrections_filename,awl_additions_filename)
+
   awl_raw_count = len(awl_list)
   print(f"AWL list total: {awl_raw_count}; Corrected entries:")
-  for i in corrected_ids:
-    print(f"*{awl_list[i]}")
+  # for i in corrected_ids:
+  #   print(f"@{awl_list[i]}")
   awl_list = [entry for entry in awl_list if Pos.DEL.value not in entry[POS].split(" ")]
+  awl_list = awl_list + infinitives_to_add
   awl_final_count = len(awl_list)
   print(f"Total AWL list entries after thinning: {awl_final_count} ({awl_final_count - awl_raw_count} entries removed from total of {awl_final_count + awl_raw_count})")
 
   #### Output final awl list & updated GEPT list
-  # save_list(gept_list, new_gept_json)
+  save_list(gept_list, new_gept_json)
+  # save_list(sorted(awl_list, key=lambda entry: entry[0]), awl_for_gept_json)
   save_list(awl_list, awl_for_gept_json)
 
 

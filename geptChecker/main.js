@@ -329,7 +329,7 @@
       if (find.pos) {
         results = results.filter(el => el[C.POS].search(find.pos) != -1);
       }
-      if (V.isBEST && find.awl.length) {
+      if (V.isBEST && find.awl && find.awl.length) {
         const resultsInAWL = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
         let resultsInGEPT = [];
         // ** Add in GEPT list words if required
@@ -911,7 +911,8 @@
       const searchResults = get_results(search);
       const matches = [];
       // ## return only the IDs
-      for (const i in get_results(search)) {
+      // for (const i in get_results(search)) {
+      for (const i in searchResults) {
         if (searchResults[i]) matches.push(searchResults[i][0]);
       }
       // console.log("*dbLookup* matches=",search, matches)
