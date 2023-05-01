@@ -346,8 +346,15 @@
     }
 
     function getAwlSublist(level_arr) {
-      return (level_arr[1] && V.isBEST) ? level_arr[1] - C.awl_index0 : -1;
+      return (V.isBEST && level_arr[1]) ? level_arr[1] - C.awl_index0 : -1;
+    }
 
+    function getNormalizedLevels(level_arr){
+      if (V.isKids){
+        return [level_arr[0],-1,-1]
+      } else {
+        return [level_arr]
+      }
     }
 
     function format_results(results) {
@@ -372,8 +379,9 @@
           let level = V.level_subs[level_arr[0]];
           if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
           if (!level) continue;
-          let note = entry[C.NOTE].trim();
+          let [note,awl_note] = entry[C.NOTE].trim().split(C.NOTE_SEP);
           note = note ? `, ${note}` : "";
+          note += (V.isBEST) ? ` (headword: ${awl_note})` : "";
           // const col2 = `${lemma}${awl_indicator} <span class="pos">${pos}</span> ${level}${note}`;
           const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}`;
           // let class2 = (V.currentDb.name === "GEPTKids") ? "level-e" : `level-${level[0]}`;
@@ -476,7 +484,9 @@
       }
       level = `<em>${level}</em>`;
       const pos = `[${entry[C.POS]}]`;
-      const notes = (entry[C.NOTE]) ? ` ${entry[C.NOTE]}` : "";
+      let [notes,awl_notes] = entry[C.NOTE].split(C.NOTE_SEP);
+      // const notes = (entry[C.NOTE]) ? ` ${entry[C.NOTE]}` : "";
+      notes += (V.isBEST) ? ` (headword: ${awl_notes.trim()})` : ""
       const html = `${level}<span>${lemma}${pos}${notes}</span>`;
       return html;
     }

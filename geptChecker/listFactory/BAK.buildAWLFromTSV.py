@@ -147,7 +147,12 @@ def create_awl_from_tsv(tsv_filename):
           pass
         for (i, entry) in enumerate(entries):
           notes = []
-          awl_info = f"{NOTES_SEP}{headword}"
+          # notes += [f"AWL_{level}"]
+          # awl_info = NOTES_SEP + "headword"
+          # if i > 0:
+          #   awl_info += f"_{headword}"
+          awl_info = f"{NOTES_SEP}{headword} {Pos.AWL_ONLY.value}"
+          # notes += ["headword"] if i == 0 else [f"headword_{headword}"]
           notes += [awl_info]
           gept_level = 1 if level <= 5 else 2
           pos = []
@@ -208,7 +213,7 @@ def create_awl_from_tsv(tsv_filename):
           # elif entry.endswith("ise"):
           #   pos += [Pos.V.value]
 
-          awl_list += [[display.strip()," ".join(pos),[gept_level,37 + level, Pos.AWL_ONLY.value], " ".join(notes)]]
+          awl_list += [[display.strip()," ".join(pos),[gept_level,37 + level], " ".join(notes)]]
 
     return awl_list
 
@@ -243,26 +248,48 @@ def add_gept_level(awl_list, gept_list):
   count = 0
   for awl_line in awl_list:
     for gept_line in gept_list:
+      # if len(gept_line[LEMMA]) == 0:
+      #   print("Hallloooo!!!")
+      #   continue
       if gept_line[LEMMA] == awl_line[LEMMA] and Pos.DEL.value not in awl_line[POS].split(" "):
         """
         LOGIC: if entry in both lists, update GEPT, delete AWL
         (because GEPT list is used as a stand alone; AWL only in combination with GEPT)
         """
-        gept_line[POS] = awl_line[POS]
-        gept_line[LEVEL] = [gept_line[LEVEL][0],awl_line[LEVEL][1],Pos.AWL_AND_GEPT.value]
-        gept_line[NOTES] += awl_line[NOTES]
+        gept_line[POS] = awl_line[POS] # prefer manually corrected version
+        word_provenance = f"{awl_line[NOTES][:-1]}{Pos.AWL_AND_GEPT.value}"
+        gept_line[NOTES] = f"{gept_line[NOTES]}{word_provenance}"
+        # gept_line[NOTES] += awl_line[NOTES]
+        gept_line[LEVEL] += [awl_line[LEVEL][1]]
         awl_line[POS] += " " + Pos.DEL.value
         count += 1
         shared_words[gept_line[LEMMA]] = 1
   print(f"There are {count} GEPT words in the AWL wordlist.")
   for gept_line in gept_list:
-    # if NOTES_SEP not in gept_line[NOTES]:
-    if len(gept_line[LEVEL]) == 1:
-      # gept_line[NOTES] += f"{NOTES_SEP}- {Pos.GEPT_ONLY.value}"
-      gept_line[NOTES] += f"{NOTES_SEP}"
-      gept_line[LEVEL] = [gept_line[LEVEL][0],-1,Pos.GEPT_ONLY.value]
+    if NOTES_SEP not in gept_line[NOTES]:
+      gept_line[NOTES] += f"{NOTES_SEP}- {Pos.GEPT_ONLY.value}"
   return (awl_list, gept_list)
 
+
+
+# def deal_with_duplicates(gept_list, awl_list):
+#   """
+#   Update GEPT list to show AWL sublist number if entry also in AWL
+#   Mark duplicate entry in AWL for deletion
+#   """
+#   global shared_words
+#   count = 0
+#   for gept_line in gept_list:
+#     for awl_line in awl_list:
+#       if gept_line[LEMMA] == awl_line[LEMMA]:
+#         gept_line[LEVEL] += [awl_line[LEVEL][1]]
+#         awl_line[POS] += " " + Pos.DEL.value
+#         count += 1
+#         shared_words[gept_line[LEMMA]] += 1
+#         # gept_line[NOTES] += f" (AWL-{awl_line[LEVEL][1]-AWL_INDEX})"
+#       # gept_line[NOTES] = gept_line[NOTES].strip()
+#   print(f"There are {count} AWL words in the GEPT wordlist.")
+#   return gept_list
 
 
 def get_homonyms(list):

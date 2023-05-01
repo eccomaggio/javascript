@@ -785,7 +785,8 @@
       // ## removed hyphen & bar (- |)
       NBSP: String.fromCharCode(160),
       backupIDs: ["backup_0", "backup_1"],
-      awl_index0: 37
+      awl_index0: 37,
+      NOTE_SEP: "|"
       // compoundMaxLen: 1
     }
 
