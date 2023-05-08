@@ -1,2 +1,0 @@
-    console.clear();
-    "use strict";

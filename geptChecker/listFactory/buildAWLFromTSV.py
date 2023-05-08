@@ -34,6 +34,27 @@ import string
 from enum import Enum
 from pprint import pprint
 
+
+pov_lookup = {
+  'noun': 'n',
+  'verb': 'v',
+  'art': 'a',
+  'det': 'd',
+  'determiner': 'd',
+  'aux': 'x',
+  'adj': 'j',
+  'conj': 'c',
+  'interj': 'i',
+  'number': 'm',
+  'adv': 'b',
+  'prep': 'p',
+  'pron': 'r',
+  'int': 't',
+  'inf': 'f',
+  # '--': 'title',
+  '--': 'n', # titles are listed as 'noun' in main GEPT wordlist
+  }
+
 # pov_lookup = {
 #   'n': 'noun',
 #   'v': 'verb',
@@ -48,6 +69,23 @@ from pprint import pprint
 #   'prep': 'prep.',
 #   'pron': 'pron.',
 #   # '--': 'title',
+#   '--': 'noun', # titles are listed as 'noun' in main GEPT wordlist
+#   }
+
+# pov_lookup = {
+#   'n': 'noun',
+#   'v': 'verb',
+#   'a': 'art.',
+#   'd': 'determiner',
+#   'x': 'aux.',
+#   'j': 'adj.',
+#   'c': 'conj.',
+#   'i': 'interj.',
+#   'm': 'number',
+#   'b': 'adv.',
+#   'p': 'prep.',
+#   'r': 'pron.',
+#   # 't': 'title',
 #   '--': 'noun', # titles are listed as 'noun' in main GEPT wordlist
 #   }
 
@@ -345,15 +383,28 @@ def create_additions_list(pos_corrections_filename, additions_filename):
   return additions
 
 
+def minimize_pos(pos):
+  if pos:
+    pos = pos.replace(".","")
+    pos = re.sub("[()/,]"," ", pos)
+    pos = re.sub("\s{2,}", " ", pos).strip()
+    # return " ".join([pov_lookup[item] for item in pos.split(" ")])
+    return "".join([pov_lookup[item] for item in pos.split(" ")])
+
+
 def get_list_from_json(json_filename):
   with open(os.path.join(os.getcwd(),json_filename), "r") as f:
     return json.load(f)
 
 
 
-def save_list(list, out_filename):
+def save_list(list, out_filename, top="", tail=""):
   with open(os.path.join(os.getcwd(),out_filename), "w") as out_file:
+    if top:
+      out_file.write(top)
     json.dump(list,out_file, indent=None)
+    if tail:
+      out_file.write(tail)
 
 
 
@@ -372,10 +423,15 @@ if __name__ == "__main__":
   awl_full_json = "AWLlist.full.json"
   awl_gept_json = "AWLlist.gept.json"
   gept_json = "dbGEPT.json"
-  new_gept_json = "dbGEPT.new.json"
-  awl_for_gept_json = "dbAWL.new.json"
   pos_corrections_filename = "awl_pos_corrections.json"
   awl_additions_filename = "awl_additions.json"
+  new_gept_json = "dbGEPT.new.json"
+  awl_for_gept_json = "dbAWL.new.json"
+  new_gept_javascript = "dbGEPT.new.js"
+  new_awl_javascript = "dbAWL.new.js"
+
+  kids_json = "dbKids.json"
+  new_kids_javascript = "dbKids.new.js"
 
   #### Load the two wordlists (if awl wordlist json does not exist, create it)
   awl_list = create_awl_list(awl_full_json, awl_tsv)
@@ -409,9 +465,25 @@ if __name__ == "__main__":
   awl_final_count = len(awl_list)
   print(f"Total AWL list entries after thinning: {awl_final_count} ({awl_final_count - awl_raw_count} entries removed from total of {awl_final_count + awl_raw_count})")
 
+  #### Turn POS list into short format
+  # print("!!!!!",minimize_pos("adj./adv./prep./noun"))
+  gept_list = [[el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in gept_list]
+  awl_list = [[el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in awl_list]
+
+  # print(gept_list)
+  # sys.exit("bye bye")
+
   #### Output final awl list & updated GEPT list
   save_list(gept_list, new_gept_json)
   # save_list(sorted(awl_list, key=lambda entry: entry[0]), awl_for_gept_json)
   save_list(awl_list, awl_for_gept_json)
 
 
+
+  #### Output lists as javascript files
+  save_list(gept_list, new_gept_javascript,"function makeGEPTdb() {\n return","\n;}")
+  save_list(awl_list, new_awl_javascript,"function makeAWLdb() {\n return","\n;}")
+
+  kids_list = get_list_from_json(kids_json)
+  kids_list = [[el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in kids_list]
+  save_list(kids_list, new_kids_javascript,"function makeKIDSdb() {\n return","\n;}")

@@ -1,6 +1,4 @@
-    function makeKIDSdb() {
-      return [
-        ["", "", [0], "dummy entry: 0 easily confused with undefined :S"],
+        [["", "", [0], "dummy entry: 0 easily confused with undefined"],
         ["animal", "noun", [3], "動物"],
         ["bear", "noun", [3], "熊"],
         ["bee", "noun", [3], "蜜蜂"],
@@ -686,7 +684,5 @@
         ["which", "determiner", [37], "哪一個…"],
         ["who", "pron.", [37], "誰…"],
         ["whose", "determiner", [37], "誰的…"],
-        ["why", "adv.", [37], "為什麼…"],
-      ];
-    }
-
+        ["why", "adv.", [37], "為什麼…"]
+      ]
