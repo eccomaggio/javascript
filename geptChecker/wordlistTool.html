@@ -2273,7 +2273,7 @@ function submitForm(event) {
   if (isEmptySearch(data)) {
     errorMsg = "Please enter at least one search term to restrict the number of results.";
   }
-  else if (term.search(/[^a-zA-Z\s\-\s\']/g) > -1) {
+  else if (term.search(/[^a-zA-Z\-\s']/g) > -1) {
     errorMsg = "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.";
   }
   else {
@@ -2343,7 +2343,7 @@ function refineSearch(find) {
 function getDerivedForms(term) {
   // ### retrieve non-regex form of search term
   let raw_term = term.toString().slice(1, -2);
-  for (char of "^:.*$/") {
+  for (const char of "^:.*$/") {
     raw_term = raw_term.replace(char, "");
   }
   let matches = [];
@@ -2576,7 +2576,7 @@ function splitText(raw_text) {
     .replace(/(\w)\/(\w)/g, "$1 / $2");
   const raw_chunks = raw_text
     .trim()
-    .replace(/([\.,;()\:\?\!])\s+/gi, "$1@@")
+    .replace(/([.,;():?!])\s+/gi, "$1@@")
     .split("@@");
 
   let chunks = [];
@@ -2874,15 +2874,14 @@ function buildRepeatList(wordCount) {
       if (V.wordStats[key] > 1 && !lookup.repeatableWords.includes(word)) {
         countReps++;
         let anchors = "";
-        let awlClass = "";
-        for (let x = 1; x <= V.wordStats[key]; x++) {
-          let display = x;
+        for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
+          let display = repetition;
           let displayClass = 'class="anchors" ';
-          if (x === 1) {
+          if (repetition === 1) {
             display = highlightAwlWord(level_arr, word);
             displayClass = `class="level-${getLevelPrefix(level_arr[0])}" `;
           }
-          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${key}_${x}'); return false;">${display}</a>`;
+          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${key}_${repetition}'); return false;">${display}</a>`;
         }
         listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
       }
@@ -2915,12 +2914,17 @@ function displayCheckedText(htmlText, listOfRepeats, wordCount) {
     } else {
       htmlText += "<h1>There are no significant repeated words.</h1>"
     }
-    const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(wordCount > 1 ? "s" : "")}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
+    // const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(wordCount > 1 ? "s" : "")}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
+    const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
     HTM.finalLegend.innerHTML = displayDbName(numOfWords);
     HTM.finalInfoDiv.style.display = "flex";
   }
   HTM.finalTextDiv.innerHTML = htmlText;
   HTM.finalInfoDiv.innerHTML = "";
+}
+
+function pluralNoun(amount) {
+  return (amount > 1) ? "s" : "";
 }
 
 function displayDbName(msg) {
@@ -2933,7 +2937,7 @@ function dbLookup(word) {
   if (typeof word !== "string") throw new Error("Search term must be a string.")
   if (!word) return [];
   word = word.toLowerCase();
-  searchResults = V.currentDb.db
+  const searchResults = V.currentDb.db
     .filter(el => el[C.LEMMA].toLowerCase() === word)
     .map(el => el[C.ID]);
   return searchResults;
