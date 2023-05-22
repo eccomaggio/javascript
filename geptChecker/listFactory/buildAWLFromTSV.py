@@ -171,6 +171,14 @@ shared_words = {}
 
 def create_awl_from_tsv(tsv_filename):
   awl_list = []
+  headword_corrections = {
+      "utilise": "utilize",
+      "maximise": "maximize",
+      "minimise": "minimize",
+      "licence": "license",
+      "labour": "labor",
+      "criteria": "criterion"
+  }
   # with open(os.path.join(os.getcwd(),tsv_filename), "r") as tsv_file, open(os.path.join(os.getcwd(),"out.json"),"w") as out_file:
   with open(os.path.join(os.getcwd(),tsv_filename), "r") as tsv_file:
     tsv_reader = csv.reader(tsv_file, delimiter="\t")
@@ -179,6 +187,10 @@ def create_awl_from_tsv(tsv_filename):
         headword = row[0]
         level = int(row[1])
         entries = [headword]
+        try:
+          headword = headword_corrections[headword]
+        except KeyError:
+          pass
         try:
           entries += row[2].split(",")
         except IndexError:
