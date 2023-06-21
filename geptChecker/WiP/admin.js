@@ -1,3 +1,3 @@
-    "use strict";
     console.clear();
-    document.getElementById("version-no").innerHTML = "Version 5-0.2"
+    "use strict";
+    document.getElementById("version-no").innerHTML = "Version 5-0.1"

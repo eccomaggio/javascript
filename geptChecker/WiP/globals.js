@@ -275,7 +275,7 @@ const lookup = {
     "s",
   ],
 
-  irregRoot: {
+  irregPlural: {
     feet: "foot",
     geese: "goose",
     men: "man",
@@ -284,8 +284,7 @@ const lookup = {
     women: "woman",
     children: "child",
     oxen: "ox",
-    an: "a",
-    worst: "bad"
+    an: "a"
   },
 
   irregNegVerb: {

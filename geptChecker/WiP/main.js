@@ -281,7 +281,7 @@ function submitForm(event) {
     }
   }
   const term = data.term.join().split(" ")[0].toLowerCase();
-  // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, ""),data);
+  // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, "");
   if (isEmptySearch(data)) {
     errorMsg = "Please enter at least one search term to restrict the number of results.";
   }
@@ -316,7 +316,6 @@ function isEmptySearch(searchTerms) {
 }
 
 function refineSearch(find) {
-
   let results = V.currentDb.db.filter(el => el[C.LEMMA].search(find.term) != -1);
   // console.log("get results for term:", find.term,results.length, results)
   // console.log("get results for term:", find, find.level.length || find.awl.length || find.pos.length)
@@ -334,27 +333,22 @@ function refineSearch(find) {
     2-in gept only
     3-in gept AND awl
 
-    from search (awl[0]): awlMode =
+    from search from (awl)
     100 = choose only words in AWL list
     200 = choose only words in GEPT list
-    300 = choose only AWL headwords
     */
-    const awlMode = (find.awl[0] >= 100) ? find.awl[0] : 0;
-    const awlSublists = (awlMode) ? find.awl.slice(1) : find.awl ;
-    if (awlMode == 100) {
-      results = results.filter(el => el[C.LEVEL][1] > -1);
-    }
-    else if (awlMode === 200) {
+    if (find.awl == 200) {
       results = results.filter(el => el[C.LEVEL][2] >= 2);
     }
-    else if (awlMode == 300) {
-      results = results.filter(el => el[C.LEMMA] === el[C.NOTE].split("|")[1]);
+    else if (find.awl == 100) {
+      results = results.filter(el => el[C.LEVEL][1] > -1);
     }
-    if (awlSublists.length) {
-      results = results.filter(el => awlSublists.indexOf(el[C.LEVEL][1]) > -1);
+    else {
+      results = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
     }
   }
   results = results.filter(result => result[C.ID] > 0);
+  // console.log("refined search results",results)
   return results;
 }
 
@@ -392,15 +386,17 @@ function formatResults(results) {
         output += formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", "");
       }
       const level_arr = entry[C.LEVEL];
-      let level = V.level_subs[level_arr[0]];
-      if (!level) continue;
       const awl_sublist = getAwlSublist(level_arr);
-      if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
       const awlWord = highlightAwlWord(level_arr, entry[C.LEMMA]);
-      // const lemma = `<strong>${awlWord}</strong>`;
-      // const pos = `[${expandPos(entry)}]`;
+      const lemma = `<strong>${awlWord}</strong>`;
+      // const pos = `[${entry[C.POS].trim()}]`;
+      const pos = `[${expandPos(entry)}]`;
+      // const awl_indicator = (awl_sublist >= 0) ? `; AWL${awl_sublist}` : "";
+      let level = V.level_subs[level_arr[0]];
+      if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
+      if (!level) continue;
       let [note, awl_note] = getNotes(entry);
-      const col2 = `<strong>${awlWord}</strong> <span class="show-pos">${expandPos(entry)}</span> <span class="show-level">${level}</span>${note}${awl_note}`;
+      const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}${awl_note}`;
       let class2 = (V.currentDb.isKids) ? "level-e" : `level-${level[0]}`;
       output += formatResultsAsTablerows(`${i + 1}`, col2, "", class2);
       previousInitial = currentInitial;
@@ -428,8 +424,7 @@ function displayResults(output) {
   const resultText = output[0];
   const resultCount = output[1];
   let text = lookup.legends.results;
-  // if (resultCount) text += ` (${resultCount})`;
-  if (resultCount) text = `${resultCount} result${pluralNoun(resultCount)}:`;
+  if (resultCount) text += ` (${resultCount})`;
   HTM.resultsLegend.innerHTML = text;
   HTM.resultsText.innerHTML = resultText;
 }
@@ -739,61 +734,64 @@ function lookupDerivations([word, raw_word], matches = []) {
   else if (lookup.setOfCommonNames.has(word) && (raw_word[0] === raw_word[0].toUpperCase())) {
     matches.push(markOfflist(word, "proper name"))
   }
-  // matches = dbLookup(word); ## remove as produces accidental recursions
-  else if (lookup.irregNegVerb[word]) {
-    /* ## test = hidden written stole lain */
-    const candidate = dbLookup(lookup.irregNegVerb[word])[0];
-    // ## Check for GEPTKids to ensure word is in the very limited wordlist
-    if (candidate) matches.push(candidate);
-  }
-  else if (lookup.irregRoot[word]) {
-    /* ## test: worst, indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crisis */
-    matches.push(dbLookup(lookup.irregRoot[word])[0]);
-  }
-  else if (lookup.irregVerb[word]) {
-    /* ## test = aren't won't cannot */
-    const candidate = dbLookup(lookup.irregVerb[word])[0];
-    // ## Check for GEPTKids to ensure word is in the very limited wordlist
-    if (candidate) matches.push(candidate);
-  }
-  else if (word.slice(-3) === "ing") {
-    /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
-    addToMatches(word, matches, lookup.g_subs, "v");
-  }
-  else if (word.slice(-2) === "ed") {
-    /* ## test = robbed gagged passed busied played visited */
-    addToMatches(word, matches, lookup.d_subs, "v");
-  }
-  else if (word.slice(-2) === "st") {
-    /* ## test = "longest hottest prettiest closest soonest" */
-    addToMatches(word, matches, lookup.est_subs, "j");
-  }
-  else if (word.slice(-2) === "ly") {
-    /* ## test: happily clumsily annually finely sensibly sadly automatically */
-    addToMatches(word, matches, lookup.y_subs, "j");
-  }
-  else if (word.slice(-1) === "r") {
-    /* ## test = "longer hotter prettier closer sooner" */
-    addToMatches(word, matches, lookup.er_subs, "j");
-  }
-  else if (word.slice(-1) === "s") {
-    /* ## test: families tries potatoes scarves crises boxes dogs ## Filter out adjs (can't take '-s') */
-    const candidates = findBaseForm(word, lookup.s_subs);
-    for (const id of candidates) {
-      const candidate = getDbEntry(id);
-      if (candidate.length > 0 && candidate[C.POS] !== "j") {
-        matches.push(id);
+  else if (V.currentDb.language === "en") {
+    // matches = dbLookup(word); ## remove as produces accidental recursions
+    if (lookup.irregNegVerb[word]) {
+      /* ## test = hidden written stole lain */
+      const candidate = dbLookup(lookup.irregNegVerb[word])[0];
+      // ## Check for GEPTKids to ensure word is in the very limited wordlist
+      if (candidate) matches.push(candidate);
+    }
+    else if (lookup.irregVerb[word]) {
+      /* ## test = aren't won't cannot */
+      const candidate = dbLookup(lookup.irregVerb[word])[0];
+      // ## Check for GEPTKids to ensure word is in the very limited wordlist
+      if (candidate) matches.push(candidate);
+    }
+    if (word.slice(-3) === "ing") {
+      /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
+      addToMatches(word, matches, lookup.g_subs, "v");
+
+    }
+    if (word.slice(-2) === "ed") {
+      /* ## test = robbed gagged passed busied played visited */
+      addToMatches(word, matches, lookup.d_subs, "v");
+    }
+    if (!matches.length) {
+      if (word.slice(-2) === "st") {
+        /* ## test = "longest hottest prettiest closest soonest" */
+        addToMatches(word, matches, lookup.est_subs, "j");
+      }
+      else if (word.slice(-1) === "r") {
+        /* ## test = "longer hotter prettier closer sooner" */
+        addToMatches(word, matches, lookup.er_subs, "j");
+      }
+      else if (word.slice(-1) === "s") {
+        /* ## test: families tries potatoes scarves crises boxes dogs ## Filter out adjs (can't take '-s') */
+        const candidates = findBaseForm(word, lookup.s_subs);
+        for (const id of candidates) {
+          const candidate = getDbEntry(id);
+          if (candidate.length > 0 && candidate[C.POS] !== "j") {
+            matches.push(id);
+          }
+        }
+      }
+      else if (word.slice(-2) === "ly") {
+        /* ## test: happily clumsily annually finely sensibly sadly automatically */
+        addToMatches(word, matches, lookup.y_subs, "j");
+      }
+      else if (lookup.irregPlural[word]) {
+        /* ## test: indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crisis */
+        matches.push(dbLookup(lookup.irregPlural[word])[0]);
+      }
+      for (const match of checkForeignPlurals(word)) {
+        matches.push(...match)
+      }
+      if (typeof matches[0] === 'undefined') {
+        matches.push(markOfflist(word, "offlist"));
       }
     }
   }
-  else {
-    for (const match of checkForeignPlurals(word)) {
-      matches.push(...match)
-    }
-  }
-  if (typeof matches[0] === 'undefined') {
-    matches.push(markOfflist(word, "offlist"));
-    }
   // console.log("lookupDerivations", word, matches)
   return matches;
 }
@@ -900,8 +898,7 @@ function buildRepeatList(wordCount) {
         listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
       }
     }
-    // listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on a number to jump to the word.</em></p><div id='repeats'>` + listOfRepeats;
-    listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${pluralNoun(countReps)}:</strong><br><em>Click on a number to jump to the word.</em></p><div id='repeats'>` + listOfRepeats;
+    listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on a number to jump to the word.</em></p><div id='repeats'>` + listOfRepeats;
     listOfRepeats += "</div>";
   }
   return listOfRepeats
@@ -1117,7 +1114,7 @@ function changeDb_shared(e) {
   V.currentDb.language = "en";
   V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
   for (let key in V.currentDb.css) {
-    const property = key[0].startsWith("_") ? `--${key.slice(1)}` : key;
+    const property = key[0] == "_" ? `--${key.slice(1)}` : key;
     HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
   }
   changeDb_text();
