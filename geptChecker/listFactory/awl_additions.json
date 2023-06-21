@@ -1,0 +1,59 @@
+[
+  ["individualize", "verb",
+    [
+      1,
+      38,
+      2
+    ], "|individual 1"
+  ],
+  ["categorize", "verb",
+    [
+      1,
+      39,
+      2
+    ], "|category 1"
+  ],
+  ["computerize", "verb",
+    [
+      1,
+      39,
+      2
+    ], "|compute 1"
+  ],
+  ["institutionalize", "verb",
+    [
+      1,
+      39,
+      2
+    ], "|institute 1"
+  ],
+  ["itemize", "verb",
+    [
+      1,
+      39,
+      2
+    ], "|item 1"
+  ],
+  ["deregulate", "verb",
+    [
+      1,
+      39,
+      2
+    ], "|regulate 1"
+  ],
+  ["minister", "noun/verb",
+    [
+      2,
+      43,
+      3
+    ], "|ministry 3"
+  ],
+["conceptualization", "noun", [1, 38], "|concept"],
+  ["recommence", "verb",
+    [
+      2,
+      46,
+      2
+    ], "|commence 1"
+  ]
+]

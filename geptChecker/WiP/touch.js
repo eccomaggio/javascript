@@ -62,13 +62,15 @@
       const prev = el.previousElementSibling;
       const next = el.nextElementSibling;
       const container = el.parentElement;
-      let resizeCounter = 0;
+      // let resizeCounter = 0;
       const sepThickness = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--sep-width'));
       const matchMedia = '(min-width: 600px)';
       const maxCompress = 50;
       el.onmousedown = dragMouseDown;
+      // ## necessary to update container size if window is resized
+      window.onresize = elementDrag;
 
-      let prevState = window.matchMedia(matchMedia);
+      // let prevState = window.matchMedia(matchMedia);
       // console.log("dragElement initiated...", prev.id, next.id)
 
       function dragMouseDown(e) {
@@ -82,8 +84,11 @@
       }
 
       function elementDrag(e) {
+        // ## originally used flex but > problems with earlier browsers; switched to style sizings
+        // ## used onresize event to update window resizings to make this work smoothly
         e.preventDefault();
-        // calculate the new cursor position:
+        // console.log("container width/height: ",container.offsetWidth,container.offsetHeight)
+        // ## calculate the new cursor position:
         posX = posX1 - e.clientX;
         posY = posY1 - e.clientY;
         posX1 = e.clientX;
@@ -97,8 +102,10 @@
           const leftWidth = prev.offsetWidth - posX;
           const rightWidth = container.offsetWidth - leftWidth - sepThickness;
           if (leftWidth > maxCompress && rightWidth > maxCompress) {
-            prev.style.flex = "0 0 " + (leftWidth / container.offsetWidth) * 100 + '%';
-            next.style.flex = "0 0 " + (rightWidth / container.offsetWidth) * 100 + '%';
+            // prev.style.flex = "0 0 " + (leftWidth / container.offsetWidth) * 100 + '%';
+            // next.style.flex = "0 0 " + (rightWidth / container.offsetWidth) * 100 + '%';
+            prev.style.width = (leftWidth / container.offsetWidth) * 100 + '%';
+            next.style.width = (rightWidth / container.offsetWidth) * 100 + '%';
           }
         }
         else {
@@ -108,8 +115,10 @@
           const topHeight = prev.offsetHeight - posY;
           const botHeight = container.offsetHeight - topHeight - sepThickness;
           if (topHeight > maxCompress && botHeight > maxCompress) {
-            prev.style.flex = "0 0 " + (topHeight / container.offsetHeight) * 100 + '%';
-            next.style.flex = "0 0 " + (botHeight / container.offsetHeight) * 100 + '%';
+            // prev.style.flex = "0 0 " + (topHeight / container.offsetHeight) * 100 + '%';
+            // next.style.flex = "0 0 " + (botHeight / container.offsetHeight) * 100 + '%';
+            prev.style.height = (topHeight / container.offsetHeight) * 100 + '%';
+            next.style.height = (botHeight / container.offsetHeight) * 100 + '%';
           }
         }
       }
