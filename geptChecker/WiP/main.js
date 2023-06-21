@@ -281,7 +281,7 @@ function submitForm(event) {
     }
   }
   const term = data.term.join().split(" ")[0].toLowerCase();
-  // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, "");
+  // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, ""),data);
   if (isEmptySearch(data)) {
     errorMsg = "Please enter at least one search term to restrict the number of results.";
   }
@@ -316,6 +316,7 @@ function isEmptySearch(searchTerms) {
 }
 
 function refineSearch(find) {
+
   let results = V.currentDb.db.filter(el => el[C.LEMMA].search(find.term) != -1);
   // console.log("get results for term:", find.term,results.length, results)
   // console.log("get results for term:", find, find.level.length || find.awl.length || find.pos.length)
@@ -333,27 +334,27 @@ function refineSearch(find) {
     2-in gept only
     3-in gept AND awl
 
-    from search from (awl)
+    from search (awl[0]): awlMode =
     100 = choose only words in AWL list
     200 = choose only words in GEPT list
     300 = choose only AWL headwords
     */
-    if (find.awl == 200) {
-      results = results.filter(el => el[C.LEVEL][2] >= 2);
-    }
-    else if (find.awl == 100) {
+    const awlMode = (find.awl[0] >= 100) ? find.awl[0] : 0;
+    const awlSublists = (awlMode) ? find.awl.slice(1) : find.awl ;
+    if (awlMode == 100) {
       results = results.filter(el => el[C.LEVEL][1] > -1);
     }
-    else if (find.awl == 300) {
-      // ** routine to find only AWL headwords
+    else if (awlMode === 200) {
+      results = results.filter(el => el[C.LEVEL][2] >= 2);
+    }
+    else if (awlMode == 300) {
       results = results.filter(el => el[C.LEMMA] === el[C.NOTE].split("|")[1]);
     }
-    else {
-      results = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
+    if (awlSublists.length) {
+      results = results.filter(el => awlSublists.indexOf(el[C.LEVEL][1]) > -1);
     }
   }
   results = results.filter(result => result[C.ID] > 0);
-  // console.log("refined search results",results)
   return results;
 }
 
@@ -1116,7 +1117,7 @@ function changeDb_shared(e) {
   V.currentDb.language = "en";
   V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
   for (let key in V.currentDb.css) {
-    const property = key[0] == "_" ? `--${key.slice(1)}` : key;
+    const property = key[0].startsWith("_") ? `--${key.slice(1)}` : key;
     HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
   }
   changeDb_text();
