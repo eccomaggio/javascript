@@ -983,7 +983,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    document.getElementById("version-no").innerHTML = "Version 5-0.1"
+    document.getElementById("version-no").innerHTML = "Version 5-0.2"
   </script>
 
   <script data-title="touch.js">
@@ -2540,10 +2540,11 @@ function processText(raw) {
   } else return;
   if (raw.innerText.trim()) {
     const chunkedText = splitText(raw.innerText);
+    // console.log("chunked text:",chunkedText)
     const textArr = findCompounds(chunkedText);
     const [processedTextArr, wordCount] = addLookUps(textArr);
     // debug(processedTextArr)
-    // console.log("blah",processedTextArr)
+    // console.log("processed text array",processedTextArr)
     let htmlString = convertToHTML(processedTextArr);
     const listOfRepeats = buildRepeatList(wordCount);
     displayCheckedText(htmlString, listOfRepeats, wordCount)
@@ -2600,18 +2601,29 @@ function findCompounds(chunks) {
   for (let chunk of chunks) {
     /* for each word, checks normalized words to end of chunk in search of compound match
     then adds this as a match
+    "tail" is the sequence of words in a chunk (punctuation delimited block) as an array.
+    The function iterates through it, removing the first word each time
     */
-    for (let word_i = 0; word_i < chunk.length - 1; word_i++) {
+    // console.log("chunk:",chunk)
+    for (let word_i = 0; word_i <= chunk.length - 1; word_i++) {
       let tail = [];
       for (let j = word_i; j < chunk.length; j++) {
         tail.push(chunk[j][0])
       }
       let matches = [];
+      const flattenedTail = tail.join("").replace(/-/g,"");
+      // console.log("tail:",flattenedTail)
       for (let compound in V.currentDb.compounds) {
-        if (V.currentDb.compounds.hasOwnProperty(compound)) {
-          const [c_lemma, c_id] = [compound, V.currentDb.compounds[compound]];
-          if (tail.join("").startsWith(c_lemma)) addMatch(matches, c_id);
-        }
+        // if (V.currentDb.compounds.hasOwnProperty(compound)) {
+          // const [c_lemma, c_id] = [compound, V.currentDb.compounds[compound]];
+          // const flattenedTail = tail.join("").replace(/-/g,"");
+          // console.log("find comps:",flattenedTail,compound)
+          // if (flattenedTail.startsWith(c_lemma)) {
+          if (flattenedTail.startsWith(compound)) {
+            const c_id =  V.currentDb.compounds[compound];
+            addMatch(matches, c_id);
+          }
+        // }
       }
       chunk[word_i].push(matches);
     }
