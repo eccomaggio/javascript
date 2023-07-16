@@ -30,129 +30,97 @@ DONE: implement splitting into separate files
 DONE: why doesn't set_mode see links in the header??
 DONE: implement importing files
 
+TODO:
+DONE: make it so that all files are created in WiP directory.
+If the filename already specifies a sub directory,
+this should be created in the WiP directory.
+If WiP not present, add it in the current context folder.
+(Implement all this in a dummy folder first!!)
+use this info: https://realpython.com/python-pathlib/
+
 """
 import sys
-import os.path
+# import os.path
+from pathlib import Path
 import re
-# from tkinter import W
 
-isSplitMode = True
+## Global variables
+# (that there are so many means i should prob make this into a class :S)
+wip_directory = Path.cwd() / "WiP"
 isInComment = False
 isInStyle = False
 isInScript = False
 current_external_file = None
 buffer = ""
-
+wip_directory = Path.cwd() / "WiP"
+assembled_html = "out.html"
+disassembled_html = "out.min.html"
 rx = {
-"opener_style" : re.compile('(^.*?)<style\s+[^>]*data-title="(.+?)"') ,
-"close_style" :  re.compile('(^.*?)</style>'),
-"opener_script" : re.compile('(^.*?)<script\s+[^>]*data-title="(.+?)"'),
-"close_script" : re.compile('(^.*?)</script>'),
-"html_open_comment" : re.compile('(^.*?)<!--'),
-"html_full_comment" : re.compile('(^.*?)<!--.*?-->(.*$)'),
-"html_close_comment" : re.compile('-->(.*$)'),
-"style_link" : re.compile('(^.*?)<link\s+?rel="stylesheet"\s+?href="(.+?)"'),
-"script_link" : re.compile('(^.*?)<script\s+?src="(.+?)"'),
-"external_link" : re.compile('https?:')
+  "opener_style" : re.compile('(^.*?)<style\s+[^>]*data-title="(.+?)"') ,
+  "close_style" :  re.compile('(^.*?)</style>'),
+  "opener_script" : re.compile('(^.*?)<script\s+[^>]*data-title="(.+?)"'),
+  "close_script" : re.compile('(^.*?)</script>'),
+  "html_open_comment" : re.compile('(^.*?)<!--'),
+  "html_full_comment" : re.compile('(^.*?)<!--.*?-->(.*$)'),
+  "html_close_comment" : re.compile('-->(.*$)'),
+  "style_link" : re.compile('(^.*?)<link\s+?rel="stylesheet"\s+?href="(.+?)"'),
+  "script_link" : re.compile('(^.*?)<script\s+?src="(.+?)"'),
+  "external_link" : re.compile('https?:')
 }
 
 
-def get_file_name(prog_file_name=''):
+def get_source_file(source_file_name="wordlistTool.html"):
   """
   use filename specified at commandline
   OR if none, use filename specified in program
   OR if none, default to default_file_name
   """
   ## Establish name
-  default_file_name = "wordlistTool.html"
+  global disassembled_html
   try:
-    file_name = sys.argv[1]
+    source_file_name = sys.argv[1]
   except IndexError:
-    # print(f"No filename specified; I'll look for {default_file_name}")
-    file_name = prog_file_name if prog_file_name else default_file_name
+    # if not source_file_name:
+      # source_file_name = "wordlistTool.html"
+      tmp_path = Path(wip_directory / disassembled_html)
+      if tmp_path.is_file:
+        source_file_name = str(tmp_path)
+
 
   ## Establish file exists
-  if os.path.isfile(file_name):
-    print("file_name:",file_name)
-    return file_name
+  source_file = Path(source_file_name)
+  if source_file.exists():
+    print("file_name:",source_file_name)
+    return source_file
   else:
-    print(f'Sorry. "{file_name}" could not be found.')
+    print(f'Sorry. "{source_file_name}" could not be found.')
     quit()
 
 
-
-def build_files(file_name):
+def build_files(source_file):
   global isInStyle
   global isInScript
-  global isSplitMode
-  # out_file_name = "out.htm"
-  with open(file_name, "r", encoding="utf-8") as input:
-    set_mode(input)
-    if isSplitMode:
-      out_file_name = "out.min.html"
-    else:
-      out_file_name = "out.html"
-    print("isSplitMode:",isSplitMode)
-    print(f"Your HTML file is: {out_file_name}")
-    # file in write mode
-    with open(out_file_name, "w") as html_out:
-      # Write each line from input file to html_out file using loop
-      for raw_line in input:
-        if isSplitMode:
-          disassemble_file(raw_line,html_out)
-        else:
-          assemble_file(raw_line,html_out)
+  global wip_directory
+  global assembled_html
+  global disassembled_html
+  try:
+    wip_directory.mkdir()
+    print("Creating WiP directory for new files.")
+  except FileExistsError:
+    print("WiP directory already exists.")
+
+  is_split_mode = set_mode(source_file)
+  if is_split_mode:
+    print("The master html file has been split into .js/.css components.")
+    # disassemble_file(source_file, Path(wip_directory / "out.min.html"))
+    disassemble_file(source_file, Path(wip_directory / disassembled_html))
+  else:
+    print("The separate .js/.css files have been reassembled into a single HTML file.")
+    # assemble_file(source_file, Path(wip_directory / "out.html"))
+    assemble_file(source_file, Path(wip_directory / assembled_html))
 
 
-def assemble_file(raw_line,html_out):
-  """
-
-  """
-  global buffer
-  global rx
-  file_name = ""
-  file_type = ""
-  line = remove_comments(raw_line)
-  if line:
-    match = re.search(rx["script_link"], line)
-    if match:
-      file_type = "script"
-    else:
-      match = re.search(rx["style_link"], line)
-      if match:
-        file_type = "style"
-    if match:
-      file_name = match.group(2)
-      padding = match.group(1)
-      if not re.search(rx["external_link"], file_name):
-        print(f"attempting get data from {file_name}")
-        buffer = f'{padding}<{file_type} data-title="{file_name}">\n'
-        with open(file_name, "r", encoding="utf-8") as source_file:
-          buffer += source_file.read()
-        buffer += f"{padding}</{file_type}>\n"
-        html_out.write(buffer)
-        buffer = ""
-        return
-  html_out.write(raw_line)
-
-
-def disassemble_file(raw_line,html_out):
-  global isInStyle
-  global isInScript
-  to_print = ""
-  is_skip = False
-  line = remove_comments(raw_line)
-  if line:
-    if not isInStyle:
-      (to_print,isInScript,is_skip) = export_parts(line,raw_line,"script",isInScript)
-    if not (isInScript or is_skip):
-      (to_print,isInStyle,is_skip) = export_parts(line,raw_line,"style",isInStyle)
-  if not (isInScript or isInStyle or is_skip):
-    html_out.write(raw_line)
-  elif to_print:
-    html_out.write(to_print)
-
-def set_mode(html_file):
+def set_mode(source_file):
   """
   Checks through file for either:
   <link rel="stylesheet" href=
@@ -161,20 +129,76 @@ def set_mode(html_file):
   IF it finds one of these, it assumes the entire file is for re-assembling
   otherwise, it assumes the whole file is for splitting
   """
-  global isSplitMode
+  # global isSplitMode
   global rx
-  for i, raw_line in enumerate(html_file):
-    if not isSplitMode:
-      break
-    line = remove_comments(raw_line)
-    if line:
-      for item in ("script_link","style_link"):
-        match = re.search(rx[item],line)
-        if match and not re.search(rx["external_link"],line):
-          # print(item,line)
-          isSplitMode = False
-  ## reset to beginning of file
-  html_file.seek(0)
+  is_split_mode = True
+  with source_file.open(mode="r", encoding="utf-8") as input_file:
+    for raw_line in input_file:
+      line = remove_comments(raw_line)
+      if line:
+        for item in ("script_link", "style_link"):
+          match = re.search(rx[item],line)
+          if match and not re.search(rx["external_link"], line):
+            is_split_mode = False
+    ## reset to beginning of file
+    input_file.seek(0)
+  return is_split_mode
+
+
+def assemble_file(source_file, out_file):
+  """
+
+  """
+  global wip_directory
+  global buffer
+  global rx
+  with source_file.open(mode="r", encoding="utf-8") as input_file, out_file.open(mode="w", encoding="utf-8") as html_out:
+    # Write each line from input file to html_out file using loop
+    for raw_line in input_file:
+      file_name = ""
+      file_type = ""
+      line = remove_comments(raw_line)
+      if line:
+        match = re.search(rx["script_link"], line)
+        if match:
+          file_type = "script"
+        else:
+          match = re.search(rx["style_link"], line)
+          if match:
+            file_type = "style"
+        if match:
+          file_name = match.group(2)
+          padding = match.group(1)
+          if not re.search(rx["external_link"], file_name):
+            print(f"Getting data from {file_name}")
+            buffer = f'{padding}<{file_type} data-title="{file_name}">\n'
+            with Path(wip_directory / file_name).open(mode="r", encoding="utf-8") as part_file:
+              buffer += part_file.read()
+            buffer += f"{padding}</{file_type}>\n"
+            html_out.write(buffer)
+            buffer = ""
+      html_out.write(raw_line)
+
+
+def disassemble_file(source_file, out_file):
+  global wip_directory
+  global isInStyle
+  global isInScript
+  to_write = ""
+  is_skip = False
+  with source_file.open(mode="r", encoding="utf-8") as input_file, out_file.open(mode="w", encoding="utf-8") as html_out:
+    # Write each line from input file to html_out file using loop
+    for raw_line in input_file:
+      line = remove_comments(raw_line)
+      if line:
+        if not isInStyle:
+          (to_write, isInScript, is_skip) = export_parts(line, raw_line, "script", isInScript)
+        if not (isInScript or is_skip):
+          (to_write, isInStyle, is_skip) = export_parts(line, raw_line, "style", isInStyle)
+      if not (isInScript or isInStyle or is_skip):
+        html_out.write(raw_line)
+      elif to_write:
+        html_out.write(to_write)
 
 
 def remove_comments(line):
@@ -187,7 +211,6 @@ def remove_comments(line):
   if isInComment:
     match = re.search(rx["html_close_comment"],line)
     if match:
-      # print("!!!!",line)
       isInComment = False
       line = match.group(1)
     else:
@@ -219,28 +242,24 @@ def export_parts(line,raw_line,mode,is_in_part):
   look for style / script elements (@title contains file name)
   replace them with links to files
   copy contents of tags into external files
-  TODO: write the lines to the appropriate file
   """
+  global wip_directory
   global current_external_file
   global buffer
   global rx
-  is_style = (mode == "style")
-  if is_style:
-    re_opener = rx["opener_style"]
-    re_close = rx["close_style"]
-  else:
-    re_opener = rx["opener_script"]
-    re_close = rx["close_script"]
-  to_print = ""
+  re_opener = rx[f"opener_{mode}"]
+  re_close = rx[f"close_{mode}"]
+  link = ""
   is_skip = False
   if is_in_part:
     match = re.search(re_close,line)
     if match:
       is_in_part = False
       is_skip = True
-      write_part()
+      current_external_file.write_text(buffer, encoding="utf-8")
+      buffer = ""
+      current_external_file = None
     else:
-      # print(f"export:{current_external_file}",line)
       buffer += raw_line
   else:
     match = re.search(re_opener,line)
@@ -248,25 +267,16 @@ def export_parts(line,raw_line,mode,is_in_part):
       file_name = match.group(2)
       print(mode, file_name)
       is_in_part = True
-      current_external_file = file_name
-      if is_style:
+      current_external_file = Path(wip_directory / file_name)
+      if (mode == "style"):
         link = f'{match.group(1)}<link rel="stylesheet" href="{file_name}">\n'
       else:
         link = f'{match.group(1)}<script src="{file_name}"></script>\n'
-      to_print = link
-  return (to_print,is_in_part,is_skip)
-
-def write_part():
-  global buffer
-  global current_external_file
-  with open(current_external_file, "w", encoding="utf-8") as out_file:
-    out_file.write(buffer)
-  buffer = ""
-  current_external_file = None
+  return (link, is_in_part, is_skip)
 
 
 def main():
-  build_files(get_file_name())
+  build_files(get_source_file())
 
 
 main()
