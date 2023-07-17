@@ -102,7 +102,6 @@ Non-editable text. Editable is below:
         // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
         let isInMark = false;
         C.isKeyText = (e.key) ? e.key.length == 1 : false;
-        // const [cursorOffset, cursorOffsetNoMarks, isInMark] = getCursorOffsetIn(HTML.workingDiv);
         [C.cursorOffset, C.cursorOffsetNoMarks, C.isInMark] = getCursorOffsetIn(HTML.workingDiv);
         console.log(">>", C.cursorOffset, "<<", C.isInMark, C.isKeyText, e.key);
         if (C.isInMark && C.isKeyText) {
