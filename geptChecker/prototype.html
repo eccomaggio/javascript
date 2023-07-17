@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    #test {
+      background: powderblue;
+      padding: 1rem;
+      border-radius: 20px;
+    }
+
+    span[data-test]::after {
+      content: attr(data-test);
+      vertical-align: super;
+      font-size: smaller;
+    }
+    mark {
+      background: none;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+Non-editable text. Editable is below:
+<div id="test" contenteditable="true" style="-webkit-user-select:text;">Hello, <span data-test="42">some</span>
+  <b>bold</b> and <i>italic<mark> <span data-test="69">italic</span> etc. </mark> and <b>bold</b></i> text. Then a bit
+  more text <mark>/ text</mark> and finish!</div>
+<div id="caretPos"></div>
+
+  <script>
+    /*
+  style="-webkit-user-select:text;" is needed for iPad
+
+  */
+
+      // function ORIGgetCursorOffsetIn(element) {
+      //   let cursorOffset = 0;
+      //   const doc = element.ownerDocument || element.document;
+      //   const win = doc.defaultView || doc.parentWindow;
+      //   let sel;
+      //   sel = win.getSelection();
+      //   if (sel.rangeCount > 0) {
+      //     const range = win.getSelection().getRangeAt(0);
+      //     //const preCursorRange = range.cloneRange();
+      //     const preCursorRange = doc.createRange();
+      //     preCursorRange.selectNodeContents(element);
+      //     preCursorRange.setEnd(range.endContainer, range.endOffset);
+      //     console.log("preCursor:", range.startContainer.parentElement)
+      //     cursorOffset = preCursorRange.toString().length;
+      //   }
+      //   return cursorOffset;
+      // }
+
+      const HTML = {
+        testDiv: document.getElementById("test"),
+        infoDiv: document.getElementById("caretPos")
+      }
+
+      function getCursorOffsetIn(element) {
+        let cursorOffset = 0;
+        let cursorOffsetNoMarks = 0;
+        let divText = "";
+        let isInMark = false;
+        const doc = element.ownerDocument || element.document;
+        const win = doc.defaultView || doc.parentWindow;
+        let sel;
+        sel = win.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = win.getSelection().getRangeAt(0);
+          //const preCursorRange = range.cloneRange();
+          const preCursorRange = doc.createRange();
+          preCursorRange.selectNodeContents(element);
+          preCursorRange.setEnd(range.endContainer, range.endOffset);
+          cursorOffset = preCursorRange.toString().length;
+
+          const noMarks = preCursorRange.cloneContents();
+          let noMarksNodes = doc.createElement("root");
+          noMarksNodes.append(noMarks);
+          // const marks = noMarksNodes.getElementsByTagName("mark");
+          // for (let i=0; i<marks.length; i++){
+          //   marks[i].innerHTML = "";
+          // }
+          // cursorOffsetNoMarks = noMarksNodes.textContent.length;
+          cursorOffsetNoMarks = removeTagContentFromElement(noMarksNodes, "mark").length;
+          console.log("preCursorRange:", noMarks,noMarksNodes.textContent);
+          const cursorEl = range.startContainer.parentElement;
+          isInMark = [cursorEl.tagName,cursorEl.parentElement.tagName,cursorEl.parentElement.parentElement.tagName].includes("MARK");
+          // cursorOffset = preCursorRange.toString().length;
+        }
+        return [cursorOffset,cursorOffsetNoMarks,isInMark];
+      }
+
+      function removeTagContentFromElement(node,tagName){
+        let textWithoutMarks = "";
+        const divText = node.cloneNode(true);
+        const marks = divText.querySelectorAll(tagName);
+        for (let i=0; i<marks.length; i++){
+          marks[i].innerHTML = "";
+        }
+        // textWithoutMarks = divText.textContent;
+        return divText.textContent;
+      }
+
+      // HTML.testDiv.addEventListener("keydown", testy);
+      HTML.testDiv.addEventListener("keyup", testy);
+      HTML.testDiv.addEventListener("click", testy);
+
+      function testy(e) {
+        // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
+        const isKeyText = (e.key) ? e.key.length == 1 : false;
+        const [cursorOffset, cursorOffsetNoMarks, isInMark] = getCursorOffsetIn(HTML.testDiv);
+        if (isInMark && isKeyText) e.preventDefault();
+        // let divText = removeTagContentFromElement(HTML.testDiv, "mark");
+        let divText = removeTagContentFromElement(HTML.testDiv, "mark");
+        // console.log("no marks:", divText)
+        HTML.infoDiv.innerHTML = `Cursor position: ${cursorOffset} vs ${cursorOffsetNoMarks}`;
+        HTML.infoDiv.innerHTML += `<br>  ${divText.slice(0, cursorOffsetNoMarks)}*${divText.slice(cursorOffsetNoMarks)}`;
+        console.log(">>", cursorOffset, isInMark);
+      }
+
+  </script>
+</body>
+</html>
