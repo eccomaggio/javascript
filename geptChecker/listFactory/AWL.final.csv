@@ -184,6 +184,7 @@ constructed,,int,AWL-2
 reconstruct,,int,AWL-2
 reconstructed,,int,AWL-2
 consumed,,int,AWL-2
+commission,,int,AWL-2
 credited,,int,AWL-2
 culturally,,int,AWL-2
 cultured,,int,AWL-2

@@ -1,0 +1,88 @@
+commission - add v)
+analyse -s / noun => delete brit spelling !
+benefit add v
+define (no Pos)
+factor (add v)
+function (add v)
+interpret (n)
+major (add v)
+principle (add adj)
+cultured (adj) ADD
+comment (add v)
+minor (noun only) - add adj (not in list as v!)
+goal - adj; should be n
+parallel - add noun
+partner - add v
+statistic = change adj to n
+compound - add v & adj
+fundamental -add n
+logic - change to n
+medical - add n
+objective - add noun
+prime - add n (should be n, v adj)
+reject - add n
+discriminate - add adj
+discriminating - adj ADD
+transport - add v
+adult - add adj
+visual - DON'T ADD n (only in list as adj)
+portion - add v
+preliminary - add n
+supplement - add v
+collapse - add n
+conceive - should be v not adj
+incline - add noun
+
+
+# idiosynchratic adjs (and nouns) - they take the same level as the headword...
+assuming - adj
+financing - noun
+functioning - adj
+identifying - adj
+affecting - adj
+computing - noun
+concluding - adj
+corresponding - adj
+funding - noun
+publishing - noun
+scheming - adj
+shifting - adj
+validating - adj
+cycling - noun
+emerging - adj
+challenging - adj
+enabling - adj6
+ministering - adj
+motivating - adj 6
+revealing - adj 6
+intervening - adj 7
+isolating - adj 7
+accompanying - adj 8
+accommodating - adj 9
+
+assumed - adj 1
+involved - adj 1
+labored - adj 1
+principled - adj 1
+unprincipled
+affected - adj 1
+assisted - adj 1
+co-ordinated - adj 3
+unresolved - adj 4
+exposed - adj 5
+attached - adj 6
+bonded - adj 6
+coupled - adj 7
+biased - adj 8
+confined - adì 9
+devoted - adj 9
+refined - adj 9
+inclined - adj 10
+
+uncontextualized - adj
+uninvolved - adj
+unregulated - adj
+unrestrained - adj
+
+underlay (irregular verb)
+** actually, underlay is linked to underlay (intrans), but i think this is a mistake; the rest of the entry implies it is the past of 'underlie'
