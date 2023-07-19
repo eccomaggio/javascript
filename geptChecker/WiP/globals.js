@@ -481,6 +481,8 @@ const lookup = {
     underwent: "undergo",
     undergone: "undergo",
     understood: "understand",
+    underlay: "underlie",
+    underlain: "underlie",
     wept: "weep",
     went: "go",
     withdrawn: "withdraw",
