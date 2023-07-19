@@ -863,15 +863,19 @@ function convertToHTML(textArr) {
       let showDuplicateCount = "";
       if (totalRepeats > 1 && !ignoreRepeats) {
         duplicateClass = " duplicate";
-        showDuplicateCount = "<sup>" + totalRepeats + "</sup>";
+        // showDuplicateCount = "<sup>" + totalRepeats + "</sup>";
+        showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
+      const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["",""];
       let localWord = highlightAwlWord(level_arr, rawWord);
       const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
       if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
-      displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${anchor}>${localWord + showDuplicateCount}</span>`;
-      if (matchCount < matches.length - 1) displayWord += " /" + (leaveSpace ? "" : " ");
-      htmlString += displayWord;
+      // displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${anchor}>${localWord + showDuplicateCount}</span>`;
+      displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
+      // if (matchCount < matches.length - 1) displayWord += " /" + (leaveSpace ? "" : " ");
+      if (matchCount > 0 && matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
+      htmlString += hideAlternatives[0] + displayWord + hideAlternatives[1];
       matchCount++;
       wasEOL = false;
     }
