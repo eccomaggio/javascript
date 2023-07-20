@@ -251,12 +251,12 @@ function submitWordSearchForm(e) {
   let resultsCount = 0;
   let resultsArr = [];
   let stringToDisplay = "";
-  if (!errorMsg) {
+  if (errorMsg) {
+    stringToDisplay = `<p class='error'>${errorMsg}</p>`;
+  } else {
     resultsArr = executeFormDataLookup(data);
     resultsCount = resultsArr.length;
     stringToDisplay = formatResultsAsHTML(resultsArr);
-  } else {
-    stringToDisplay = `<p class='error'>${errorMsg}</p>`;
   }
   displayWordSearchResults(stringToDisplay, resultsCount);
 }
@@ -291,26 +291,44 @@ function getFormData(e) {
 }
 
 function checkFormData(data) {
-  let resultsArr = [];
-  let errorMsg = "";
+  let status = 3;
+  /* key for status:
+  0 = contains a valid search term outside of "match"
+  1 = contains a character other than space/apostrophe/hypen
+  2 = contains a non-default match term but no lemma (which match requires)
+  3 = contains nothing beyond the default "match=contains"
+  */
+  for (let el in data) {
+    if (el === "match") continue;
+    if (data[el].length) {
+      status = 0;
+      break;
+    }
+  }
+  if (status === 3 && !data["match"].includes("contains")) status = 2;
   const term = data.term.join().split(" ")[0].toLowerCase();
-  // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, "");
-  if (isEmptySearch(data)) {
-    errorMsg = "Please enter at least one search term to restrict the number of results.";
-  }
-  else if (term.search(/[^a-zA-Z\-\s']/g) > -1) {
-    errorMsg = "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.";
-  }
+  if (term.search(/[^a-z\-\s']/g) > -1) status = 1;
+  const errorMsg = [
+    "",
+    "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.",
+    "Please enter at least one search term to restrict the number of results.",
+    "Enter a search term."
+  ][status];
+  console.log({status},errorMsg, data)
   return errorMsg;
 }
 
-function isEmptySearch(searchTerms) {
-  for (let el in searchTerms) {
-    if (el === "match") continue;
-    if (searchTerms[el].length) return false;
-  }
-  return true;
-}
+// function isEmptySearch(searchTerms) {
+//   for (let el in searchTerms) {
+//     if (el === "match") {
+//       isContains = searchTerms[el].includes("contains");
+//       console.log("in match:", searchTerms[el], isContains)
+//       continue;
+//     }
+    // if (searchTerms[el].length) return false;
+//   }
+//   return true;
+// }
 
 function executeFormDataLookup(data) {
   const term = data.term.join().split(" ")[0].toLowerCase();
@@ -436,9 +454,10 @@ function displayWordSearchResults(resultsAsHtmlString, resultCount=0) {
 
 function resetTab1() {
   HTM.form.reset();
-  displayWordSearchResults([]);
+  // displayWordSearchResults([]);
+  submitWordSearchForm();
   refreshLabels("t1_form");
-  HTM.resultsText.innerHTML = "";
+  // HTM.resultsText.innerHTML = "";
 }
 
 
