@@ -33,7 +33,7 @@ const HTM = {
 
 
 
-const lookup = {
+const LOOKUP = {
 
   // ## These are used in the tab 1 GUI
   legends: {
@@ -832,9 +832,9 @@ let V = {
   wordStats: {},
   isAutoRefresh: true,
   currentDb: {},
-  OFFLIST: lookup.level_headings.length,
+  OFFLIST: LOOKUP.level_headings.length,
   // const level_subs = lookup.level_headings.concat(lookup.offlist_subs);
-  level_subs: lookup.level_headings.concat(lookup.offlist_subs),
+  level_subs: LOOKUP.level_headings.concat(LOOKUP.offlist_subs),
   currentTab: 0
 }
 

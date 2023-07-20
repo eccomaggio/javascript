@@ -36,10 +36,10 @@ finalInit();
 
 function addListeners() {
   document
-    .getElementById("t1_theme_select")
-    .addEventListener("change", submitForm);
+    .getElementById("t1_theme_select");
+    // .addEventListener("change", submitWordSearchForm);
 
-  document.getElementById("t1_term_i").addEventListener("input", debounce(submitForm, 500));
+  document.getElementById("t1_term_i").addEventListener("input", debounce(submitWordSearchForm, 500));
 
   for (const el of document.getElementsByTagName("input")) {
     if (el.type != "text") {
@@ -61,7 +61,7 @@ function addListeners() {
   document.getElementById("set-refresh").addEventListener("change", changeRefresh);
   HTM.refreshButton.addEventListener("click", processText);
   HTM.backupButton.addEventListener("click", showBackups);
-  HTM.backupDialog.addEventListener("mouseleave", closeDialog);
+  HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
   HTM.backupSave.addEventListener("click", saveBackup);
 
   // ## for text input box
@@ -127,7 +127,7 @@ function loadBackup(id) {
   HTM.rawDiv.innerText = restoredContent;
   processText(HTM.rawDiv);
   if (swap) localStorage.setItem(id, swap);
-  closeDialog("backup-dlg");
+  closeBackupDialog("backup-dlg");
 }
 
 function updateBackup(id) {
@@ -173,7 +173,7 @@ function saveBackup() {
   }, 1000);
 }
 
-function closeDialog(id) {
+function closeBackupDialog(id) {
   if (id.target) id = "backup-dlg";
   document.getElementById(id).style.display = "none";
 }
@@ -227,7 +227,7 @@ function registerLabelClick(e_label) {
       defaultChecked.labels[0].classList.add("selected_txt");
       refreshLabels(parentID);
     }
-    submitForm(e_label);
+    submitWordSearchForm(e_label);
   }
 }
 
@@ -245,19 +245,25 @@ function refreshLabels(parentID) {
   });
 }
 
-function getInputs(parentID) {
-  let tag = "input";
-  if (parentID == "theme") tag = "option";
-  return document.getElementById(parentID).querySelectorAll(tag);
+function submitWordSearchForm(e) {
+  const data = getFormData(e);
+  let errorMsg = checkFormData(data);
+  let resultsCount = 0;
+  let resultsArr = [];
+  let stringToDisplay = "";
+  if (!errorMsg) {
+    resultsArr = executeFormDataLookup(data);
+    resultsCount = resultsArr.length;
+    stringToDisplay = formatResultsAsHTML(resultsArr);
+  } else {
+    stringToDisplay = `<p class='error'>${errorMsg}</p>`;
+  }
+  displayWordSearchResults(stringToDisplay, resultsCount);
 }
 
-function submitForm(event) {
-  let results = [];
-  let resultString = "";
-  let errorMsg = "";
+function getFormData(e) {
   let raw_data = new FormData(HTM.form);
-  if (event) event.preventDefault();
-
+  if (e) e.preventDefault();
   let data = {
     term: [],
     match: [],
@@ -270,6 +276,7 @@ function submitForm(event) {
   for (let [key, value] of raw_data) {
     // ## default value of html option (but screws up db lookup)
     if (value === "-1") value = "";
+    // ## ignore form elements that aren't required for current dB
     if (key === "level" && V.currentDb.isKids) continue;
     if (key === "theme" && (V.currentDb.isGEPT || V.currentDb.isBEST)) continue;
     if (key === "awl" && (V.currentDb.isGEPT || V.currentDb.isKids)) continue;
@@ -280,6 +287,12 @@ function submitForm(event) {
       data[key].push(value.trim());
     }
   }
+  return data;
+}
+
+function checkFormData(data) {
+  let resultsArr = [];
+  let errorMsg = "";
   const term = data.term.join().split(" ")[0].toLowerCase();
   // console.log("Search for:" + JSON.stringify(data).replace(/[\[\]\{\}]/g, "");
   if (isEmptySearch(data)) {
@@ -288,31 +301,29 @@ function submitForm(event) {
   else if (term.search(/[^a-zA-Z\-\s']/g) > -1) {
     errorMsg = "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.";
   }
-  else {
-    const matchType = C.MATCHES[data.match]
-    const searchTerms = {
-      term: new RegExp(matchType[0] + term + matchType[1], "i"),
-      raw_term: term,
-      level: (V.isKids) ? data.theme : data.level,
-      awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
-      pos: data.pos.join("|")
-    };
-    results = refineSearch(searchTerms);
-    resultString = formatResults(results);
-  }
-  if (errorMsg) errorMsg = "<p class='error'>" + errorMsg + "</p>";
-  displayResults([errorMsg + resultString, results.length]);
+  return errorMsg;
 }
 
 function isEmptySearch(searchTerms) {
   for (let el in searchTerms) {
-    // console.log(">>",el,searchTerms[el])
-    // ## Ignore default search term
-    // if (el === "match" && searchTerms[el] === "contains") continue;
     if (el === "match") continue;
     if (searchTerms[el].length) return false;
   }
   return true;
+}
+
+function executeFormDataLookup(data) {
+  const term = data.term.join().split(" ")[0].toLowerCase();
+  const matchType = C.MATCHES[data.match];
+  const searchTerms = {
+    term: new RegExp(matchType[0] + term + matchType[1], "i"),
+    raw_term: term,
+    level: (V.isKids) ? data.theme : data.level,
+    awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
+    pos: data.pos.join("|")
+  };
+  const resultsArr = refineSearch(searchTerms);
+  return resultsArr;
 }
 
 function refineSearch(find) {
@@ -371,37 +382,33 @@ function highlightAwlWord(level_arr, word) {
   return (V.isBEST & level_arr[1] > -1) ? `<span class="awl-word">${word}</span>` : word;
 }
 
-function formatResults(results) {
+function formatResultsAsHTML(results) {
   // console.log("formatresults*", results, !results)
   let output = "";
   let previousInitial = "";
   let currentInitial = "";
   let i = 0;
-  if (!results.length) {
-    output = "<tr><td></td><td class='error'>No matching words found.</td></tr>";
-  } else {
-    for (const entry of results.sort(compareByLemma)) {
-      currentInitial = (entry[C.LEMMA]) ? entry[C.LEMMA][0].toLowerCase() : "";
-      if (currentInitial !== previousInitial) {
-        output += formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", "");
-      }
-      const level_arr = entry[C.LEVEL];
-      const awl_sublist = getAwlSublist(level_arr);
-      const awlWord = highlightAwlWord(level_arr, entry[C.LEMMA]);
-      const lemma = `<strong>${awlWord}</strong>`;
-      // const pos = `[${entry[C.POS].trim()}]`;
-      const pos = `[${expandPos(entry)}]`;
-      // const awl_indicator = (awl_sublist >= 0) ? `; AWL${awl_sublist}` : "";
-      let level = V.level_subs[level_arr[0]];
-      if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
-      if (!level) continue;
-      let [note, awl_note] = getNotes(entry);
-      const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}${awl_note}`;
-      let class2 = (V.currentDb.isKids) ? "level-e" : `level-${level[0]}`;
-      output += formatResultsAsTablerows(`${i + 1}`, col2, "", class2);
-      previousInitial = currentInitial;
-      i++;
+  for (const entry of results.sort(compareByLemma)) {
+    currentInitial = (entry[C.LEMMA]) ? entry[C.LEMMA][0].toLowerCase() : "";
+    if (currentInitial !== previousInitial) {
+      output += formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", "");
     }
+    const level_arr = entry[C.LEVEL];
+    const awl_sublist = getAwlSublist(level_arr);
+    const awlWord = highlightAwlWord(level_arr, entry[C.LEMMA]);
+    const lemma = `<strong>${awlWord}</strong>`;
+    // const pos = `[${entry[C.POS].trim()}]`;
+    const pos = `[${expandPos(entry)}]`;
+    // const awl_indicator = (awl_sublist >= 0) ? `; AWL${awl_sublist}` : "";
+    let level = V.level_subs[level_arr[0]];
+    if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
+    if (!level) continue;
+    let [note, awl_note] = getNotes(entry);
+    const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}${awl_note}`;
+    let class2 = (V.currentDb.isKids) ? "level-e" : `level-${level[0]}`;
+    output += formatResultsAsTablerows(`${i + 1}`, col2, "", class2);
+    previousInitial = currentInitial;
+    i++;
   }
   return "<table>" + output + "</table>";
 }
@@ -420,18 +427,16 @@ function formatResultsAsTablerows(col1, col2, class1, class2, row) {
   return (`<tr${row}><td${class1}>${col1}</td><td${class2}>${col2}</td></tr>\n`)
 }
 
-function displayResults(output) {
-  const resultText = output[0];
-  const resultCount = output[1];
-  let text = lookup.legends.results;
+function displayWordSearchResults(resultsAsHtmlString, resultCount=0) {
+  let text = LOOKUP.legends.results;
   if (resultCount) text += ` (${resultCount})`;
   HTM.resultsLegend.innerHTML = text;
-  HTM.resultsText.innerHTML = resultText;
+  HTM.resultsText.innerHTML = resultsAsHtmlString;
 }
 
 function resetTab1() {
   HTM.form.reset();
-  displayResults([]);
+  displayWordSearchResults([]);
   refreshLabels("t1_form");
   HTM.resultsText.innerHTML = "";
 }
@@ -472,9 +477,6 @@ function hoverEffects(e) {
     for (let el of els) {
       el.classList.toggle("highlight");
     }
-    // for (let i = 0; i < els.length; i++) {
-    //   els[i].classList.toggle("highlight");
-    // }
   }
 }
 
@@ -510,7 +512,7 @@ function displayEntryInfo(ref) {
 function expandPos(entry) {
   const pos_str = entry[C.POS];
   if (entry[C.ID] < 0) return pos_str;
-  const pos = (pos_str) ? pos_str.split("").map(el => lookup.pos_expansions[el]).join(", ") : "";
+  const pos = (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
   return pos;
 }
 
@@ -555,7 +557,6 @@ function processText(raw) {
     // console.log("chunked text:",chunkedText)
     const textArr = findCompounds(chunkedText);
     const [processedTextArr, wordCount] = addLookUps(textArr);
-    // debug(processedTextArr)
     // console.log("processed text array",processedTextArr)
     let htmlString = convertToHTML(processedTextArr);
     const listOfRepeats = buildRepeatList(wordCount);
@@ -623,19 +624,13 @@ function findCompounds(chunks) {
         tail.push(chunk[j][0])
       }
       let matches = [];
-      const flattenedTail = tail.join("").replace(/-/g,"");
+      const flattenedTail = tail.join("").replace(/-/g, "");
       // console.log("tail:",flattenedTail)
       for (let compound in V.currentDb.compounds) {
-        // if (V.currentDb.compounds.hasOwnProperty(compound)) {
-          // const [c_lemma, c_id] = [compound, V.currentDb.compounds[compound]];
-          // const flattenedTail = tail.join("").replace(/-/g,"");
-          // console.log("find comps:",flattenedTail,compound)
-          // if (flattenedTail.startsWith(c_lemma)) {
-          if (flattenedTail.startsWith(compound)) {
-            const c_id =  V.currentDb.compounds[compound];
-            addMatch(matches, c_id);
-          }
-        // }
+        if (flattenedTail.startsWith(compound)) {
+          const c_id = V.currentDb.compounds[compound];
+          addMatch(matches, c_id);
+        }
       }
       chunk[word_i].push(matches);
     }
@@ -712,7 +707,7 @@ function markOfflist(word, type) {
     }
   }
   if (isUnique) {
-    tmp = [-(V.offlistIndex), word, type, [lookup.offlist_subs.indexOf(type) + lookup.level_headings.length], ""];
+    tmp = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
     V.offlistDb.push(tmp);
     V.offlistIndex++
   }
@@ -740,47 +735,47 @@ function lookupDerivations([word, raw_word], matches = []) {
     matches.push(markOfflist(word, "unknown"));
     return matches;
   }
-  else if (lookup.contractions.includes(word)) {
+  else if (LOOKUP.contractions.includes(word)) {
     matches.push(markOfflist(word, "contraction"));
   }
-  else if (lookup.setOfCommonNames.has(word) && (raw_word[0] === raw_word[0].toUpperCase())) {
+  else if (LOOKUP.setOfCommonNames.has(word) && (raw_word[0] === raw_word[0].toUpperCase())) {
     matches.push(markOfflist(word, "proper name"))
   }
   else if (V.currentDb.language === "en") {
     // matches = dbLookup(word); ## remove as produces accidental recursions
-    if (lookup.irregNegVerb[word]) {
+    if (LOOKUP.irregNegVerb[word]) {
       /* ## test = hidden written stole lain */
-      const candidate = dbLookup(lookup.irregNegVerb[word])[0];
+      const candidate = dbLookup(LOOKUP.irregNegVerb[word])[0];
       // ## Check for GEPTKids to ensure word is in the very limited wordlist
       if (candidate) matches.push(candidate);
     }
-    else if (lookup.irregVerb[word]) {
+    else if (LOOKUP.irregVerb[word]) {
       /* ## test = aren't won't cannot */
-      const candidate = dbLookup(lookup.irregVerb[word])[0];
+      const candidate = dbLookup(LOOKUP.irregVerb[word])[0];
       // ## Check for GEPTKids to ensure word is in the very limited wordlist
       if (candidate) matches.push(candidate);
     }
     if (word.slice(-3) === "ing") {
       /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
-      addToMatches(word, matches, lookup.g_subs, "v");
+      addToMatches(word, matches, LOOKUP.g_subs, "v");
 
     }
     if (word.slice(-2) === "ed") {
       /* ## test = robbed gagged passed busied played visited */
-      addToMatches(word, matches, lookup.d_subs, "v");
+      addToMatches(word, matches, LOOKUP.d_subs, "v");
     }
     if (!matches.length) {
       if (word.slice(-2) === "st") {
         /* ## test = "longest hottest prettiest closest soonest" */
-        addToMatches(word, matches, lookup.est_subs, "j");
+        addToMatches(word, matches, LOOKUP.est_subs, "j");
       }
       else if (word.slice(-1) === "r") {
         /* ## test = "longer hotter prettier closer sooner" */
-        addToMatches(word, matches, lookup.er_subs, "j");
+        addToMatches(word, matches, LOOKUP.er_subs, "j");
       }
       else if (word.slice(-1) === "s") {
         /* ## test: families tries potatoes scarves crises boxes dogs ## Filter out adjs (can't take '-s') */
-        const candidates = findBaseForm(word, lookup.s_subs);
+        const candidates = findBaseForm(word, LOOKUP.s_subs);
         for (const id of candidates) {
           const candidate = getDbEntry(id);
           if (candidate.length > 0 && candidate[C.POS] !== "j") {
@@ -790,11 +785,11 @@ function lookupDerivations([word, raw_word], matches = []) {
       }
       else if (word.slice(-2) === "ly") {
         /* ## test: happily clumsily annually finely sensibly sadly automatically */
-        addToMatches(word, matches, lookup.y_subs, "j");
+        addToMatches(word, matches, LOOKUP.y_subs, "j");
       }
-      else if (lookup.irregPlural[word]) {
+      else if (LOOKUP.irregPlural[word]) {
         /* ## test: indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crisis */
-        matches.push(dbLookup(lookup.irregPlural[word])[0]);
+        matches.push(dbLookup(LOOKUP.irregPlural[word])[0]);
       }
       for (const match of checkForeignPlurals(word)) {
         matches.push(...match)
@@ -851,7 +846,7 @@ function convertToHTML(textArr) {
     for (const [id, count] of matches) {
       const match = getDbEntry(id);
       let displayWord = "";
-      const ignoreRepeats = lookup.repeatableWords.includes(match[C.LEMMA]);
+      const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
       const level_arr = match[C.LEVEL];
       const level_num = level_arr[0];
       const levelClass = "level-" + getLevelPrefix(level_num);
@@ -867,7 +862,7 @@ function convertToHTML(textArr) {
         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
-      const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["",""];
+      const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
       let localWord = highlightAwlWord(level_arr, rawWord);
       const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
       if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
@@ -899,7 +894,7 @@ function buildRepeatList(wordCount) {
       const entry = getDbEntry(key);
       const word = entry[C.LEMMA];
       const level_arr = entry[C.LEVEL];
-      if (V.wordStats[key] > 1 && !lookup.repeatableWords.includes(word)) {
+      if (V.wordStats[key] > 1 && !LOOKUP.repeatableWords.includes(word)) {
         countReps++;
         let anchors = "";
         for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
@@ -995,7 +990,7 @@ function findBaseForm(word, subs) {
 
 function checkForeignPlurals(word) {
   let candidates = [];
-  for (const ending of lookup.foreign_plurals) {
+  for (const ending of LOOKUP.foreign_plurals) {
     const len = ending[0].length;
     const guess = word.slice(0, -len) + ending[1];
     if (ending[0] === word.slice(-len)) {
@@ -1147,7 +1142,7 @@ function changeDb_words() {
   for (let el of V.currentDb.hide) {
     el.style.setProperty("display", "none");
   }
-  submitForm();
+  submitWordSearchForm();
 }
 
 function changeDb_text() {
