@@ -37,7 +37,7 @@ finalInit();
 function addListeners() {
   document
     .getElementById("t1_theme_select");
-    // .addEventListener("change", submitWordSearchForm);
+  // .addEventListener("change", submitWordSearchForm);
 
   document.getElementById("t1_term_i").addEventListener("input", debounce(submitWordSearchForm, 500));
 
@@ -65,9 +65,8 @@ function addListeners() {
   HTM.backupSave.addEventListener("click", saveBackup);
 
   // ## for text input box
-  // HTM.rawDiv.addEventListener("input", processText);
-  HTM.rawDiv.addEventListener("input", debounce(processText, 500));
-  HTM.rawDiv.addEventListener("paste", normalizePastedText);
+  // HTM.rawDiv.addEventListener("input", debounce(processText, 500));
+  // HTM.rawDiv.addEventListener("paste", normalizePastedText);
 
   HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
   HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
@@ -314,7 +313,7 @@ function checkFormData(data) {
     "Please enter at least one search term to restrict the number of results.",
     "Enter a search term."
   ][status];
-  console.log({status},errorMsg, data)
+  // console.log({status},errorMsg, data)
   return errorMsg;
 }
 
@@ -325,7 +324,7 @@ function checkFormData(data) {
 //       console.log("in match:", searchTerms[el], isContains)
 //       continue;
 //     }
-    // if (searchTerms[el].length) return false;
+// if (searchTerms[el].length) return false;
 //   }
 //   return true;
 // }
@@ -445,7 +444,7 @@ function formatResultsAsTablerows(col1, col2, class1, class2, row) {
   return (`<tr${row}><td${class1}>${col1}</td><td${class2}>${col2}</td></tr>\n`)
 }
 
-function displayWordSearchResults(resultsAsHtmlString, resultCount=0) {
+function displayWordSearchResults(resultsAsHtmlString, resultCount = 0) {
   let text = LOOKUP.legends.results;
   if (resultCount) text += ` (${resultCount})`;
   HTM.resultsLegend.innerHTML = text;
@@ -561,33 +560,59 @@ function debounce(callback, delay) {
 }
 
 // ## if text is typed in, this is where processing starts
-function processText(raw) {
+// function processText(rawHTML) {
+//   console.log("html type=", rawHTML.type,rawHTML)
+//   // ## reset V.wordStats
+//   V.wordStats = {};
+//   // ## need to distinguish between typed / button / pasted input
+//   // ## and interact with auto-refresh toggle
+//   const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
+//   const isClick = (rawHTML.type === 'click');
+//   if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
+//     rawHTML = HTM.rawDiv;
+//   } else return;
+//   if (rawHTML.innerText.trim()) {
+//     const chunkedText = splitText(rawHTML.innerText);
+//     // console.log("chunked text:",chunkedText)
+//     const textArr = findCompounds(chunkedText);
+//     const [processedTextArr, wordCount] = addLookUps(textArr);
+//     // console.log("processed text array",processedTextArr)
+//     let htmlString = convertToHTML(processedTextArr);
+//     const listOfRepeats = buildRepeatList(wordCount);
+//     displayCheckedText(htmlString, listOfRepeats, wordCount)
+
+//     updateBackup(C.backupIDs[1]);
+//   } else {
+//     displayCheckedText();
+//   }
+// }
+
+function processText(rawText) {
   // ## reset V.wordStats
   V.wordStats = {};
-  // ## need to distinguish between typed / button / pasted input
-  // ## and interact with auto-refresh toggle
-  const isTyped = (raw.type === 'input' || raw.type === 'paste');
-  const isClick = (raw.type === 'click');
-  if ((isTyped && V.isAutoRefresh) || isClick || !raw.type) {
-    raw = HTM.rawDiv;
-  } else return;
-  if (raw.innerText.trim()) {
-    const chunkedText = splitText(raw.innerText);
+  // const text = (rawText.innerText) ? rawText.innerText : rawText;
+  const text = rawText;
+  if (typeof text === "object") return;
+  // console.log('process:',text, typeof text)
+  if (text) {
+    const chunkedText = splitText(text);
     // console.log("chunked text:",chunkedText)
     const textArr = findCompounds(chunkedText);
     const [processedTextArr, wordCount] = addLookUps(textArr);
     // console.log("processed text array",processedTextArr)
-    let htmlString = convertToHTML(processedTextArr);
+    const htmlString = convertToHTML(processedTextArr);
     const listOfRepeats = buildRepeatList(wordCount);
-    displayCheckedText(htmlString, listOfRepeats, wordCount)
+    return [htmlString,listOfRepeats];
+  //   displayCheckedText(htmlString, listOfRepeats, wordCount)
 
-    updateBackup(C.backupIDs[1]);
-  } else {
-    displayCheckedText();
+  //   updateBackup(C.backupIDs[1]);
+  // } else {
+  //   displayCheckedText();
   }
 }
 
-function splitText(raw_text) {
+function splitText(rawText) {
+  // console.log("split text:", rawText)
   /* To narrow down the hunt for compound words,
   the normalized text is first split into
   independent chunks by punctuation (which compounds can't cross)
@@ -598,7 +623,7 @@ function splitText(raw_text) {
       2) word with caps + punctuation for display
   */
   // ## text = [processed word for lookup + tagging, raw word for display]
-  raw_text = raw_text
+  rawText = rawText
     .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
@@ -607,7 +632,7 @@ function splitText(raw_text) {
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
     .replace(/(\w)\/(\w)/g, "$1 / $2");
-  const raw_chunks = raw_text
+  const raw_chunks = rawText
     .trim()
     .replace(/([.,;():?!])\s+/gi, "$1@@")
     .split("@@");
