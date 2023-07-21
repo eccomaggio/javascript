@@ -64,7 +64,7 @@ function addListeners() {
   HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
   HTM.backupSave.addEventListener("click", saveBackup);
 
-  // ## for text input box
+  // ## for text input box (need to be restored if in-place editing not activated)
   // HTM.rawDiv.addEventListener("input", debounce(processText, 500));
   // HTM.rawDiv.addEventListener("paste", normalizePastedText);
 
@@ -244,20 +244,39 @@ function refreshLabels(parentID) {
   });
 }
 
+// function submitWordSearchForm(e) {
+//   const data = getFormData(e);
+//   let errorMsg = checkFormData(data);
+//   let resultsCount = 0;
+//   let resultsArr = [];
+//   let stringToDisplay = "";
+//   if (errorMsg) {
+//     stringToDisplay = `<p class='error'>${errorMsg}</p>`;
+//   } else {
+//     resultsArr = executeFormDataLookup(data);
+//     resultsCount = resultsArr.length;
+//     stringToDisplay = formatResultsAsHTML(resultsArr);
+//   }
+//   displayWordSearchResults(stringToDisplay, resultsCount);
+// }
 function submitWordSearchForm(e) {
   const data = getFormData(e);
   let errorMsg = checkFormData(data);
   let resultsCount = 0;
   let resultsArr = [];
-  let stringToDisplay = "";
-  if (errorMsg) {
-    stringToDisplay = `<p class='error'>${errorMsg}</p>`;
-  } else {
+  let HTMLstringToDisplay = "";
+  if (!errorMsg) {
     resultsArr = executeFormDataLookup(data);
     resultsCount = resultsArr.length;
-    stringToDisplay = formatResultsAsHTML(resultsArr);
+    // HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
+    if (!resultsCount) errorMsg = "No matches found for this term."
   }
-  displayWordSearchResults(stringToDisplay, resultsCount);
+  if (errorMsg) {
+    HTMLstringToDisplay = `<p class='error'>${errorMsg}</p>`;
+  } else {
+    HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
+  }
+  displayWordSearchResults(HTMLstringToDisplay, resultsCount);
 }
 
 function getFormData(e) {
@@ -560,54 +579,30 @@ function debounce(callback, delay) {
 }
 
 // ## if text is typed in, this is where processing starts
-// function processText(rawHTML) {
-//   console.log("html type=", rawHTML.type,rawHTML)
-//   // ## reset V.wordStats
-//   V.wordStats = {};
-//   // ## need to distinguish between typed / button / pasted input
-//   // ## and interact with auto-refresh toggle
-//   const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
-//   const isClick = (rawHTML.type === 'click');
-//   if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
-//     rawHTML = HTM.rawDiv;
-//   } else return;
-//   if (rawHTML.innerText.trim()) {
-//     const chunkedText = splitText(rawHTML.innerText);
-//     // console.log("chunked text:",chunkedText)
-//     const textArr = findCompounds(chunkedText);
-//     const [processedTextArr, wordCount] = addLookUps(textArr);
-//     // console.log("processed text array",processedTextArr)
-//     let htmlString = convertToHTML(processedTextArr);
-//     const listOfRepeats = buildRepeatList(wordCount);
-//     displayCheckedText(htmlString, listOfRepeats, wordCount)
-
-//     updateBackup(C.backupIDs[1]);
-//   } else {
-//     displayCheckedText();
-//   }
-// }
-
-function processText(rawText) {
+function OLDprocessText(rawHTML) {
+  console.log("html type=", rawHTML.type,rawHTML)
   // ## reset V.wordStats
   V.wordStats = {};
-  // const text = (rawText.innerText) ? rawText.innerText : rawText;
-  const text = rawText;
-  if (typeof text === "object") return;
-  // console.log('process:',text, typeof text)
-  if (text) {
-    const chunkedText = splitText(text);
+  // ## need to distinguish between typed / button / pasted input
+  // ## and interact with auto-refresh toggle
+  const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
+  const isClick = (rawHTML.type === 'click');
+  if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
+    rawHTML = HTM.rawDiv;
+  } else return;
+  if (rawHTML.innerText.trim()) {
+    const chunkedText = splitText(rawHTML.innerText);
     // console.log("chunked text:",chunkedText)
     const textArr = findCompounds(chunkedText);
     const [processedTextArr, wordCount] = addLookUps(textArr);
     // console.log("processed text array",processedTextArr)
-    const htmlString = convertToHTML(processedTextArr);
+    let htmlString = convertToHTML(processedTextArr);
     const listOfRepeats = buildRepeatList(wordCount);
-    return [htmlString,listOfRepeats];
-  //   displayCheckedText(htmlString, listOfRepeats, wordCount)
+    displayCheckedText(htmlString, listOfRepeats, wordCount)
 
-  //   updateBackup(C.backupIDs[1]);
-  // } else {
-  //   displayCheckedText();
+    updateBackup(C.backupIDs[1]);
+  } else {
+    displayCheckedText();
   }
 }
 

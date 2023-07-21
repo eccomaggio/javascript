@@ -174,10 +174,20 @@ def assemble_file(source_file, out_file):
             buffer = f'{padding}<{file_type} data-title="{file_name}">\n'
             with Path(wip_directory / file_name).open(mode="r", encoding="utf-8") as part_file:
               buffer += part_file.read()
-            buffer += f"{padding}</{file_type}>\n"
+            # Should I suppress extra newline? Does it compound over time?
+            buffer += f"\n{padding}</{file_type}>\n"
+            # buffer += f"{padding}</{file_type}>\n"
             html_out.write(buffer)
             buffer = ""
-      html_out.write(raw_line)
+          # do not repeat link to script/css file
+          # html_out.write("<!--" + raw_line + "-->")
+        else:
+          # print out code line verbatim from HTML
+          html_out.write(raw_line)
+      # html_out.write(raw_line)
+      else:
+        # print out any comments in the original file
+        html_out.write(raw_line)
 
 
 def disassemble_file(source_file, out_file):
@@ -247,6 +257,7 @@ def export_parts(line,raw_line,mode,is_in_part):
   global current_external_file
   global buffer
   global rx
+  # dynamically choose open / close link tags depending on style / script
   re_opener = rx[f"opener_{mode}"]
   re_close = rx[f"close_{mode}"]
   link = ""

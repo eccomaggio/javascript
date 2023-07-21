@@ -1,3 +1,7 @@
+// to make way for in-place editing
+// HTM.rawDiv.removeEventListener("input", debounce(processText, 500));
+// HTM.rawDiv.removeEventListener("paste", normalizePastedText);
+
 const V_SUPP = {
   cursorOffset: 0,
   cursorOffsetNoMarks: 0,
@@ -120,4 +124,28 @@ function addBackCursor(el, cursorPos=0) {
     console.log(`cursorPos (${cursorPos}) out of range...`)
   }
   el.focus();
+}
+
+function processText(rawText) {
+  // ## reset V.wordStats
+  V.wordStats = {};
+  // const text = (rawText.innerText) ? rawText.innerText : rawText;
+  const text = rawText;
+  if (typeof text === "object") return;
+  // console.log('process:',text, typeof text)
+  if (text) {
+    const chunkedText = splitText(text);
+    // console.log("chunked text:",chunkedText)
+    const textArr = findCompounds(chunkedText);
+    const [processedTextArr, wordCount] = addLookUps(textArr);
+    // console.log("processed text array",processedTextArr)
+    const htmlString = convertToHTML(processedTextArr);
+    const listOfRepeats = buildRepeatList(wordCount);
+    return [htmlString,listOfRepeats];
+  //   displayCheckedText(htmlString, listOfRepeats, wordCount)
+
+  //   updateBackup(C.backupIDs[1]);
+  // } else {
+  //   displayCheckedText();
+  }
 }
