@@ -7,6 +7,8 @@ const V_SUPP = {
   cursorOffsetNoMarks: 0,
   isInMark: false,
   isKeyText: false,
+  // # key: [index in textArr, index in normalized word]
+  cursorPosInTextArr: [0,0],
 }
 
 const HTM_SUPP = {
@@ -18,8 +20,15 @@ const HTM_SUPP = {
 const CURSOR = {
   tag: "span",
   id: "cursorPosHere",
-  text: "@CRSR",
+  // text: "@CRSR",
+  text: "~",
 }
+
+const EOL = {
+  text: "*EOL",
+  HTMLtext: "<br>",
+}
+
 const newCursor = document.createElement(CURSOR.tag);
 newCursor.setAttribute("id", CURSOR.id);
 CURSOR.node = newCursor;
@@ -137,7 +146,7 @@ function removeTagContentFromElement(node, tagName) {
 function updateCursorPos(e) {
   // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
   // let isInMark = false;
-  V_SUPP.isKeyText = (e.key) ? e.key.length == 1 : false;
+  V_SUPP.isKeyText = (e.key) ? e.key.length === 1 : false;
   [
     V_SUPP.cursorOffset,
     V_SUPP.cursorOffsetNoMarks,
@@ -156,23 +165,23 @@ function getUpdatedText(e) {
   // CURSOR.node.remove();
   // debug("2." + HTM_SUPP.workingDiv.textContent)
   let revisedText = removeTagContentFromElement(HTM_SUPP.workingDiv);
+  if (!revisedText) return;
   [
     V_SUPP.cursorOffset,
     V_SUPP.cursorOffsetNoMarks,
     V_SUPP.isInMark
   ] = getCursorOffsetIn(HTM_SUPP.workingDiv);
-  // debug(`cursorPos=${V_SUPP.cursorOffsetNoMarks}, revisedText=${revisedText}`)
-  // if (!(V_SUPP.isInMark && V_SUPP.isKeyText)) moveCursorMarker();
-  // revisedText = `<br>  ${revisedText.slice(0, V_SUPP.cursorOffsetNoMarks)}*${revisedText.slice(V_SUPP.cursorOffsetNoMarks)}`
   revisedText = revisedText.slice(0, V_SUPP.cursorOffsetNoMarks) + CURSOR.text + revisedText.slice(V_SUPP.cursorOffsetNoMarks);
-  debug(revisedText)
+  debug(V_SUPP.cursorOffsetNoMarks, !!revisedText, revisedText)
   tmp_ShowResults(revisedText);
   // HTM_SUPP.infoDiv.innerHTML = `Cursor position: ${V_SUPP.cursorOffset} vs ${V_SUPP.cursorOffsetNoMarks}`;
   // HTM_SUPP.infoDiv.innerHTML += `<br>  ${revisedText.slice(0, V_SUPP.cursorOffsetNoMarks)}*${revisedText.slice(V_SUPP.cursorOffsetNoMarks)}`;
   const [resultsAsHTML, repeatsAsHTML, wordCount] = processText(revisedText);
   HTM_SUPP.infoDiv.innerHTML = repeatsAsHTML;
+  moveCursorMarker();
   removeListeners();
   HTM_SUPP.workingDiv.innerHTML = resultsAsHTML;
+  // if (!(V_SUPP.isInMark && V_SUPP.isKeyText)) moveCursorMarker();
   setListeners();
   if (resultsAsHTML) {
     displayCheckedText(resultsAsHTML, repeatsAsHTML, wordCount)
@@ -192,8 +201,10 @@ function tmp_ShowResults(revisedText) {
 function moveCursorMarker() {
   const currentRange = window.getSelection().getRangeAt(0);
   // const cursorParent = HTML.cursorMarker.parentElement;
-  HTM_SUPP.cursorHTML.parentElement.removeChild(HTM_SUPP.cursorHTML);
-  currentRange.insertNode(HTM_SUPP.cursorHTML);
+  // HTM_SUPP.cursorHTML.parentElement.removeChild(HTM_SUPP.cursorHTML);
+  // currentRange.insertNode(HTM_SUPP.cursorHTML);
+  CURSOR.node.parentElement.removeChild(CURSOR.node);
+  currentRange.insertNode(CURSOR.node);
 }
 
 // function addBackCursor(el, cursorPos=0) {
@@ -256,7 +267,8 @@ function processText(rawText) {
   }
 }
 
-function debug(msg) {
-  // return debug.caller.name;
+// function debug(msg) {
+function debug(...params) {
+  const msg = params.join(" ")
   console.log(`* ${debug.caller.name.toUpperCase()}: ${msg}`);
 }

@@ -622,7 +622,8 @@ function splitText(rawText) {
     .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
-    .replace(/[\n\r]+/g, " *EOL ") // encode EOLs
+    // .replace(/[\n\r]+/g, " *EOL ") // encode EOLs
+    .replace(/[\n\r]+/g, ` ${EOL.text} `) // encode EOLs
     // .replace(/\u2014/g, " -- ")
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
@@ -633,18 +634,28 @@ function splitText(rawText) {
     .split("@@");
 
   let chunks = [];
+  let cursorFound = false;
   for (let chunk of raw_chunks) {
     let chunkArr = [];
     for (let word of chunk.split(/\s+/)) {
-      if (word.includes("*EOL")) {
-        chunkArr.push(["*EOL", "<br>"]);
+      // if (word.includes("*EOL")) {
+      // if (word.indexOf("*EOL") >= 0) {
+      //   chunkArr.push(["*EOL", "<br>"]);
+      if (word.indexOf(EOL.text) >= 0) {
+        chunkArr.push([EOL.text,EOL.HTMLtext]);
         debug("EOL!")
       // TODO: how do i put the cursor inside a word but keep the word unitary??
-      } else if (word.includes(CURSOR.text)) {
-        // chunkArr.push([V_SUPP.cursorText, HTM_SUPP.cursorHTML.outerHTML]);
-        chunkArr.push([CURSOR.text, CURSOR.HTMLtext]);
-        debug("CRSR!")
       } else {
+        if (!cursorFound) {
+          // # Save position of cursor externally so it can be reinserted after text parsing
+          const indexOfCursorText = word.indexOf(CURSOR.text);
+          if (indexOfCursorText >= 0) {
+            V_SUPP.cursorPosInTextArr = [chunkArr.length, indexOfCursorText];
+            word = word.replace(CURSOR.text,"");
+            cursorFound = true;
+            debug("CRSR!" + word + V_SUPP.cursorPosInTextArr)
+          }
+        }
         let normalizedWord = word.replace(C.punctuation, "").toLowerCase();
         chunkArr.push([normalizedWord, word]);
       }
@@ -701,7 +712,8 @@ function addLookUps(textArr) {
     const word = wordArr[0];
     let preMatchArr = wordArr[2];
     const matchedIDs = [];
-    if (word === "*EOL") {
+    // if (word === "*EOL") {
+    if (word === EOL.text) {
       processedTextArr.push([word]);
     } else {
       matches = lookupWord(wordArr);
@@ -872,14 +884,18 @@ function convertToHTML(textArr) {
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
+  let wordIndex = 0;
   for (let wordArr of textArr) {
     let word = wordArr[0];
-    if (word === "*EOL") {
-      htmlString += "<br><br>";
+    // debug(word, word === EOL.text, wordIndex, wordIndex == V_SUPP.cursorPosInTextArr[0])
+    // if (word === "*EOL") {
+      // htmlString += "<br><br>";
+    if (word === EOL.text) {
+      htmlString += EOL.HTMLtext + EOL.HTMLtext;
       wasEOL = true;
       continue;
     }
-    const rawWord = wordArr[1];
+    let rawWord = wordArr[1];
     let leaveSpace = " ";
     if ((wordArr[2][0] && getDbEntry(wordArr[2][0][0])[2] == "contraction") || isFirstWord || wasEOL) {
       leaveSpace = "";
@@ -908,6 +924,11 @@ function convertToHTML(textArr) {
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
       const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
+      // # Add in cursor marker
+      if (V_SUPP.cursorPosInTextArr[0] === wordIndex) {
+        rawWord = rawWord.slice(0,V_SUPP.cursorPosInTextArr[0]) + CURSOR.HTMLtext + rawWord.slice(V_SUPP.cursorPosInTextArr[0]);
+        // debug(rawWord)
+      }
       let localWord = highlightAwlWord(level_arr, rawWord);
       const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
       if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
@@ -919,6 +940,7 @@ function convertToHTML(textArr) {
       matchCount++;
       wasEOL = false;
     }
+    wordIndex++;
   }
   return htmlString;
 }
