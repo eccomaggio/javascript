@@ -580,7 +580,7 @@ function debounce(callback, delay) {
 
 // ## if text is typed in, this is where processing starts
 function OLDprocessText(rawHTML) {
-  console.log("html type=", rawHTML.type,rawHTML)
+  console.log("html type=", rawHTML.type, rawHTML)
   // ## reset V.wordStats
   V.wordStats = {};
   // ## need to distinguish between typed / button / pasted input
@@ -638,6 +638,12 @@ function splitText(rawText) {
     for (let word of chunk.split(/\s+/)) {
       if (word.includes("*EOL")) {
         chunkArr.push(["*EOL", "<br>"]);
+        debug("EOL!")
+      // TODO: how do i put the cursor inside a word but keep the word unitary??
+      } else if (word.includes(CURSOR.text)) {
+        // chunkArr.push([V_SUPP.cursorText, HTM_SUPP.cursorHTML.outerHTML]);
+        chunkArr.push([CURSOR.text, CURSOR.HTMLtext]);
+        debug("CRSR!")
       } else {
         let normalizedWord = word.replace(C.punctuation, "").toLowerCase();
         chunkArr.push([normalizedWord, word]);

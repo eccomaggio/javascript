@@ -6,18 +6,30 @@ const V_SUPP = {
   cursorOffset: 0,
   cursorOffsetNoMarks: 0,
   isInMark: false,
-  isKeyText: false
+  isKeyText: false,
 }
 
-const newCursor = document.createElement("span");
-newCursor.setAttribute("id","cursorPosHere");
 const HTM_SUPP = {
   workingDiv: HTM.rawDiv,
   infoDiv: HTM.finalTextDiv,
-  cursorMarker: newCursor
+  // cursorHTML: newCursor,
 }
-HTM_SUPP.workingDiv.insertBefore(HTM_SUPP.cursorMarker, HTM_SUPP.workingDiv.firstChild);
-setCursorPosToStartOf(HTM_SUPP.cursorMarker, "*");
+
+const CURSOR = {
+  tag: "span",
+  id: "cursorPosHere",
+  text: "@CRSR",
+}
+const newCursor = document.createElement(CURSOR.tag);
+newCursor.setAttribute("id", CURSOR.id);
+CURSOR.node = newCursor;
+CURSOR.HTMLtext = newCursor.outerHTML;
+// HTM_SUPP.workingDiv.insertBefore(HTM_SUPP.cursorHTML, HTM_SUPP.workingDiv.firstChild);
+// setCursorPosToStartOf(HTM_SUPP.cursorHTML, V_SUPP.cursorText);
+HTM_SUPP.workingDiv.insertBefore(CURSOR.node, HTM_SUPP.workingDiv.firstChild);
+// setCursorPosToStartOf(CURSOR.node, V_SUPP.cursorText);
+setCursorPosToStartOf(CURSOR.node);
+HTM.finalInfoDiv.style.display = "flex";
 
 // HTM_SUPP.workingDiv.addEventListener("keydown", updateDiv);
 // HTM_SUPP.workingDiv.addEventListener("keyup", getUpdatedText);
@@ -83,7 +95,7 @@ function getCursorOffsetIn(element) {
     cursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
     isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
   }
-  return [cursorOffset,cursorOffsetNoMarks,isInMark];
+  return [cursorOffset, cursorOffsetNoMarks, isInMark];
 }
 
 function getCopyWithoutMarks(range) {
@@ -92,8 +104,8 @@ function getCopyWithoutMarks(range) {
   return removeTagContentFromElement(noMarksNodes);
 }
 
-function cursorIsInTag(cursorEl, tagName){
-  return [cursorEl.tagName,cursorEl.parentElement.tagName,cursorEl.parentElement.parentElement.tagName].includes(tagName);
+function cursorIsInTag(cursorEl, tagName) {
+  return [cursorEl.tagName, cursorEl.parentElement.tagName, cursorEl.parentElement.parentElement.tagName].includes(tagName);
 }
 
 function removeTagContentFromElement(node, tagName) {
@@ -123,7 +135,6 @@ function removeTagContentFromElement(node, tagName) {
 //   }
 // }
 function updateCursorPos(e) {
-  console.log("updateDiv...")
   // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
   // let isInMark = false;
   V_SUPP.isKeyText = (e.key) ? e.key.length == 1 : false;
@@ -132,6 +143,7 @@ function updateCursorPos(e) {
     V_SUPP.cursorOffsetNoMarks,
     V_SUPP.isInMark
   ] = getCursorOffsetIn(HTM_SUPP.workingDiv);
+  console.log("updated cursor pos:", V_SUPP.cursorOffset, V_SUPP.cursorOffsetNoMarks)
   // console.log(">>", V_SUPP.cursorOffset, "<<", V_SUPP.isInMark, V_SUPP.isKeyText, e.key);
   // ## discard new text if cursor is in non-editable area (i.e. in <mark>)
   if (V_SUPP.isInMark && V_SUPP.isKeyText) {
@@ -139,30 +151,49 @@ function updateCursorPos(e) {
   }
 }
 
-function moveCursorMarker() {
-    const currentRange = window.getSelection().getRangeAt(0);
-    // const cursorParent = HTML.cursorMarker.parentElement;
-    HTM_SUPP.cursorMarker.parentElement.removeChild(HTM_SUPP.cursorMarker);
-    currentRange.insertNode(HTM_SUPP.cursorMarker);
-}
-
 function getUpdatedText(e) {
-  console.log("getUpdatedText...")
-  const [,cursorPos,] = getCursorOffsetIn(HTM_SUPP.workingDiv);
-  removeListeners;
-  console.log("cursor pos:", cursorPos)
-  const revisedText = removeTagContentFromElement(HTM_SUPP.workingDiv);
-  [V_SUPP.cursorOffset, V_SUPP.cursorOffsetNoMarks, V_SUPP.isInMark] = getCursorOffsetIn(HTM_SUPP.workingDiv);
-  if (!(V_SUPP.isInMark && V_SUPP.isKeyText)) moveCursorMarker();
-
+  // debug("1." + HTM_SUPP.workingDiv.textContent)
+  // CURSOR.node.remove();
+  // debug("2." + HTM_SUPP.workingDiv.textContent)
+  let revisedText = removeTagContentFromElement(HTM_SUPP.workingDiv);
+  [
+    V_SUPP.cursorOffset,
+    V_SUPP.cursorOffsetNoMarks,
+    V_SUPP.isInMark
+  ] = getCursorOffsetIn(HTM_SUPP.workingDiv);
+  // debug(`cursorPos=${V_SUPP.cursorOffsetNoMarks}, revisedText=${revisedText}`)
+  // if (!(V_SUPP.isInMark && V_SUPP.isKeyText)) moveCursorMarker();
+  // revisedText = `<br>  ${revisedText.slice(0, V_SUPP.cursorOffsetNoMarks)}*${revisedText.slice(V_SUPP.cursorOffsetNoMarks)}`
+  revisedText = revisedText.slice(0, V_SUPP.cursorOffsetNoMarks) + CURSOR.text + revisedText.slice(V_SUPP.cursorOffsetNoMarks);
+  debug(revisedText)
+  tmp_ShowResults(revisedText);
   // HTM_SUPP.infoDiv.innerHTML = `Cursor position: ${V_SUPP.cursorOffset} vs ${V_SUPP.cursorOffsetNoMarks}`;
   // HTM_SUPP.infoDiv.innerHTML += `<br>  ${revisedText.slice(0, V_SUPP.cursorOffsetNoMarks)}*${revisedText.slice(V_SUPP.cursorOffsetNoMarks)}`;
-  const [resultsAsHTML, repeatsListAsHTML] = processText(revisedText);
-  HTM_SUPP.infoDiv.innerHTML = repeatsListAsHTML;
+  const [resultsAsHTML, repeatsAsHTML, wordCount] = processText(revisedText);
+  HTM_SUPP.infoDiv.innerHTML = repeatsAsHTML;
+  removeListeners();
   HTM_SUPP.workingDiv.innerHTML = resultsAsHTML;
+  setListeners();
+  if (resultsAsHTML) {
+    displayCheckedText(resultsAsHTML, repeatsAsHTML, wordCount)
+    // updateBackup(C.backupIDs[1]);
+  } else {
+    displayCheckedText();
+  }
   // addBackCursor(HTM_SUPP.workingDiv, cursorPos);
 
-  setListeners();
+}
+
+function tmp_ShowResults(revisedText) {
+  HTM_SUPP.infoDiv.innerHTML = `Cursor position: ${V_SUPP.cursorOffset} vs ${V_SUPP.cursorOffsetNoMarks}`;
+  HTM_SUPP.infoDiv.innerHTML += `<br>  ${revisedText.slice(0, V_SUPP.cursorOffsetNoMarks)}*${revisedText.slice(V_SUPP.cursorOffsetNoMarks)}`;
+}
+
+function moveCursorMarker() {
+  const currentRange = window.getSelection().getRangeAt(0);
+  // const cursorParent = HTML.cursorMarker.parentElement;
+  HTM_SUPP.cursorHTML.parentElement.removeChild(HTM_SUPP.cursorHTML);
+  currentRange.insertNode(HTM_SUPP.cursorHTML);
 }
 
 // function addBackCursor(el, cursorPos=0) {
@@ -184,7 +215,7 @@ function getUpdatedText(e) {
 //   el.focus();
 // }
 
-function setCursorPosToStartOf(el, textToInsert=""){
+function setCursorPosToStartOf(el, textToInsert = "") {
   console.log("setCurPos:", el, newCursor)
   const selectedText = window.getSelection();
   const selectedRange = document.createRange();
@@ -210,17 +241,22 @@ function processText(rawText) {
   // console.log('process:',text, typeof text)
   if (text) {
     const chunkedText = splitText(text);
-    // console.log("chunked text:",chunkedText)
+    console.log("chunked text:",chunkedText)
     const textArr = findCompounds(chunkedText);
-    const [processedTextArr, wordCount] = addLookUps(textArr);
+    const [resultsAsTextArr, wordCount] = addLookUps(textArr);
     // console.log("processed text array",processedTextArr)
-    const htmlString = convertToHTML(processedTextArr);
-    const listOfRepeats = buildRepeatList(wordCount);
-    return [htmlString,listOfRepeats];
-  //   displayCheckedText(htmlString, listOfRepeats, wordCount)
+    const resultsAsHTML = convertToHTML(resultsAsTextArr);
+    const repeatsAsHTML = buildRepeatList(wordCount);
+    return [resultsAsHTML, repeatsAsHTML, wordCount];
+    //   displayCheckedText(htmlString, listOfRepeats, wordCount)
 
-  //   updateBackup(C.backupIDs[1]);
-  // } else {
-  //   displayCheckedText();
+    //   updateBackup(C.backupIDs[1]);
+    // } else {
+    //   displayCheckedText();
   }
+}
+
+function debug(msg) {
+  // return debug.caller.name;
+  console.log(`* ${debug.caller.name.toUpperCase()}: ${msg}`);
 }
