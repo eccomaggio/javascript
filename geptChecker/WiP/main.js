@@ -66,10 +66,12 @@ function addListeners() {
 
   // ## for text input box (need to be restored if in-place editing not activated)
   // HTM.rawDiv.addEventListener("input", debounce(processText, 500));
-  // HTM.rawDiv.addEventListener("paste", normalizePastedText);
+  HTM.rawDiv.addEventListener("paste", normalizePastedText);
 
-  HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
-  HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
+  // HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
+  // HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
+  HTM.rawDiv.addEventListener("mouseover", hoverEffects);
+  HTM.rawDiv.addEventListener("mouseout", hoverEffects);
   document.getElementById("dropdown").addEventListener("mouseenter", dropdown)
   document.getElementById("dropdown").addEventListener("mouseleave", dropdown)
 }
@@ -493,8 +495,10 @@ function hoverEffects(e) {
   // ## 1) show information text
   // const tooltip = el.firstElementChild;
   if (el.dataset.entry || el.parentElement.dataset.entry) {
+    debug("!!")
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
     HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
+    HTM.finalInfoDiv.style.display = "flex";
   }
 
   // ## 2) remove highlighting after a jump to a duplicate
@@ -559,7 +563,8 @@ function normalizePastedText(e) {
   e.preventDefault();
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
-  paste = paste.replace(/[\n\r]+/g, "\n\n");
+  // paste = paste.replace(/[\n\r]+/g, "\n\n");
+  paste = normalizeRawText(paste);
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
   processText(e);
   // resetBackup();
@@ -593,7 +598,7 @@ function OLDprocessText(rawHTML) {
   if (rawHTML.innerText.trim()) {
     const chunkedText = splitText(rawHTML.innerText);
     // console.log("chunked text:",chunkedText)
-    const textArr = findCompounds(chunkedText);
+    const textArr = findCompoundsAndFlattenArray(chunkedText);
     const [processedTextArr, wordCount] = addLookUps(textArr);
     // console.log("processed text array",processedTextArr)
     let htmlString = convertToHTML(processedTextArr);
@@ -617,55 +622,70 @@ function splitText(rawText) {
       1) normalized word
       2) word with caps + punctuation for display
   */
-  // ## text = [processed word for lookup + tagging, raw word for display]
-  rawText = rawText
-    .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
-    .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
-    .replace(/…/g, "...")
-    // .replace(/[\n\r]+/g, " *EOL ") // encode EOLs
-    .replace(/[\n\r]+/g, ` ${EOL.text} `) // encode EOLs
-    // .replace(/\u2014/g, " -- ")
-    .replace(/–/g, " -- ")  // pasted in em-dashes
-    .replace(/—/g, " - ")
-    .replace(/(\w)\/(\w)/g, "$1 / $2");
-  const raw_chunks = rawText
-    .trim()
-    .replace(/([.,;():?!])\s+/gi, "$1@@")
-    .split("@@");
-
-  let chunks = [];
+  // ## text format = [processed word for lookup + tagging, raw word for display]
+  rawText = normalizeRawText(rawText);
+  const raw_chunks = splitTextIntoPhrases(rawText);
+  let arrayOfPhrases = [];
+  let indexOfCurrentWord = 0;
   let cursorFound = false;
-  for (let chunk of raw_chunks) {
-    let chunkArr = [];
-    for (let word of chunk.split(/\s+/)) {
+  for (let phrase of raw_chunks) {
+    let arrayOfWords = [];
+    for (let word of phrase.split(/\s+/)) {
       // if (word.includes("*EOL")) {
       // if (word.indexOf("*EOL") >= 0) {
       //   chunkArr.push(["*EOL", "<br>"]);
       if (word.indexOf(EOL.text) >= 0) {
-        chunkArr.push([EOL.text,EOL.HTMLtext]);
-        debug("EOL!")
-      // TODO: how do i put the cursor inside a word but keep the word unitary??
+        arrayOfWords.push([EOL.text, EOL.HTMLtext]);
+        // debug("EOL!")
+        // TODO: how do i put the cursor inside a word but keep the word unitary??
       } else {
         if (!cursorFound) {
           // # Save position of cursor externally so it can be reinserted after text parsing
           const indexOfCursorText = word.indexOf(CURSOR.text);
           if (indexOfCursorText >= 0) {
-            V_SUPP.cursorPosInTextArr = [chunkArr.length, indexOfCursorText];
-            word = word.replace(CURSOR.text,"");
+            // debug("Cursor: 1.", word)
+            // let indexOfChunkWithCursor = arrayOfWords.length;
+            // let indexOfChunkWithCursor = chunkArr.length - 1;
+            // if (indexOfChunkWithCursor < 0) indexOfChunkWithCursor = 0;
+            V_SUPP.cursorPosInTextArr = [indexOfCurrentWord , indexOfCursorText];
+            word = word.replace(CURSOR.text, "");
             cursorFound = true;
-            debug("CRSR!" + word + V_SUPP.cursorPosInTextArr)
+            // debug(`2. ${word} ${V_SUPP.cursorPosInTextArr}`)
           }
+          indexOfCurrentWord++;
         }
         let normalizedWord = word.replace(C.punctuation, "").toLowerCase();
-        chunkArr.push([normalizedWord, word]);
+        arrayOfWords.push([normalizedWord, word]);
       }
     }
-    chunks.push(chunkArr);
+    arrayOfPhrases.push(arrayOfWords);
   }
-  return chunks;
+  return arrayOfPhrases;
 }
 
-function findCompounds(chunks) {
+function normalizeRawText(text) {
+  return text
+    .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
+    .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
+    .replace(/…/g, "...")
+    // .replace(/[\n\r]+/g, " *EOL ") // encode EOLs
+    // .replace(/[\n\r]/g, " *EOL ") // encode EOLs
+    // .replace(/[\n\r]+/g, ` ${EOL.text} `) // encode EOLs
+    .replace(/[\n\r]/g, ` ${EOL.text} `) // encode EOLs
+    // .replace(/\u2014/g, " -- ")
+    .replace(/–/g, " -- ")  // pasted in em-dashes
+    .replace(/—/g, " - ")
+    .replace(/(\w)\/(\w)/g, "$1 / $2");
+}
+
+function splitTextIntoPhrases(text) {
+  return text
+    .trim()
+    .replace(/([.,;():?!])\s+/gi, "$1@@")
+    .split("@@");
+}
+
+function findCompoundsAndFlattenArray(chunks) {
   let tmp = [];
   for (let chunk of chunks) {
     /* for each word, checks normalized words to end of chunk in search of compound match
@@ -880,7 +900,7 @@ function convertToHTML(textArr) {
   /* ## textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]]
   for each word, repeat the raw-word for each match, but with different interpretations
   */
-  if (!textArr.length) console.log("nowt doin'!")
+  // if (!textArr.length) console.log("nowt doin'!")
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
@@ -889,9 +909,10 @@ function convertToHTML(textArr) {
     let word = wordArr[0];
     // debug(word, word === EOL.text, wordIndex, wordIndex == V_SUPP.cursorPosInTextArr[0])
     // if (word === "*EOL") {
-      // htmlString += "<br><br>";
+    // htmlString += "<br><br>";
     if (word === EOL.text) {
-      htmlString += EOL.HTMLtext + EOL.HTMLtext;
+      // htmlString += EOL.HTMLtext + EOL.HTMLtext;
+      htmlString += EOL.HTMLtext;
       wasEOL = true;
       continue;
     }
@@ -923,20 +944,24 @@ function convertToHTML(textArr) {
         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
-      const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
+      // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
       // # Add in cursor marker
-      if (V_SUPP.cursorPosInTextArr[0] === wordIndex) {
-        rawWord = rawWord.slice(0,V_SUPP.cursorPosInTextArr[0]) + CURSOR.HTMLtext + rawWord.slice(V_SUPP.cursorPosInTextArr[0]);
+      const [word_i, pos_i] = V_SUPP.cursorPosInTextArr;
+      if (wordIndex === word_i) {
+        // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
+        rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
         // debug(rawWord)
       }
       let localWord = highlightAwlWord(level_arr, rawWord);
       const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
       if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
-      // displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${anchor}>${localWord + showDuplicateCount}</span>`;
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
-      // if (matchCount < matches.length - 1) displayWord += " /" + (leaveSpace ? "" : " ");
       if (matchCount > 0 && matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
-      htmlString += hideAlternatives[0] + displayWord + hideAlternatives[1];
+      // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
+      if (matchCount > 0) {
+        htmlString += `<mark>${displayWord}</mark>`;
+      } else htmlString += displayWord;
+      // htmlString += hideAlternatives[0] + displayWord + hideAlternatives[1];
       matchCount++;
       wasEOL = false;
     }

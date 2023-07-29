@@ -21,6 +21,7 @@ const HTM = {
   finalTextDiv: document.getElementById("t2_final_text"),
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
+  repeatsList: document.getElementById("t2_repeats_list"),
   backupButton: document.getElementById("backup-btn"),
   backupDialog: document.getElementById("backup-dlg"),
   backupSave: document.getElementById("backup-save"),
