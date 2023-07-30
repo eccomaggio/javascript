@@ -52,8 +52,7 @@ function getCursorInfoInEl(element) {
   let cursorOffsetNoMarks = 0;
   // let divText = "";
   let isInMark = false;
-  let sel;
-  sel = window.getSelection();
+  let sel = window.getSelection();
   if (sel.rangeCount > 0) {
     // ** Create a range stretching from beginning of div to cursor
     const currentRange = window.getSelection().getRangeAt(0);
@@ -220,3 +219,16 @@ function debounce(callback, delay) {
 function debug(...params) {
   console.log(`* ${debug.caller.name.toUpperCase()}: `, params);
 }
+
+
+HTM_SUPP.workingDiv.addEventListener("copy", (event) => {
+  const sel = document.getSelection();
+  // debug(sel)
+  const copiedText = document.createRange();
+  copiedText.setStart(sel.anchorNode, sel.anchorOffset);
+  copiedText.setEnd(sel.focusNode, sel.focusOffset);
+  // event.clipboardData.setData("text/plain", sel.toString().toUpperCase());
+  const normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text,"\n");
+  event.clipboardData.setData("text/plain", normalizedText);
+  event.preventDefault();
+});
