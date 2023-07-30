@@ -59,7 +59,8 @@ function addListeners() {
   document.getElementById("set-db").addEventListener("change", changeDb_shared);
   document.getElementById("set-font").addEventListener("change", changeFont);
   document.getElementById("set-refresh").addEventListener("change", changeRefresh);
-  HTM.refreshButton.addEventListener("click", processText);
+  // HTM.refreshButton.addEventListener("click", processText);
+  HTM.refreshButton.addEventListener("click", getUpdatedText);
   HTM.backupButton.addEventListener("click", showBackups);
   HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
   HTM.backupSave.addEventListener("click", saveBackup);
@@ -495,7 +496,6 @@ function hoverEffects(e) {
   // ## 1) show information text
   // const tooltip = el.firstElementChild;
   if (el.dataset.entry || el.parentElement.dataset.entry) {
-    debug("!!")
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
     HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
     HTM.finalInfoDiv.style.display = "flex";
@@ -572,16 +572,16 @@ function normalizePastedText(e) {
   // console.log("debug *normalize*", paste)
 }
 
-function debounce(callback, delay) {
-  // ## add delay so that text is only processed after user stops typing
-  let timeout;
-  return function () {
-    let originalArguments = arguments;
+// function debounce(callback, delay) {
+//   // ## add delay so that text is only processed after user stops typing
+//   let timeout;
+//   return function () {
+//     let originalArguments = arguments;
 
-    clearTimeout(timeout);
-    timeout = setTimeout(() => callback.apply(this, originalArguments), delay);
-  }
-}
+//     clearTimeout(timeout);
+//     timeout = setTimeout(() => callback.apply(this, originalArguments), delay);
+//   }
+// }
 
 // ## if text is typed in, this is where processing starts
 function OLDprocessText(rawHTML) {
@@ -1001,7 +1001,7 @@ function buildRepeatList(wordCount) {
         listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
       }
     }
-    listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on a number to jump to the word.</em></p><div id='repeats'>` + listOfRepeats;
+    listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p><div id='repeats'>` + listOfRepeats;
     listOfRepeats += "</div>";
   }
   return listOfRepeats
@@ -1044,7 +1044,7 @@ function pluralNoun(amount) {
 
 function displayDbName(msg) {
   if (!msg) msg = "";
-  return `Checked against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  return `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
 }
 
 function dbLookup(word) {
@@ -1116,8 +1116,10 @@ function changeFont(e) {
 }
 
 function changeRefresh(e) {
-  V.isAutoRefresh = (parseInt(e.target.value) === 0);
-  // console.log("changerefresh: isAutoRefresh=",isAutoRefresh)
+  // V.isAutoRefresh = (parseInt(e.target.value) === 0);
+  // const oldStatus = V.isAutoRefresh;
+  V.isAutoRefresh = !V.isAutoRefresh;
+  // debug(`Changed refresh status from ${oldStatus} to ${V.isAutoRefresh}`)
   if (V.isAutoRefresh) {
     HTM.refreshButton.style.display = "none";
   } else {

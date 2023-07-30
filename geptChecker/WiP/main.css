@@ -29,12 +29,19 @@
       align-self: center;
     }
 
-    #left-top,
+    /* #left-top,
     #right-bot {
       flex-grow: 1;
       min-width: 5%;
       width: 100%;
-      /*height: 100%;*/
+      display: flex;
+      overflow: inherit;
+    } */
+
+    #left-top,
+    #right-bot {
+      flex-grow: 1;
+      min-width: 5%;
       display: flex;
       overflow: inherit;
     }
@@ -42,6 +49,11 @@
     #right-bot {
       display: flex;
       flex-direction: column;
+      width: 33%;
+    }
+
+    #left-top {
+      width: 67%;
     }
 
     /* ## TABS ############################################ */
@@ -136,17 +148,29 @@
       flex-grow: 1;
     }
 
+    /* #t2_repeats_list, */
     #t1_results_text,
-    #t2_final_text,
+    /* #t2_final_text, */
     #t2_raw_text,
     #t2_final_info {
-      font-size: var(--font-size);
+      /* font-size: var(--font-size); */
       flex-grow: 1;
     }
 
+    #t2_repeats_list,
+    #t1_results_text,
+    /* #t2_final_text, */
+    #t2_raw_text,
+    #t2_final_info {
+      font-size: var(--font-size);
+      /* flex-grow: 1; */
+    }
+
+
+
     #t1_results_text,
     #t1_results_text table,
-    #t2_final_text,
+    /* #t2_final_text, */
     #t2_raw_text {
       overflow-y: scroll;
       overflow-x: hidden;
@@ -188,7 +212,8 @@
       outline: none;
     }
 
-    #t2_final_text {
+    /* #t2_final_text, */
+    #t2_repeats_list {
       margin-top: 1em;
       padding: 1em;
       white-space: pre-wrap;
@@ -204,13 +229,15 @@
       box-shadow: 5px 5px 5px grey;
       padding: 6px;
       min-height: 40px;
-      max-height: 40px;
+      /* max-height: 40px; */
+      max-height: 90px;
       width: 90%;
       flex-shrink: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      text-align: center;
       z-index: 2;
     }
 

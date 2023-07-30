@@ -1,6 +1,3 @@
-// to make way for in-place editing
-// HTM.rawDiv.removeEventListener("input", debounce(processText, 500));
-
 const V_SUPP = {
   cursorOffset: 0,
   cursorOffsetNoMarks: 0,
@@ -32,17 +29,21 @@ const EOL = {
 }
 
 // HTM.finalInfoDiv.style.display = "flex";
-HTM_SUPP.infoDiv.style.display = "flex";
+// HTM_SUPP.infoDiv.style.display = "flex";
 
 function setListeners() {
   HTM_SUPP.workingDiv.addEventListener("keydown", saveCursorPos);
-  HTM_SUPP.workingDiv.addEventListener("keyup", getUpdatedText);
+  // HTM_SUPP.workingDiv.addEventListener("keyup", getUpdatedText);
+  // HTM_SUPP.workingDiv.addEventListener("keyup", refreshGatekeeper);
+  HTM_SUPP.workingDiv.addEventListener("keyup", debounce(refreshGatekeeper, 500));
+  // HTM_SUPP.workingDiv.addEventListener("keyup", debounce(getUpdatedText, 500));
 }
 
-function removeListeners() {
-  HTM_SUPP.workingDiv.removeEventListener("keydown", saveCursorPos);
-  HTM_SUPP.workingDiv.removeEventListener("keyup", getUpdatedText);
-}
+// function removeListeners() {
+//   HTM_SUPP.workingDiv.removeEventListener("keydown", saveCursorPos);
+//   // HTM_SUPP.workingDiv.removeEventListener("keyup", getUpdatedText);
+//   HTM_SUPP.workingDiv.removeEventListener("keyup", debounce(getUpdatedText, 900));
+// }
 
 setListeners();
 
@@ -95,8 +96,8 @@ function saveCursorPos(e) {
   // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
   V_SUPP.isTextEdit = (e.key) ? e.key === "Backspace" || e.key.length === 1 : false;
   [,,V_SUPP.isInMark] = getCursorInfoInEl(HTM_SUPP.workingDiv);
-  console.log("\n")
-  debug("updated cursor pos:", e.key, V_SUPP.cursorOffset, V_SUPP.cursorOffsetNoMarks)
+  // console.log("\n")
+  // debug("updated cursor pos:", e.key, V_SUPP.cursorOffset, V_SUPP.cursorOffsetNoMarks)
   // console.log(">>", V_SUPP.cursorOffset, "<<", V_SUPP.isInMark, V_SUPP.isKeyText, e.key);
   // ## discard new text if cursor is in non-editable area (i.e. in <mark>)
   if (V_SUPP.isInMark && V_SUPP.isTextEdit) {
@@ -125,8 +126,19 @@ function getUpdatedText(e) {
   } else setCursorPosToStartOf(document.getElementById(CURSOR.id));
 }
 
+function refreshGatekeeper(e) {
+  // debug("autorefresh",V.isAutoRefresh);
+  if (V.isAutoRefresh){
+    getUpdatedText(e);
+  }
+}
+
 function updateDiv(html) {
   // removeListeners();
+  // if (!V.isAutoRefresh) {
+  //   debug("waiting for manual refresh...")
+  //   return;
+  // }
   HTM_SUPP.workingDiv.innerHTML = html;
   // setListeners();
   setCursorPosToStartOf(document.getElementById(CURSOR.id));
@@ -148,7 +160,7 @@ function tmp_ShowResults(revisedText) {
 
 function setCursorPosToStartOf(el, textToInsert = "") {
   if (!el) return;
-  debug(el, ...V_SUPP.cursorPosInTextArr, V_SUPP.cursorOffsetNoMarks)
+  // debug(el, ...V_SUPP.cursorPosInTextArr, V_SUPP.cursorOffsetNoMarks)
   const selectedRange = document.createRange();
   selectedRange.setStart(el, 0);
   if (textToInsert) {
@@ -177,6 +189,7 @@ function processText(rawText) {
   // ## reset V.wordStats
   V.wordStats = {};
   // const text = (rawText.innerText) ? rawText.innerText : rawText;
+
   const text = rawText;
   if (typeof text === "object") return;
   // console.log('process:',text, typeof text)
@@ -189,6 +202,17 @@ function processText(rawText) {
     const resultsAsHTML = convertToHTML(resultsAsTextArr);
     const repeatsAsHTML = buildRepeatList(wordCount);
     return [resultsAsHTML, repeatsAsHTML, wordCount];
+  }
+}
+
+function debounce(callback, delay) {
+  // ## add delay so that text is only processed after user stops typing
+  let timeout;
+  return function () {
+    let originalArguments = arguments;
+
+    clearTimeout(timeout);
+    timeout = setTimeout(() => callback.apply(this, originalArguments), delay);
   }
 }
 
