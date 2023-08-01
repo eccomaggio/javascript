@@ -52,13 +52,16 @@ function addListeners() {
     el.addEventListener("click", activateTab);
   }
   // ## for refresh button
-  document.getElementById("clear_button").addEventListener("click", resetTab);
-  document.getElementById("reset_button").addEventListener("click", resetApp);
+  HTM.clearButton.addEventListener("click", resetTab);
+  HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
-  document.getElementById("set-db").addEventListener("change", changeDb_shared);
-  document.getElementById("set-font").addEventListener("change", changeFont);
-  document.getElementById("set-refresh").addEventListener("change", changeRefresh);
+  // document.getElementById("set-db").addEventListener("change", changeDb_shared);
+  HTM.changeDb.addEventListener("change", changeDb_shared);
+  HTM.changeFontSize.addEventListener("change", changeFont);
+  // document.getElementById("set-refresh").addEventListener("change", changeRefresh);
+  HTM.toggleRefresh.addEventListener("change", changeRefresh);
+  HTM.toggleEditMode.addEventListener("change", changeEditingMode);
   // HTM.refreshButton.addEventListener("click", processText);
   HTM.refreshButton.addEventListener("click", getUpdatedText);
   HTM.backupButton.addEventListener("click", showBackups);
@@ -67,14 +70,45 @@ function addListeners() {
 
   // ## for text input box (need to be restored if in-place editing not activated)
   // HTM.rawDiv.addEventListener("input", debounce(processText, 500));
-  HTM.rawDiv.addEventListener("paste", normalizePastedText);
-
+  // if (!V.isInPlaceEditing) HTM.workingDiv.addEventListener("input", debounce(getUpdatedText, 500));
+  // HTM.workingDiv.addEventListener("paste", normalizePastedText);
   // HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
   // HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
-  HTM.rawDiv.addEventListener("mouseover", hoverEffects);
-  HTM.rawDiv.addEventListener("mouseout", hoverEffects);
+  // HTM.workingDiv.addEventListener("mouseover", hoverEffects);
+  // HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+
+  setEditModeListeners();
   document.getElementById("dropdown").addEventListener("mouseenter", dropdown)
   document.getElementById("dropdown").addEventListener("mouseleave", dropdown)
+}
+
+function setEditModeListeners(){
+  if (V.isInPlaceEditing) {
+    HTM.workingDiv.removeEventListener("paste", normalizePastedText);
+    HTM.workingDiv.removeEventListener("input", debounce(getUpdatedText, 500))
+    HTM.finalInfoDiv.removeEventListener("mouseover", hoverEffects);
+    HTM.finalInfoDiv.removeEventListener("mouseout", hoverEffects);
+
+    HTM.workingDiv.addEventListener("copy", removeMarkupFromCopiedText);
+    HTM.workingDiv.addEventListener("keydown", saveCursorPos);
+    HTM.workingDiv.addEventListener("keyup", debounce(refreshGatekeeper, 500));
+    HTM.workingDiv.addEventListener("mouseover", hoverEffects);
+    HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+  }
+  else {
+    HTM.workingDiv.removeEventListener("copy", removeMarkupFromCopiedText);
+    HTM.workingDiv.removeEventListener("keydown", saveCursorPos);
+    HTM.workingDiv.removeEventListener("keyup", debounce(refreshGatekeeper, 500));
+    HTM.workingDiv.removeEventListener("mouseover", hoverEffects);
+    HTM.workingDiv.removeEventListener("mouseout", hoverEffects);
+
+    HTM.workingDiv.addEventListener("paste", normalizePastedText);
+    // HTM.workingDiv.addEventListener("input", debounce(getUpdatedText, 500))
+    HTM.workingDiv.addEventListener("input", debounce(refreshGatekeeper, 500))
+    HTM.finalInfoDiv.addEventListener("mouseover", hoverEffects);
+    HTM.finalInfoDiv.addEventListener("mouseout", hoverEffects);
+  }
+  // HTM.workingDiv.addEventListener("paste", normalizePastedText);
 }
 
 function dropdown(e) {
@@ -88,11 +122,36 @@ function dropdown(e) {
 }
 
 function finalInit() {
-  const appStatus = localStorage.getItem(C.SAVE_DB_STATE)
-  changeDb_shared((appStatus | 0));
-  HTM.dbDropdown.value = appStatus;
-  refreshLabels("t1_form");
+  // const appStatus = localStorage.getItem(C.SAVE_DB_STATE)
+  // changeDb_shared((appStatus | 0));
+  // HTM.changeDb.value = appStatus;
+  let [
+    dbState,
+    tabState,
+    refreshState,
+    editState
+  ] = retrieveAppState();
+  // changeDb_shared((dbState || 0));
+  // changeDb_shared((dbState) ? dbState : 0);
+  // ## Apply defaults if nothing in storage
+  dbState = (dbState) ? dbState : C.DEFAULT_db;
+  tabState = (tabState) ? tabState : C.DEFAULT_tab;
+  refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
+  editState = (editState) ? editState : C.DEFAULT_edit;
+  // debug(`db:${dbState}, tab:${tabState}, isAutoRefresh: ${refreshState}, isIn-Place: ${editState}`)
+  changeDb_shared(dbState);
+  V.currentTab = tabState;
+  activateTab(HTM.tabHead.children[V.currentTab]);
   resetTab1();
+  V.isAutoRefresh = (refreshState === "0");
+  V.isInPlaceEditing = (editState === "0");
+  // # update dropdown menu select options
+  HTM.changeDb.value = dbState;
+  HTM.toggleRefresh.value = refreshState;
+  HTM.toggleEditMode.value = editState;
+  toggleRefreshButton();
+  refreshLabels("t1_form");
+  // V.currentTab = localStorage.getItem(C.SAVE_TAB_STATE);
   // console.log("offlist db",V.offlistDb)
 }
 
@@ -104,7 +163,7 @@ function showBackups(e) {
   2) close backup dialog on mouseout
   3) close settings dialog when backup opens
   4) hide backup setting on tab 1
-  5) ? rationalize dialogs so there is a coherent, extenable system
+  5) ? rationalize dialogs so there is a coherent, extendable system
   */
   for (const id of C.backupIDs) {
     const backup = document.getElementById(id)
@@ -123,34 +182,35 @@ function showBackups(e) {
 }
 
 function loadBackup(id) {
-  const swap = JSON.parse(JSON.stringify(HTM.rawDiv.innerText));
+  const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
   const restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
-  HTM.rawDiv.innerText = restoredContent;
-  processText(HTM.rawDiv);
+  HTM.workingDiv.innerText = restoredContent;
+  // processText(HTM.workingDiv);
+  getUpdatedText();
   if (swap) localStorage.setItem(id, swap);
   closeBackupDialog("backup-dlg");
 }
 
 function updateBackup(id) {
   // ## current logic: 0=from last refresh, 1=regularly updated (if longer than prev)
-  if (window.localStorage.getItem(id)) {
-    let newContent = HTM.rawDiv.innerText.trim();
+  if (localStorage.getItem(id)) {
+    let newContent = HTM.workingDiv.innerText.trim();
     if (!newContent) return;
     for (let other of C.backupIDs) {
       // ## don't hold duplicate backups
       if (id != other && newContent == localStorage.getItem(other)) return;
     }
-    if (window.localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
+    if (localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
     localStorage.setItem("mostRecent", id);
   } else {
-    window.localStorage.setItem(id, " ")
+    localStorage.setItem(id, " ")
   }
 }
 
 function resetBackup() {
   // ## logic: put current OR most recent change in first backup (2nd backup is constantly updated)
-  let mostRecent = HTM.rawDiv.innerText.trim();
+  let mostRecent = HTM.workingDiv.innerText.trim();
   if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
   if (!mostRecent || !mostRecent.trim().length) return;
   localStorage.setItem(C.backupIDs[0], mostRecent);
@@ -159,7 +219,7 @@ function resetBackup() {
 }
 
 function saveBackup() {
-  const currentText = HTM.rawDiv.innerText;
+  const currentText = HTM.workingDiv.innerText;
   if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText.trim());
     localStorage.setItem("mostRecent", C.backupIDs[1]);
@@ -566,7 +626,8 @@ function normalizePastedText(e) {
   // paste = paste.replace(/[\n\r]+/g, "\n\n");
   paste = normalizeRawText(paste);
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
-  processText(e);
+  // processText(e); // pre-in-place-editing workflow
+  getUpdatedText(e);
   // resetBackup();
   saveBackup();
   // console.log("debug *normalize*", paste)
@@ -593,7 +654,7 @@ function OLDprocessText(rawHTML) {
   const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
   const isClick = (rawHTML.type === 'click');
   if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
-    rawHTML = HTM.rawDiv;
+    rawHTML = HTM.workingDiv;
   } else return;
   if (rawHTML.innerText.trim()) {
     const chunkedText = splitText(rawHTML.innerText);
@@ -647,7 +708,7 @@ function splitText(rawText) {
             // let indexOfChunkWithCursor = arrayOfWords.length;
             // let indexOfChunkWithCursor = chunkArr.length - 1;
             // if (indexOfChunkWithCursor < 0) indexOfChunkWithCursor = 0;
-            V_SUPP.cursorPosInTextArr = [indexOfCurrentWord , indexOfCursorText];
+            V.cursorPosInTextArr = [indexOfCurrentWord, indexOfCursorText];
             word = word.replace(CURSOR.text, "");
             cursorFound = true;
             // debug(`2. ${word} ${V_SUPP.cursorPosInTextArr}`)
@@ -946,7 +1007,7 @@ function convertToHTML(textArr) {
       }
       // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
       // # Add in cursor marker
-      const [word_i, pos_i] = V_SUPP.cursorPosInTextArr;
+      const [word_i, pos_i] = V.cursorPosInTextArr;
       if (wordIndex === word_i) {
         // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
         rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
@@ -1094,7 +1155,7 @@ function checkForeignPlurals(word) {
 }
 
 function resetTab2() {
-  HTM.rawDiv.innerText = "";
+  HTM.workingDiv.innerText = "";
   HTM.finalTextDiv.innerHTML = "";
   HTM.finalLegend.innerHTML = displayDbName();
   HTM.finalInfoDiv.innerText = "";
@@ -1117,14 +1178,30 @@ function changeFont(e) {
 
 function changeRefresh(e) {
   // V.isAutoRefresh = (parseInt(e.target.value) === 0);
-  // const oldStatus = V.isAutoRefresh;
-  V.isAutoRefresh = !V.isAutoRefresh;
-  // debug(`Changed refresh status from ${oldStatus} to ${V.isAutoRefresh}`)
-  if (V.isAutoRefresh) {
+  V.isAutoRefresh = (e.target.value === "0");
+  toggleRefreshButton();
+  localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "0" : "1");
+  // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
+}
+
+function toggleRefreshButton() {
+  // debug("isAutoRefresh:",V.isAutoRefresh)
+  if (V.isAutoRefresh || isTab1()) {
     HTM.refreshButton.style.display = "none";
+    HTM.refreshButtonSpacer.style.display = "none";
   } else {
     HTM.refreshButton.style.display = "block";
+    HTM.refreshButtonSpacer.style.display = "block";
+    getUpdatedText();
   }
+}
+
+function changeEditingMode(e) {
+  // V.isInPlaceEditing = (parseInt(e.target.value) === 0);
+  V.isInPlaceEditing = (e.target.value === "0");
+  localStorage.setItem(C.SAVE_EDIT_STATE, (V.isInPlaceEditing) ? "0" : "1");
+  // debug("is in-place", V.isInPlaceEditing, e.target.value, localStorage.getItem(C.SAVE_EDIT_STATE))
+  // V.isInPlaceEditing = !V.isInPlaceEditing;
 }
 
 function jumpToDuplicate(id) {
@@ -1152,21 +1229,42 @@ function resetTab(event) {
 }
 
 function resetApp() {
-  localStorage.setItem(C.SAVE_DB_STATE, 0);
-  localStorage.setItem(C.SAVE_TAB_STATE, 0);
-  V.currentTab = 0;
+  localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
+  localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
+  localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
+  localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
+  // V.currentTab = 0;
+  V.currentTab = C.DEFAULT_tab;
   resetTab1();
   resetTab2();
-  HTM.dbDropdown.value = 0;
+  // HTM.changeDb.value = 0;
+  HTM.changeDb.value = C.DEFAULT_db;
+  HTM.toggleEditMode = C.DEFAULT_edit;
+  HTM.toggleRefresh = C.DEFAULT_refresh;
+  toggleRefreshButton();
   activateTab(HTM.tabHead.children[0]);
   changeDb_shared(0);
 }
 
+function retrieveAppState() {
+  // localStorage.getItem(C.SAVE_DB_STATE);
+  // localStorage.getItem(C.SAVE_TAB_STATE);
+  // localStorage.getItem(C.SAVE_REFRESH_STATE);
+  // localStorage.getItem(C.SAVE_EDIT_STATE);
+  return [
+    localStorage.getItem(C.SAVE_DB_STATE),
+    localStorage.getItem(C.SAVE_TAB_STATE),
+    localStorage.getItem(C.SAVE_REFRESH_STATE),
+    localStorage.getItem(C.SAVE_EDIT_STATE)
+  ];
+}
+
 
 function changeDb_shared(e) {
-  let choice = (e.target) ? parseInt(e.target.value) : e;
+  let choice = (e.target) ? e.target.value : e;
+  choice = parseInt(choice);
   V.currentDb = [];
-  if (choice === 0) {
+  if (choice === parseInt(C.DEFAULT_db)) {
     V.currentDb = {
       name: "GEPT",
       db: indexDb(makeGEPTdb()),
@@ -1242,14 +1340,30 @@ function changeDb_words() {
 function changeDb_text() {
   const dbNameText = document.getElementById('db_name2');
   if (dbNameText) dbNameText.textContent = V.currentDb.name;
-  processText(HTM.rawDiv);
+  // processText(HTM.workingDiv);
+  getUpdatedText();
+}
+
+function debounce(callback, delay) {
+  // ## add delay so that text is only processed after user stops typing
+  let timeout;
+  return function () {
+    let originalArguments = arguments;
+
+    clearTimeout(timeout);
+    timeout = setTimeout(() => callback.apply(this, originalArguments), delay);
+  }
+}
+
+function debug(...params) {
+  console.log(`* ${debug.caller.name.toUpperCase()}: `, params);
 }
 
 // ## TABS ############################################
 
-V.currentTab = localStorage.getItem(C.SAVE_TAB_STATE);
-V.currentTab = (V.currentTab) ? V.currentTab : "0";
-activateTab(HTM.tabHead.children[V.currentTab]);
+// V.currentTab = localStorage.getItem(C.SAVE_TAB_STATE);
+// V.currentTab = (V.currentTab) ? V.currentTab : "0";
+// activateTab(HTM.tabHead.children[V.currentTab]);
 
 function activateTab(tab) {
   if (tab.target) tab = tab.target
@@ -1268,19 +1382,24 @@ function activateTab(tab) {
     i++;
   }
   if (isTab1()) {
-    document.getElementById("set-refresh").style.display = "none";
+    // document.getElementById("set-refresh").style.display = "none";
+    HTM.toggleRefresh.style.display = "none";
+    HTM.toggleEditMode.style.display = "none";
     HTM.backupButton.style.display = "none";
     HTM.backupSave.style.display = "none";
   } else {
-    document.getElementById("set-refresh").style.display = "block";
+    // document.getElementById("set-refresh").style.display = "block";
+    HTM.toggleRefresh.style.display = "block";
+    HTM.toggleEditMode.style.display = "block";
     HTM.backupButton.style.display = "block";
     HTM.backupSave.style.display = "block";
-
   }
+  toggleRefreshButton();
   localStorage.setItem(C.SAVE_TAB_STATE, V.currentTab);
 }
 
 function isTab1() {
   return V.currentTab === 0;
 }
+
 

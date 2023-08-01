@@ -150,7 +150,7 @@
 
     /* #t2_repeats_list, */
     #t1_results_text,
-    /* #t2_final_text, */
+    #t2_final_text,
     #t2_raw_text,
     #t2_final_info {
       /* font-size: var(--font-size); */
@@ -159,7 +159,7 @@
 
     #t2_repeats_list,
     #t1_results_text,
-    /* #t2_final_text, */
+    #t2_final_text,
     #t2_raw_text,
     #t2_final_info {
       font-size: var(--font-size);
@@ -170,7 +170,8 @@
 
     #t1_results_text,
     #t1_results_text table,
-    /* #t2_final_text, */
+    #t2_final_text,
+    #t2_repeats_list,
     #t2_raw_text {
       overflow-y: scroll;
       overflow-x: hidden;

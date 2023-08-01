@@ -1,4 +1,3 @@
-
 function indexDb(db) {
   for (const i in db) {
     db[i].unshift(parseInt(i));
@@ -16,22 +15,102 @@ const HTM = {
   resultsText: document.getElementById("t1_results_text"),
   t1_title: document.getElementById("t1_term_legend"),
   root_css: document.documentElement,
-  refreshButton: document.getElementById("refresh_button"),
-  rawDiv: document.getElementById("t2_raw_text"),
+  workingDiv: document.getElementById("t2_raw_text"),
+  // workingDiv: document.getElementById("t2_raw_text"),
   finalTextDiv: document.getElementById("t2_final_text"),
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
   repeatsList: document.getElementById("t2_repeats_list"),
+  tabHead: document.getElementById("tab-head"),
+  tabBody: document.getElementById("tab-body"),
+
+  clearButton: document.getElementById("clear_button"),
+  resetButton: document.getElementById("reset_button"),
+  refreshButton: document.getElementById("refresh_button"),
+  refreshButtonSpacer: document.getElementById("refresh_button_spacer"),
+  toggleRefresh: document.getElementById("set-refresh"),
+  toggleEditMode: document.getElementById("set-edit-mode"),
   backupButton: document.getElementById("backup-btn"),
   backupDialog: document.getElementById("backup-dlg"),
   backupSave: document.getElementById("backup-save"),
   settingsContent: document.getElementById("settings-content"),
-  dbDropdown: document.getElementById("set-db"),
-  tabHead: document.getElementById("tab-head"),
-  tabBody: document.getElementById("tab-body")
+  changeDb: document.getElementById("set-db"),
+  changeFontSize: document.getElementById("set-font"),
 };
 
+// ## Global constants
+const C = {
+  ID: 0,
+  LEMMA: 1,
+  POS: 2,
+  LEVEL: 3,
+  NOTE: 4,
+  isCOMPOUND: 5,
+  punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
+  // punctuation: new RegExp('[!"#$%&\'()*+,./:;<=>?@[\]^_`{}~]','g'),
+  // ## removed hyphen & bar (- |)
+  NBSP: String.fromCharCode(160),
+  backupIDs: ["backup_0", "backup_1"],
+  awl_level_offset: 37,
+  NOTE_SEP: "|",
+  // ## names of local storage variables; default values in finalInit
+  SAVE_DB_STATE: "db_state",
+  SAVE_TAB_STATE: "tab_state",
+  SAVE_REFRESH_STATE: "refresh_state",
+  SAVE_EDIT_STATE: "edit_state",
+  DEFAULT_db: "0",
+  DEFAULT_tab: 0,
+  DEFAULT_refresh: "0",
+  DEFAULT_edit: "0",
+  MATCHES: {
+    exact: ["^", "$"],
+    contains: ["", ""],
+    starts: ["^", ".*"],
+    ends: [".*", "$"]
+  }
+  // compoundMaxLen: 1
+}
 
+// ## Global variables
+let V = {
+  // ## offlist word db uses negative ids (translate to positive index) so no 0
+  offlistDb: [["unused"]],
+  offlistIndex: 1,
+  wordStats: {},
+  isAutoRefresh: true,
+  isInPlaceEditing: true,
+  currentDb: {},
+  // OFFLIST: LOOKUP.level_headings.length,
+  // level_subs: LOOKUP.level_headings.concat(LOOKUP.offlist_subs),
+  // const level_subs = lookup.level_headings.concat(lookup.offlist_subs);
+  OFFLIST: 0,
+  level_subs: [],
+  currentTab: 0,
+  cursorOffset: 0,
+  cursorOffsetNoMarks: 0,
+  isInMark: false,
+  isTextEdit: false,
+  // # key: [index in textArr, index in normalized word]
+  cursorPosInTextArr: [0, 0],
+}
+
+const CURSOR = {
+  tag: "span",
+  id: "cursorPosHere",
+  // HTMLtext: "<span id='cursorPosHere'>@</span>",
+  HTMLtext: "<span id='cursorPosHere'></span>",
+  // text: "@CRSR",
+  text: "*CRSR"
+}
+
+const EOL = {
+  text: "*EOL",
+  HTMLtext: "<br>",
+}
+
+
+
+if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
 
 
 const LOOKUP = {
@@ -798,46 +877,6 @@ const LOOKUP = {
   ])
 }
 
-
-// ## Global constants
-const C = {
-  ID: 0,
-  LEMMA: 1,
-  POS: 2,
-  LEVEL: 3,
-  NOTE: 4,
-  isCOMPOUND: 5,
-  punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
-  // punctuation: new RegExp('[!"#$%&\'()*+,./:;<=>?@[\]^_`{}~]','g'),
-  // ## removed hyphen & bar (- |)
-  NBSP: String.fromCharCode(160),
-  backupIDs: ["backup_0", "backup_1"],
-  awl_level_offset: 37,
-  NOTE_SEP: "|",
-  SAVE_DB_STATE: "db_state",
-  SAVE_TAB_STATE: "tab_state",
-  MATCHES: {
-    exact: ["^", "$"],
-    contains: ["", ""],
-    starts: ["^", ".*"],
-    ends: [".*", "$"]
-  }
-  // compoundMaxLen: 1
-}
-
-// ## Global variables
-let V = {
-  // ## offlist word db uses negative ids (translate to positive index) so no 0
-  offlistDb: [["unused"]],
-  offlistIndex: 1,
-  wordStats: {},
-  isAutoRefresh: true,
-  currentDb: {},
-  OFFLIST: LOOKUP.level_headings.length,
-  // const level_subs = lookup.level_headings.concat(lookup.offlist_subs);
-  level_subs: LOOKUP.level_headings.concat(LOOKUP.offlist_subs),
-  currentTab: 0
-}
-
-if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
+V.OFFLIST = LOOKUP.level_headings.length;
+V.level_subs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
 

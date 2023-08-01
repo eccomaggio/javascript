@@ -17,3 +17,9 @@
     #cursorPosHere {
       background-color: yellow;
     }
+
+    #t2_raw_text br {
+      display: block;
+      content: " ";
+      margin-bottom: 1.5em;
+    }

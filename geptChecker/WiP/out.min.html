@@ -26,6 +26,8 @@
         <div class="spacer">&nbsp;</div>
         <button class="dropbtn" id="clear_button" type="button">Clear</button>
         <div class="spacer">&nbsp;</div>
+        <button class="dropbtn" id="refresh_button" type="button" style="display: none">Refresh</button>
+        <div class="spacer" id="refresh_button_spacer">&nbsp;</div>
         <!-- adapted from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_dropdown_right -->
         <div class="dropdown" id="dropdown">
           <button class="dropbtn" type="button">Settings</button>
@@ -55,6 +57,11 @@
               <option id="set-refresh-manual" value="1">manual refresh</option>
             </select>
 
+            <select name="set-edit-mode" id="set-edit-mode" style="display: block;">
+              <option value="0">In-place editing</option>
+              <option id="set-edit-2col" value="1">2-column editing</option>
+            </select>
+
             <button id="backup-btn" style="display: block;">backups</button>
             <button id="backup-save" style="display: block;">save backup</button>
             <!-- <div id="version-no">Version 4-8.4</div> -->
@@ -68,8 +75,8 @@
             <button id="backup_1" onclick="loadBackup('backup_1')"></button>
           </div>
         </dialog>
-        <div class="spacer">&nbsp;</div>
-        <button class="dropbtn" id="refresh_button" type="button" style="display: none">Refresh</button>
+        <!-- <div class="spacer">&nbsp;</div>
+        <button class="dropbtn" id="refresh_button" type="button" style="display: none">Refresh</button> -->
 
         <div class="spacer">&nbsp;</div>
       </div>
@@ -260,8 +267,8 @@
             <!-- <div id="t2_final_legend">Checking against <span id="db_name2" class="dbColor">GEPT</span></div> -->
             <div id="t2_final_legend">></div>
             <div id="t2_final_info" style="display: none;"></div>
+            <div id="t2_final_text"></div>
             <div id="t2_repeats_list"></div>
-            <!-- <div id="t2_final_text"><span class="error">Please input some text.</span></div> -->
           </div>
         </div>
       </div>
