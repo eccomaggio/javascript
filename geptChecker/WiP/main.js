@@ -1,45 +1,53 @@
-function buildListOfCompoundWords(dB) {
-  /* ##
-  A) goes through currentDb and checks for compounds (words containing spaces / hyphens)
-  These are a problem as spaces are used to divide words;
-  This function creates a table of items (compounds) to be checked against the text
-  before it is divided into words. All compounds are converted into 3 forms:
-  1) compoundword, 2) compound word, 3) compound-word
-
-  B) updates database to include isCOMPOUND marker to avoid searching for words twice
-  (as compounds and single words)
-  */
-  let compounds = {};
-  for (let entry of dB) {
-    const word = entry[C.LEMMA].toLowerCase();
-    const id = entry[C.ID];
-    const splitWord = word.split(/[-'\s]/g);
-    if (splitWord.length > 1) {
-      const newCompound = splitWord.join("");
-      entry[C.isCOMPOUND] = true;
-      compounds[newCompound] = id;
-    }
-  }
-  return compounds;
-}
-
-// ## TAB1 (words) SETUP ############################################
+// ## SETUP ############################################
 
 
+initialize();
 addListeners();
-finalInit();
 
 
 // TAB1 (words) CODE ## ############################################
 
 // ***** INIT FUNCTIONS
 
+function initialize() {
+  let [
+    dbState,
+    tabState,
+    refreshState,
+    editState
+  ] = retrieveAppState();
+  // ## Apply defaults if nothing in storage
+  dbState = (dbState) ? dbState : C.DEFAULT_db;
+  tabState = (tabState) ? tabState : C.DEFAULT_tab;
+  refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
+  editState = (editState) ? editState : C.DEFAULT_edit;
+  // debug(`db:${dbState}, tab:${tabState}, isAutoRefresh: ${refreshState}, isIn-Place: ${editState}`)
+
+  changeDb_shared(dbState);
+  displayDbNameInTab2();
+
+  V.currentTab = tabState;
+  activateTab(HTM.tabHead.children[V.currentTab]);
+  clearTab1();
+
+  V.isAutoRefresh = (refreshState === "0");
+  V.isInPlaceEditing = (editState === "0");
+  // setEditModeListeners();
+  toggleFinalTextDiv();
+
+  // # update dropdown menu select options
+  HTM.changeDb.value = dbState;
+  HTM.toggleRefresh.value = refreshState;
+  HTM.toggleEditMode.value = editState;
+  toggleRefreshButton();
+  refreshLabels("t1_form");
+}
+
 function addListeners() {
   document
     .getElementById("t1_theme_select");
   // .addEventListener("change", submitWordSearchForm);
 
-  // document.getElementById("t1_term_i").addEventListener("input", debounce(submitWordSearchForm, 500));
   HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
 
   for (const el of document.getElementsByTagName("input")) {
@@ -57,38 +65,26 @@ function addListeners() {
   HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
-  // document.getElementById("set-db").addEventListener("change", changeDb_shared);
   HTM.changeDb.addEventListener("change", changeDb_shared);
   HTM.changeFontSize.addEventListener("change", changeFont);
-  // document.getElementById("set-refresh").addEventListener("change", changeRefresh);
   HTM.toggleRefresh.addEventListener("change", changeRefresh);
   HTM.toggleEditMode.addEventListener("change", changeEditingMode);
-  // HTM.refreshButton.addEventListener("click", processText);
   HTM.refreshButton.addEventListener("click", getUpdatedText);
   HTM.backupButton.addEventListener("click", showBackups);
   HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
   HTM.backupSave.addEventListener("click", saveBackup);
 
-  // ## for text input box (need to be restored if in-place editing not activated)
-  // HTM.rawDiv.addEventListener("input", debounce(processText, 500));
-  // if (!V.isInPlaceEditing) HTM.workingDiv.addEventListener("input", debounce(getUpdatedText, 500));
-  // HTM.workingDiv.addEventListener("paste", normalizePastedText);
-  // HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
-  // HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
-  // HTM.workingDiv.addEventListener("mouseover", hoverEffects);
-  // HTM.workingDiv.addEventListener("mouseout", hoverEffects);
-
-  // setEditModeListeners();
-  // document.getElementById("dropdown").addEventListener("mouseenter", dropdown)
-  // document.getElementById("dropdown").addEventListener("mouseleave", dropdown)
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
+
+  setEditModeListeners();
 }
 
 function setEditModeListeners(){
+  HTM.workingDiv.addEventListener("paste", normalizePastedText);
   if (V.isInPlaceEditing) {
     // debug("listeners set for in-place")
-    HTM.workingDiv.removeEventListener("paste", normalizePastedText);
+    // HTM.workingDiv.removeEventListener("paste", normalizePastedText);
     HTM.workingDiv.removeEventListener("input", debounce(getUpdatedText, 500))
     HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
@@ -108,13 +104,13 @@ function setEditModeListeners(){
     HTM.workingDiv.removeEventListener("mouseout", hoverEffects);
 
     // HTM.workingDiv.addEventListener("paste", normalizePastedText);
-    // HTM.workingDiv.addEventListener("input", debounce(getUpdatedText, 500))
     HTM.workingDiv.addEventListener("input", debounce(refreshGatekeeper, 500))
     HTM.finalTextDiv.addEventListener("mouseover", hoverEffects); //
     HTM.finalTextDiv.addEventListener("mouseout", hoverEffects); //
   }
-  // HTM.workingDiv.addEventListener("paste", normalizePastedText);
 }
+
+// *****  FUNCTIONS
 
 function dropdown(e) {
   // ## toggle visibility of settings dropdown
@@ -125,51 +121,6 @@ function dropdown(e) {
   }
   HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
 }
-
-function finalInit() {
-  // const appStatus = localStorage.getItem(C.SAVE_DB_STATE)
-  // changeDb_shared((appStatus | 0));
-  // HTM.changeDb.value = appStatus;
-  let [
-    dbState,
-    tabState,
-    refreshState,
-    editState
-  ] = retrieveAppState();
-  // changeDb_shared((dbState || 0));
-  // changeDb_shared((dbState) ? dbState : 0);
-  // ## Apply defaults if nothing in storage
-  dbState = (dbState) ? dbState : C.DEFAULT_db;
-  tabState = (tabState) ? tabState : C.DEFAULT_tab;
-  refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
-  editState = (editState) ? editState : C.DEFAULT_edit;
-  // debug(`db:${dbState}, tab:${tabState}, isAutoRefresh: ${refreshState}, isIn-Place: ${editState}`)
-  changeDb_shared(dbState);
-  V.currentTab = tabState;
-  activateTab(HTM.tabHead.children[V.currentTab]);
-  clearTab1();
-  V.isAutoRefresh = (refreshState === "0");
-  V.isInPlaceEditing = (editState === "0");
-  setEditModeListeners();
-  toggleFinalTextDiv();
-  // # update dropdown menu select options
-  HTM.changeDb.value = dbState;
-  HTM.toggleRefresh.value = refreshState;
-  HTM.toggleEditMode.value = editState;
-  toggleRefreshButton();
-  refreshLabels("t1_form");
-  // displayDbNameInTab2();
-  // V.currentTab = localStorage.getItem(C.SAVE_TAB_STATE);
-  // console.log("offlist db",V.offlistDb)
-
-  // ## TAB2 (text) SETUP ############################################
-
-  // HTM.finalInfoDiv.style.display = "none";
-  // HTM.finalLegend.innerHTML = displayDbNameInTab2();
-  displayDbNameInTab2();
-}
-
-// *****  FUNCTIONS
 
 function showBackups(e) {
   /*
@@ -320,21 +271,6 @@ function refreshLabels(parentID) {
   });
 }
 
-// function submitWordSearchForm(e) {
-//   const data = getFormData(e);
-//   let errorMsg = checkFormData(data);
-//   let resultsCount = 0;
-//   let resultsArr = [];
-//   let stringToDisplay = "";
-//   if (errorMsg) {
-//     stringToDisplay = `<p class='error'>${errorMsg}</p>`;
-//   } else {
-//     resultsArr = executeFormDataLookup(data);
-//     resultsCount = resultsArr.length;
-//     stringToDisplay = formatResultsAsHTML(resultsArr);
-//   }
-//   displayWordSearchResults(stringToDisplay, resultsCount);
-// }
 function submitWordSearchForm(e) {
   const data = getFormData(e);
   let errorMsg = checkFormData(data);
@@ -639,51 +575,12 @@ function normalizePastedText(e) {
   const selection = window.getSelection();
   // paste = paste.replace(/[\n\r]+/g, "\n\n");
   paste = normalizeRawText(paste);
+  paste = paste.replace(` ${EOL.text} `,"\n");
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
   getUpdatedText(e);
   // resetBackup();
   saveBackup();
-  // console.log("debug *normalize*", paste)
 }
-
-// function debounce(callback, delay) {
-//   // ## add delay so that text is only processed after user stops typing
-//   let timeout;
-//   return function () {
-//     let originalArguments = arguments;
-
-//     clearTimeout(timeout);
-//     timeout = setTimeout(() => callback.apply(this, originalArguments), delay);
-//   }
-// }
-
-// ## if text is typed in, this is where processing starts
-// function OLDprocessText(rawHTML) {
-//   console.log("html type=", rawHTML.type, rawHTML)
-//   // ## reset V.wordStats
-//   V.wordStats = {};
-//   // ## need to distinguish between typed / button / pasted input
-//   // ## and interact with auto-refresh toggle
-//   const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
-//   const isClick = (rawHTML.type === 'click');
-//   if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
-//     rawHTML = HTM.workingDiv;
-//   } else return;
-//   if (rawHTML.innerText.trim()) {
-//     const chunkedText = splitText(rawHTML.innerText);
-//     // console.log("chunked text:",chunkedText)
-//     const textArr = findCompoundsAndFlattenArray(chunkedText);
-//     const [processedTextArr, wordCount] = addLookUps(textArr);
-//     // console.log("processed text array",processedTextArr)
-//     let htmlString = convertToHTML(processedTextArr);
-//     const listOfRepeats = buildRepeatList(wordCount);
-//     displayCheckedText(htmlString, listOfRepeats, wordCount)
-
-//     updateBackup(C.backupIDs[1]);
-//   } else {
-//     displayCheckedText();
-//   }
-// }
 
 function refreshGatekeeper(e) {
   // debug("autorefresh",V.isAutoRefresh);
@@ -699,12 +596,15 @@ function getUpdatedText(e) {
       V.cursorOffset,
       V.cursorOffsetNoMarks,
     ] = getCursorInfoInEl(HTM.workingDiv);
+    // debug(V.isTextEdit,V.isInMark,e)
     // if (V.isTextEdit && !V.isInMark) {
-    if (!V.isTextEdit || V.isInMark) {
+      // ## changeEditMode sets e to "update" to ensure text is reprocessed
+    if ((!V.isTextEdit || V.isInMark) && e !== "update") {
+      // debug("reset cursor only")
       setCursorPosToStartOf(document.getElementById(CURSOR.id));
       return;
     } else {
-      debug();
+      // debug("welcome to Oz");
       let revisedText = removeTagContentFromElement(HTM.workingDiv);
       if (!revisedText) return;
       revisedText = insertCursorPlaceholder(revisedText);
@@ -717,17 +617,6 @@ function getUpdatedText(e) {
     }
   }
   else {
-    // let e = HTM_SUPP.workingDiv.innerHTML;
-    // let raw = e;
-    // // ## need to distinguish between typed / button / pasted input
-    // // ## and interact with auto-refresh toggle
-    // debug("type", raw.type);
-    // const isTyped = (raw.type === 'input' || raw.type === 'paste');
-    // const isClick = (raw.type === 'click');
-    // if ((isTyped && V.isAutoRefresh) || isClick || !raw.type) {
-    //   raw = HTM.workingDiv;
-    // } else return;
-
     let revisedText = HTM.workingDiv.innerText.trim();
     if (revisedText){
       const [
@@ -748,24 +637,14 @@ function displayTextSearchResults(resultsAsHTML, repeatsAsHTML, wordCount) {
 
 function updateTextInputDiv(html) {
   if (V.isInPlaceEditing) {
-    // removeListeners();
-    // HTM.workingDiv.removeEventListener("keydown", saveCursorPos);
-    // HTM.workingDiv.removeEventListener("keyup", debounce(refreshGatekeeper, 500));
-
     HTM.workingDiv.innerHTML = html;
     setCursorPosToStartOf(document.getElementById(CURSOR.id));
-
-    // HTM.workingDiv.addEventListener("keydown", saveCursorPos);
-    // HTM.workingDiv.addEventListener("keyup", debounce(refreshGatekeeper, 500));
-    // setListeners();
   } else {
     HTM.finalTextDiv.innerHTML = html;
   }
-  // updateBackup(C.backupIDs[1]);
 }
 
 function processText(rawText) {
-  // debug("type", typeof rawText)
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -778,16 +657,11 @@ function processText(rawText) {
   */
   // ## reset V.wordStats
   V.wordStats = {};
-  // const text = (rawText.innerText) ? rawText.innerText : rawText;
-
   if (typeof rawText === "object") return;
   const text = rawText.trim();
-  // console.log('process:',text, typeof text)
   if (text) {
     const chunkedText = splitText(text);
-    // debug("chunked text:", chunkedText)
     const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
-    // debug("textArr:", textArr)
     const [resultsAsTextArr, wordCount] = addLookUps(flatTextArr);
     const resultsAsHTML = convertToHTML(resultsAsTextArr);
     const repeatsAsHTML = buildRepeatList(wordCount);
@@ -819,25 +693,19 @@ function splitText(rawText) {
   for (let phrase of raw_chunks) {
     let arrayOfWords = [];
     for (let word of phrase.split(/\s+/)) {
-      // if (word.includes("*EOL")) {
-      // if (word.indexOf("*EOL") >= 0) {
-      //   chunkArr.push(["*EOL", "<br>"]);
       if (word.indexOf(EOL.text) >= 0) {
         arrayOfWords.push([EOL.text, EOL.HTMLtext]);
-        // debug("EOL!")
       } else {
         if (!cursorFound) {
           // # Save position of cursor externally so it can be reinserted after text parsing
           const indexOfCursorText = word.indexOf(CURSOR.text);
           if (indexOfCursorText >= 0) {
-            // debug("Cursor: 1.", word)
-            // let indexOfChunkWithCursor = arrayOfWords.length;
-            // let indexOfChunkWithCursor = chunkArr.length - 1;
-            // if (indexOfChunkWithCursor < 0) indexOfChunkWithCursor = 0;
-            V.cursorPosInTextArr = [indexOfCurrentWord, indexOfCursorText];
+            V.cursorPosInTextArr = [
+              indexOfCurrentWord,
+              indexOfCursorText
+            ];
             word = word.replace(CURSOR.text, "");
             cursorFound = true;
-            // debug(`2. ${word} ${V_SUPP.cursorPosInTextArr}`)
           }
           indexOfCurrentWord++;
         }
@@ -856,10 +724,6 @@ function normalizeRawText(text) {
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
     .replace(/[\n\r]/g, ` ${EOL.text} `) // encode EOLs
-    // .replace(/</g, "&lt;") // encode HTML entities
-    // .replace(/>/g, "&rt;") // encode HTML entities
-    // .replace(/&/g, "&amp;") // encode HTML entities
-    // .replace(/\u2014/g, " -- ")
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
     .replace(/(\w)\/(\w)/g, "$1 / $2");
@@ -933,7 +797,6 @@ function addLookUps(textArr) {
         const match = getDbEntry(id);
         // ## don't count contractions as separate words
         if (["contraction"].includes(match[C.POS])) { wordCount-- };
-        // if (!V.currentDb.compounds[word]) matchedIDs.push([id, updateWordStats(id)]);
         if (!V.currentDb.compounds[word]) addMatch(matchedIDs, id);
       }
       // ## filter out matched compounds without spaces
@@ -941,7 +804,6 @@ function addLookUps(textArr) {
       processedTextArr.push([word, wordArr[1], preMatchArr]);
     }
   }
-  // console.log("processedT arr:", processedTextArr)
   return [processedTextArr, wordCount];
 }
 
@@ -980,10 +842,6 @@ function markOfflist(word, type) {
 }
 
 function lookupWord([word, rawWord]) {
-  // let matches = dbLookup([word, raw_word]);
-  // if (rawWord === "&") {
-  //   word = rawWord;
-  // }
   if (LOOKUP.symbols.includes(rawWord)){
     word = rawWord;
   }
@@ -997,7 +855,6 @@ function lookupDerivations([word, rawWord], matches = []) {
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
   */
-  // let matches = [];
   if (word.match(/\d/i)) {
     matches.push(markOfflist(word, "digit"));
     return matches;
@@ -1073,7 +930,6 @@ function lookupDerivations([word, rawWord], matches = []) {
       }
     }
   }
-  // console.log("lookupDerivations", word, matches)
   return matches;
 }
 
@@ -1097,8 +953,6 @@ function convertToHTML(textArr) {
   /* ## textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]]
   for each word, repeat the raw-word for each match, but with different interpretations
   */
-  // if (!textArr.length) console.log("nowt doin'!")
-  // let htmlString = "";
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
@@ -1106,12 +960,8 @@ function convertToHTML(textArr) {
   for (let wordArr of textArr) {
     let word = wordArr[0];
     // debug(word, word === EOL.text, wordIndex, wordIndex == V_SUPP.cursorPosInTextArr[0])
-    // if (word === "*EOL") {
-    // htmlString += "<br><br>";
     if (word === EOL.text) {
-      // htmlString += EOL.HTMLtext + EOL.HTMLtext;
       htmlString += EOL.HTMLtext;
-      // debug("EOL!!")
       wasEOL = true;
       continue;
     }
@@ -1146,41 +996,24 @@ function convertToHTML(textArr) {
         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
-      // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
       // # Add in cursor marker
       if (V.isInPlaceEditing) {
         const [word_i, pos_i] = V.cursorPosInTextArr;
         if (wordIndex === word_i) {
-          // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
           rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
-          // continue;
         }
       }
-      // const [word_i, pos_i] = V.cursorPosInTextArr;
-      // if (wordIndex === word_i) {
-      //   // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
-      //   rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
-      //   continue;
-      //   // debug(rawWord)
-      // }
       let localWord = highlightAwlWord(level_arr, rawWord);
       const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
       if (origLemma.search(/[-'\s]/) >= 0) {
         localWord = origLemma;
       }
       // debug(`localWord: ${localWord}, wordArr: ${wordArr}`)
-      // localWord = localWord
-        // .replace(/&/g, "&amp;")
-        // .replace(/>/g, "&gt;")
-        // .replace(/</g, "&lt;");
-        // .replace(CURSOR.text,CURSOR.tag);
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
       if (matchCount > 0 && matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
-      // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
       if (matchCount > 0) {
         htmlString += `<mark>${displayWord}</mark>`;
       } else htmlString += displayWord;
-      // htmlString += hideAlternatives[0] + displayWord + hideAlternatives[1];
       matchCount++;
       wasEOL = false;
     }
@@ -1228,8 +1061,6 @@ function buildRepeatList(wordCount) {
     } else {
       listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words</strong></p>";
     }
-    // listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p><div id='repeats'>` + listOfRepeats;
-    // listOfRepeats += "</div>";
   }
   return listOfRepeats
 }
@@ -1245,25 +1076,6 @@ function compareByLemma(a, b) {
   }
   return 0;
 }
-
-// function displayCheckedText(htmlText, listOfRepeats, wordCount) {
-//   if (!htmlText) {
-//     htmlText = "<span class='error'>Please input some text.</span>"
-//     HTM.finalInfoDiv.style.display = "none";
-//   } else {
-//     if (listOfRepeats) {
-//       htmlText += listOfRepeats;
-//     } else {
-//       htmlText += "<h1>There are no significant repeated words.</h1>"
-//     }
-//     // const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(wordCount > 1 ? "s" : "")}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
-//     const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
-//     HTM.finalLegend.innerHTML = displayDbName(numOfWords);
-//     HTM.finalInfoDiv.style.display = "flex";
-//   }
-//   HTM.finalTextDiv.innerHTML = htmlText;
-//   HTM.finalInfoDiv.innerHTML = "";
-// }
 
 function getWordCountForDisplay(wordCount) {
     const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
@@ -1370,22 +1182,18 @@ function toggleRefreshButton() {
 }
 
 function changeEditingMode(e) {
-  // V.isInPlaceEditing = (parseInt(e.target.value) === 0);
   V.isInPlaceEditing = (e.target.value === "0");
-  // debug("isInPlaceEditing?", V.isInPlaceEditing)
   localStorage.setItem(C.SAVE_EDIT_STATE, (V.isInPlaceEditing) ? "0" : "1");
-  if (!V.isInPlaceEditing) {
-    // debug(removeTagContentFromElement(HTM.workingDiv))
-    HTM.workingDiv.innerText = removeTagContentFromElement(HTM.workingDiv);
-  } else {
+  if (V.isInPlaceEditing) {
     HTM.finalTextDiv.innerHTML = "";
+  } else {
+    HTM.workingDiv.innerText = removeTagContentFromElement(HTM.workingDiv);
   }
   setEditModeListeners();
-  getUpdatedText();
+  getUpdatedText("update");
   toggleFinalTextDiv();
-  // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
+  // displayInputCursor();
   // debug("is in-place", V.isInPlaceEditing, e.target.value, localStorage.getItem(C.SAVE_EDIT_STATE))
-  // V.isInPlaceEditing = !V.isInPlaceEditing;
 }
 
 function toggleFinalTextDiv() {
@@ -1512,6 +1320,31 @@ function changeDb_shared(e) {
   changeDb_text();
   changeDb_words();
   localStorage.setItem(C.SAVE_DB_STATE, choice);
+}
+
+function buildListOfCompoundWords(dB) {
+  /* ##
+  A) goes through currentDb and checks for compounds (words containing spaces / hyphens)
+  These are a problem as spaces are used to divide words;
+  This function creates a table of items (compounds) to be checked against the text
+  before it is divided into words. All compounds are converted into 3 forms:
+  1) compoundword, 2) compound word, 3) compound-word
+
+  B) updates database to include isCOMPOUND marker to avoid searching for words twice
+  (as compounds and single words)
+  */
+  let compounds = {};
+  for (let entry of dB) {
+    const word = entry[C.LEMMA].toLowerCase();
+    const id = entry[C.ID];
+    const splitWord = word.split(/[-'\s]/g);
+    if (splitWord.length > 1) {
+      const newCompound = splitWord.join("");
+      entry[C.isCOMPOUND] = true;
+      compounds[newCompound] = id;
+    }
+  }
+  return compounds;
 }
 
 function changeDb_words() {
