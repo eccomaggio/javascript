@@ -39,7 +39,8 @@ function addListeners() {
     .getElementById("t1_theme_select");
   // .addEventListener("change", submitWordSearchForm);
 
-  document.getElementById("t1_term_i").addEventListener("input", debounce(submitWordSearchForm, 500));
+  // document.getElementById("t1_term_i").addEventListener("input", debounce(submitWordSearchForm, 500));
+  HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
 
   for (const el of document.getElementsByTagName("input")) {
     if (el.type != "text") {
@@ -52,7 +53,7 @@ function addListeners() {
     el.addEventListener("click", activateTab);
   }
   // ## for refresh button
-  HTM.clearButton.addEventListener("click", resetTab);
+  HTM.clearButton.addEventListener("click", clearTab);
   HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
@@ -77,17 +78,20 @@ function addListeners() {
   // HTM.workingDiv.addEventListener("mouseover", hoverEffects);
   // HTM.workingDiv.addEventListener("mouseout", hoverEffects);
 
-  setEditModeListeners();
-  document.getElementById("dropdown").addEventListener("mouseenter", dropdown)
-  document.getElementById("dropdown").addEventListener("mouseleave", dropdown)
+  // setEditModeListeners();
+  // document.getElementById("dropdown").addEventListener("mouseenter", dropdown)
+  // document.getElementById("dropdown").addEventListener("mouseleave", dropdown)
+  HTM.settingsMenu.addEventListener("mouseenter", dropdown);
+  HTM.settingsMenu.addEventListener("mouseleave", dropdown);
 }
 
 function setEditModeListeners(){
   if (V.isInPlaceEditing) {
+    // debug("listeners set for in-place")
     HTM.workingDiv.removeEventListener("paste", normalizePastedText);
     HTM.workingDiv.removeEventListener("input", debounce(getUpdatedText, 500))
-    HTM.finalInfoDiv.removeEventListener("mouseover", hoverEffects);
-    HTM.finalInfoDiv.removeEventListener("mouseout", hoverEffects);
+    HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
+    HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
 
     HTM.workingDiv.addEventListener("copy", removeMarkupFromCopiedText);
     HTM.workingDiv.addEventListener("keydown", saveCursorPos);
@@ -96,17 +100,18 @@ function setEditModeListeners(){
     HTM.workingDiv.addEventListener("mouseout", hoverEffects);
   }
   else {
+    // debug("listeners set for 2-col")
     HTM.workingDiv.removeEventListener("copy", removeMarkupFromCopiedText);
     HTM.workingDiv.removeEventListener("keydown", saveCursorPos);
     HTM.workingDiv.removeEventListener("keyup", debounce(refreshGatekeeper, 500));
     HTM.workingDiv.removeEventListener("mouseover", hoverEffects);
     HTM.workingDiv.removeEventListener("mouseout", hoverEffects);
 
-    HTM.workingDiv.addEventListener("paste", normalizePastedText);
+    // HTM.workingDiv.addEventListener("paste", normalizePastedText);
     // HTM.workingDiv.addEventListener("input", debounce(getUpdatedText, 500))
     HTM.workingDiv.addEventListener("input", debounce(refreshGatekeeper, 500))
-    HTM.finalInfoDiv.addEventListener("mouseover", hoverEffects);
-    HTM.finalInfoDiv.addEventListener("mouseout", hoverEffects);
+    HTM.finalTextDiv.addEventListener("mouseover", hoverEffects); //
+    HTM.finalTextDiv.addEventListener("mouseout", hoverEffects); //
   }
   // HTM.workingDiv.addEventListener("paste", normalizePastedText);
 }
@@ -142,17 +147,26 @@ function finalInit() {
   changeDb_shared(dbState);
   V.currentTab = tabState;
   activateTab(HTM.tabHead.children[V.currentTab]);
-  resetTab1();
+  clearTab1();
   V.isAutoRefresh = (refreshState === "0");
   V.isInPlaceEditing = (editState === "0");
+  setEditModeListeners();
+  toggleFinalTextDiv();
   // # update dropdown menu select options
   HTM.changeDb.value = dbState;
   HTM.toggleRefresh.value = refreshState;
   HTM.toggleEditMode.value = editState;
   toggleRefreshButton();
   refreshLabels("t1_form");
+  // displayDbNameInTab2();
   // V.currentTab = localStorage.getItem(C.SAVE_TAB_STATE);
   // console.log("offlist db",V.offlistDb)
+
+  // ## TAB2 (text) SETUP ############################################
+
+  // HTM.finalInfoDiv.style.display = "none";
+  // HTM.finalLegend.innerHTML = displayDbNameInTab2();
+  displayDbNameInTab2();
 }
 
 // *****  FUNCTIONS
@@ -186,7 +200,6 @@ function loadBackup(id) {
   const restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
   HTM.workingDiv.innerText = restoredContent;
-  // processText(HTM.workingDiv);
   getUpdatedText();
   if (swap) localStorage.setItem(id, swap);
   closeBackupDialog("backup-dlg");
@@ -533,7 +546,7 @@ function displayWordSearchResults(resultsAsHtmlString, resultCount = 0) {
   HTM.resultsText.innerHTML = resultsAsHtmlString;
 }
 
-function resetTab1() {
+function clearTab1() {
   HTM.form.reset();
   // displayWordSearchResults([]);
   submitWordSearchForm();
@@ -544,8 +557,9 @@ function resetTab1() {
 
 // ## TAB2 (text) SETUP ############################################
 
-HTM.finalInfoDiv.style.display = "none";
-HTM.finalLegend.innerHTML = displayDbName();
+// HTM.finalInfoDiv.style.display = "none";
+// // HTM.finalLegend.innerHTML = displayDbNameInTab2();
+// displayDbNameInTab2();
 
 // ## TAB2 (text) CODE ############################################
 
@@ -626,7 +640,6 @@ function normalizePastedText(e) {
   // paste = paste.replace(/[\n\r]+/g, "\n\n");
   paste = normalizeRawText(paste);
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
-  // processText(e); // pre-in-place-editing workflow
   getUpdatedText(e);
   // resetBackup();
   saveBackup();
@@ -645,31 +658,145 @@ function normalizePastedText(e) {
 // }
 
 // ## if text is typed in, this is where processing starts
-function OLDprocessText(rawHTML) {
-  console.log("html type=", rawHTML.type, rawHTML)
+// function OLDprocessText(rawHTML) {
+//   console.log("html type=", rawHTML.type, rawHTML)
+//   // ## reset V.wordStats
+//   V.wordStats = {};
+//   // ## need to distinguish between typed / button / pasted input
+//   // ## and interact with auto-refresh toggle
+//   const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
+//   const isClick = (rawHTML.type === 'click');
+//   if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
+//     rawHTML = HTM.workingDiv;
+//   } else return;
+//   if (rawHTML.innerText.trim()) {
+//     const chunkedText = splitText(rawHTML.innerText);
+//     // console.log("chunked text:",chunkedText)
+//     const textArr = findCompoundsAndFlattenArray(chunkedText);
+//     const [processedTextArr, wordCount] = addLookUps(textArr);
+//     // console.log("processed text array",processedTextArr)
+//     let htmlString = convertToHTML(processedTextArr);
+//     const listOfRepeats = buildRepeatList(wordCount);
+//     displayCheckedText(htmlString, listOfRepeats, wordCount)
+
+//     updateBackup(C.backupIDs[1]);
+//   } else {
+//     displayCheckedText();
+//   }
+// }
+
+function refreshGatekeeper(e) {
+  // debug("autorefresh",V.isAutoRefresh);
+  if (V.isAutoRefresh) {
+    getUpdatedText(e);
+  }
+}
+
+function getUpdatedText(e) {
+  // debug("isInPlaceEditing?", V.isInPlaceEditing)
+  if (V.isInPlaceEditing) {
+    [
+      V.cursorOffset,
+      V.cursorOffsetNoMarks,
+    ] = getCursorInfoInEl(HTM.workingDiv);
+    // if (V.isTextEdit && !V.isInMark) {
+    if (!V.isTextEdit || V.isInMark) {
+      setCursorPosToStartOf(document.getElementById(CURSOR.id));
+      return;
+    } else {
+      debug();
+      let revisedText = removeTagContentFromElement(HTM.workingDiv);
+      if (!revisedText) return;
+      revisedText = insertCursorPlaceholder(revisedText);
+      const [
+        resultsAsHTML,
+        repeatsAsHTML,
+        wordCount
+      ] = processText(revisedText);
+      displayTextSearchResults(resultsAsHTML, repeatsAsHTML, wordCount);
+    }
+  }
+  else {
+    // let e = HTM_SUPP.workingDiv.innerHTML;
+    // let raw = e;
+    // // ## need to distinguish between typed / button / pasted input
+    // // ## and interact with auto-refresh toggle
+    // debug("type", raw.type);
+    // const isTyped = (raw.type === 'input' || raw.type === 'paste');
+    // const isClick = (raw.type === 'click');
+    // if ((isTyped && V.isAutoRefresh) || isClick || !raw.type) {
+    //   raw = HTM.workingDiv;
+    // } else return;
+
+    let revisedText = HTM.workingDiv.innerText.trim();
+    if (revisedText){
+      const [
+        resultsAsHTML,
+        repeatsAsHTML,
+        wordCount
+      ] = processText(HTM.workingDiv.innerText);
+      displayTextSearchResults(resultsAsHTML, repeatsAsHTML, wordCount);
+    } else return;
+  }
+}
+
+function displayTextSearchResults(resultsAsHTML, repeatsAsHTML, wordCount) {
+  displayRepeatsList(repeatsAsHTML);
+  displayDbNameInTab2(getWordCountForDisplay(wordCount));
+  updateTextInputDiv(resultsAsHTML);
+}
+
+function updateTextInputDiv(html) {
+  if (V.isInPlaceEditing) {
+    // removeListeners();
+    // HTM.workingDiv.removeEventListener("keydown", saveCursorPos);
+    // HTM.workingDiv.removeEventListener("keyup", debounce(refreshGatekeeper, 500));
+
+    HTM.workingDiv.innerHTML = html;
+    setCursorPosToStartOf(document.getElementById(CURSOR.id));
+
+    // HTM.workingDiv.addEventListener("keydown", saveCursorPos);
+    // HTM.workingDiv.addEventListener("keyup", debounce(refreshGatekeeper, 500));
+    // setListeners();
+  } else {
+    HTM.finalTextDiv.innerHTML = html;
+  }
+  // updateBackup(C.backupIDs[1]);
+}
+
+function processText(rawText) {
+  // debug("type", typeof rawText)
+  /*
+  Cursor-related info:
+  convertToHTML( ):
+    adds in CURSOR.HTMLtext according to V_SUPP.cursorPosInTextArr
+
+  splitText( ):
+    searches for CURSOR.text and if it finds it:
+      1. updates V_SUPP.cursorPosInTextArr
+      2. removes it (so word can be processed normally)
+  */
   // ## reset V.wordStats
   V.wordStats = {};
-  // ## need to distinguish between typed / button / pasted input
-  // ## and interact with auto-refresh toggle
-  const isTyped = (rawHTML.type === 'input' || rawHTML.type === 'paste');
-  const isClick = (rawHTML.type === 'click');
-  if ((isTyped && V.isAutoRefresh) || isClick || !rawHTML.type) {
-    rawHTML = HTM.workingDiv;
-  } else return;
-  if (rawHTML.innerText.trim()) {
-    const chunkedText = splitText(rawHTML.innerText);
-    // console.log("chunked text:",chunkedText)
-    const textArr = findCompoundsAndFlattenArray(chunkedText);
-    const [processedTextArr, wordCount] = addLookUps(textArr);
-    // console.log("processed text array",processedTextArr)
-    let htmlString = convertToHTML(processedTextArr);
-    const listOfRepeats = buildRepeatList(wordCount);
-    displayCheckedText(htmlString, listOfRepeats, wordCount)
+  // const text = (rawText.innerText) ? rawText.innerText : rawText;
 
-    updateBackup(C.backupIDs[1]);
-  } else {
-    displayCheckedText();
+  if (typeof rawText === "object") return;
+  const text = rawText.trim();
+  // console.log('process:',text, typeof text)
+  if (text) {
+    const chunkedText = splitText(text);
+    // debug("chunked text:", chunkedText)
+    const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
+    // debug("textArr:", textArr)
+    const [resultsAsTextArr, wordCount] = addLookUps(flatTextArr);
+    const resultsAsHTML = convertToHTML(resultsAsTextArr);
+    const repeatsAsHTML = buildRepeatList(wordCount);
+    return [resultsAsHTML, repeatsAsHTML, wordCount];
   }
+}
+
+function displayRepeatsList(listOfRepeats) {
+  HTM.repeatsList.innerHTML = listOfRepeats;
 }
 
 function splitText(rawText) {
@@ -698,7 +825,6 @@ function splitText(rawText) {
       if (word.indexOf(EOL.text) >= 0) {
         arrayOfWords.push([EOL.text, EOL.HTMLtext]);
         // debug("EOL!")
-        // TODO: how do i put the cursor inside a word but keep the word unitary??
       } else {
         if (!cursorFound) {
           // # Save position of cursor externally so it can be reinserted after text parsing
@@ -729,10 +855,10 @@ function normalizeRawText(text) {
     .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
-    // .replace(/[\n\r]+/g, " *EOL ") // encode EOLs
-    // .replace(/[\n\r]/g, " *EOL ") // encode EOLs
-    // .replace(/[\n\r]+/g, ` ${EOL.text} `) // encode EOLs
     .replace(/[\n\r]/g, ` ${EOL.text} `) // encode EOLs
+    // .replace(/</g, "&lt;") // encode HTML entities
+    // .replace(/>/g, "&rt;") // encode HTML entities
+    // .replace(/&/g, "&amp;") // encode HTML entities
     // .replace(/\u2014/g, " -- ")
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
@@ -742,7 +868,8 @@ function normalizeRawText(text) {
 function splitTextIntoPhrases(text) {
   return text
     .trim()
-    .replace(/([.,;():?!])\s+/gi, "$1@@")
+    .replace(/([.,;():?!])\s+/gi, "$1@@") // ## break at punctuation
+    .replace(/(\d+\s*)/gi, "@@$1@@")      // ## separate out digits
     .split("@@");
 }
 
@@ -852,14 +979,20 @@ function markOfflist(word, type) {
   return tmp[0];
 }
 
-function lookupWord([word, raw_word]) {
+function lookupWord([word, rawWord]) {
   // let matches = dbLookup([word, raw_word]);
+  // if (rawWord === "&") {
+  //   word = rawWord;
+  // }
+  if (LOOKUP.symbols.includes(rawWord)){
+    word = rawWord;
+  }
   let matches = dbLookup(word);
-  matches = lookupDerivations([word, raw_word], matches);
+  matches = lookupDerivations([word, rawWord], matches);
   return matches;
 }
 
-function lookupDerivations([word, raw_word], matches = []) {
+function lookupDerivations([word, rawWord], matches = []) {
   /*
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
@@ -869,6 +1002,9 @@ function lookupDerivations([word, raw_word], matches = []) {
     matches.push(markOfflist(word, "digit"));
     return matches;
   }
+  else if (LOOKUP.symbols.includes(word)) {
+    matches.push(markOfflist(word, "symbol"));
+  }
   else if (!word.match(/[a-z]/i)) {
     matches.push(markOfflist(word, "unknown"));
     return matches;
@@ -876,7 +1012,7 @@ function lookupDerivations([word, raw_word], matches = []) {
   else if (LOOKUP.contractions.includes(word)) {
     matches.push(markOfflist(word, "contraction"));
   }
-  else if (LOOKUP.setOfCommonNames.has(word) && (raw_word[0] === raw_word[0].toUpperCase())) {
+  else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
     matches.push(markOfflist(word, "proper name"))
   }
   else if (V.currentDb.language === "en") {
@@ -962,6 +1098,7 @@ function convertToHTML(textArr) {
   for each word, repeat the raw-word for each match, but with different interpretations
   */
   // if (!textArr.length) console.log("nowt doin'!")
+  // let htmlString = "";
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
@@ -974,10 +1111,14 @@ function convertToHTML(textArr) {
     if (word === EOL.text) {
       // htmlString += EOL.HTMLtext + EOL.HTMLtext;
       htmlString += EOL.HTMLtext;
+      // debug("EOL!!")
       wasEOL = true;
       continue;
     }
-    let rawWord = wordArr[1];
+    let rawWord = wordArr[1]
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
     let leaveSpace = " ";
     if ((wordArr[2][0] && getDbEntry(wordArr[2][0][0])[2] == "contraction") || isFirstWord || wasEOL) {
       leaveSpace = "";
@@ -1007,15 +1148,32 @@ function convertToHTML(textArr) {
       }
       // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
       // # Add in cursor marker
-      const [word_i, pos_i] = V.cursorPosInTextArr;
-      if (wordIndex === word_i) {
-        // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
-        rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
-        // debug(rawWord)
+      if (V.isInPlaceEditing) {
+        const [word_i, pos_i] = V.cursorPosInTextArr;
+        if (wordIndex === word_i) {
+          // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
+          rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
+          // continue;
+        }
       }
+      // const [word_i, pos_i] = V.cursorPosInTextArr;
+      // if (wordIndex === word_i) {
+      //   // debug("!! in cursor chunk:", word_i, pos_i,rawWord)
+      //   rawWord = rawWord.slice(0, pos_i) + CURSOR.HTMLtext + rawWord.slice(pos_i);
+      //   continue;
+      //   // debug(rawWord)
+      // }
       let localWord = highlightAwlWord(level_arr, rawWord);
       const origLemma = (V.currentDb.db[id]) ? V.currentDb.db[id][C.LEMMA] : word;
-      if (origLemma.search(/[-'\s]/) >= 0) localWord = origLemma;
+      if (origLemma.search(/[-'\s]/) >= 0) {
+        localWord = origLemma;
+      }
+      // debug(`localWord: ${localWord}, wordArr: ${wordArr}`)
+      // localWord = localWord
+        // .replace(/&/g, "&amp;")
+        // .replace(/>/g, "&gt;")
+        // .replace(/</g, "&lt;");
+        // .replace(CURSOR.text,CURSOR.tag);
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
       if (matchCount > 0 && matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
       // const hideAlternatives = (matchCount > 0) ? ["<mark>", "</mark> "] : ["", ""];
@@ -1028,6 +1186,7 @@ function convertToHTML(textArr) {
     }
     wordIndex++;
   }
+  htmlString = "<p>" + htmlString + "</p>";
   return htmlString;
 }
 
@@ -1062,8 +1221,15 @@ function buildRepeatList(wordCount) {
         listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
       }
     }
-    listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p><div id='repeats'>` + listOfRepeats;
-    listOfRepeats += "</div>";
+    let repeatsHeader;
+    if (countReps) {
+      repeatsHeader = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p>`
+      listOfRepeats = `${repeatsHeader}<div id='repeats'>${listOfRepeats}</div>`;
+    } else {
+      listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words</strong></p>";
+    }
+    // listOfRepeats = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p><div id='repeats'>` + listOfRepeats;
+    // listOfRepeats += "</div>";
   }
   return listOfRepeats
 }
@@ -1080,32 +1246,37 @@ function compareByLemma(a, b) {
   return 0;
 }
 
-function displayCheckedText(htmlText, listOfRepeats, wordCount) {
-  if (!htmlText) {
-    htmlText = "<span class='error'>Please input some text.</span>"
-    HTM.finalInfoDiv.style.display = "none";
-  } else {
-    if (listOfRepeats) {
-      htmlText += listOfRepeats;
-    } else {
-      htmlText += "<h1>There are no significant repeated words.</h1>"
-    }
-    // const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(wordCount > 1 ? "s" : "")}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
+// function displayCheckedText(htmlText, listOfRepeats, wordCount) {
+//   if (!htmlText) {
+//     htmlText = "<span class='error'>Please input some text.</span>"
+//     HTM.finalInfoDiv.style.display = "none";
+//   } else {
+//     if (listOfRepeats) {
+//       htmlText += listOfRepeats;
+//     } else {
+//       htmlText += "<h1>There are no significant repeated words.</h1>"
+//     }
+//     // const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(wordCount > 1 ? "s" : "")}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
+//     const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
+//     HTM.finalLegend.innerHTML = displayDbName(numOfWords);
+//     HTM.finalInfoDiv.style.display = "flex";
+//   }
+//   HTM.finalTextDiv.innerHTML = htmlText;
+//   HTM.finalInfoDiv.innerHTML = "";
+// }
+
+function getWordCountForDisplay(wordCount) {
     const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
-    HTM.finalLegend.innerHTML = displayDbName(numOfWords);
-    HTM.finalInfoDiv.style.display = "flex";
-  }
-  HTM.finalTextDiv.innerHTML = htmlText;
-  HTM.finalInfoDiv.innerHTML = "";
+    return numOfWords;
 }
 
 function pluralNoun(amount) {
   return (amount > 1) ? "s" : "";
 }
 
-function displayDbName(msg) {
+function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
-  return `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
 }
 
 function dbLookup(word) {
@@ -1154,12 +1325,14 @@ function checkForeignPlurals(word) {
   return candidates;
 }
 
-function resetTab2() {
+function clearTab2() {
   HTM.workingDiv.innerText = "";
   HTM.finalTextDiv.innerHTML = "";
-  HTM.finalLegend.innerHTML = displayDbName();
+  HTM.finalLegend.innerHTML = displayDbNameInTab2();
   HTM.finalInfoDiv.innerText = "";
-  HTM.finalInfoDiv.style.display = "none";
+  // HTM.finalInfoDiv.style.display = "none";
+  HTM.repeatsList.innerText = "";
+  displayDbNameInTab2();
   resetBackup();
 }
 
@@ -1177,10 +1350,10 @@ function changeFont(e) {
 }
 
 function changeRefresh(e) {
-  // V.isAutoRefresh = (parseInt(e.target.value) === 0);
   V.isAutoRefresh = (e.target.value === "0");
   toggleRefreshButton();
   localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "0" : "1");
+  getUpdatedText();
   // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
 }
 
@@ -1199,9 +1372,24 @@ function toggleRefreshButton() {
 function changeEditingMode(e) {
   // V.isInPlaceEditing = (parseInt(e.target.value) === 0);
   V.isInPlaceEditing = (e.target.value === "0");
+  // debug("isInPlaceEditing?", V.isInPlaceEditing)
   localStorage.setItem(C.SAVE_EDIT_STATE, (V.isInPlaceEditing) ? "0" : "1");
+  if (!V.isInPlaceEditing) {
+    // debug(removeTagContentFromElement(HTM.workingDiv))
+    HTM.workingDiv.innerText = removeTagContentFromElement(HTM.workingDiv);
+  } else {
+    HTM.finalTextDiv.innerHTML = "";
+  }
+  setEditModeListeners();
+  getUpdatedText();
+  toggleFinalTextDiv();
+  // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
   // debug("is in-place", V.isInPlaceEditing, e.target.value, localStorage.getItem(C.SAVE_EDIT_STATE))
   // V.isInPlaceEditing = !V.isInPlaceEditing;
+}
+
+function toggleFinalTextDiv() {
+  HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
 }
 
 function jumpToDuplicate(id) {
@@ -1219,13 +1407,14 @@ function jumpToDuplicate(id) {
 
 // ## COMMON ELEMENTS ######################################
 
-function resetTab(event) {
+function clearTab(event) {
   event.preventDefault();
   if (isTab1()) {
-    resetTab1();
+    clearTab1();
   } else {
-    resetTab2();
+    clearTab2();
   }
+  displayInputCursor();
 }
 
 function resetApp() {
@@ -1235,8 +1424,8 @@ function resetApp() {
   localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
   // V.currentTab = 0;
   V.currentTab = C.DEFAULT_tab;
-  resetTab1();
-  resetTab2();
+  clearTab1();
+  clearTab2();
   // HTM.changeDb.value = 0;
   HTM.changeDb.value = C.DEFAULT_db;
   HTM.toggleEditMode = C.DEFAULT_edit;
@@ -1340,7 +1529,6 @@ function changeDb_words() {
 function changeDb_text() {
   const dbNameText = document.getElementById('db_name2');
   if (dbNameText) dbNameText.textContent = V.currentDb.name;
-  // processText(HTM.workingDiv);
   getUpdatedText();
 }
 
@@ -1367,6 +1555,7 @@ function debug(...params) {
 
 function activateTab(tab) {
   if (tab.target) tab = tab.target
+  // debug(tab)
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
@@ -1383,23 +1572,131 @@ function activateTab(tab) {
   }
   if (isTab1()) {
     // document.getElementById("set-refresh").style.display = "none";
-    HTM.toggleRefresh.style.display = "none";
-    HTM.toggleEditMode.style.display = "none";
+    // if (HTM.toggleRefresh.hasOwnProperty("style")){
+    //   HTM.toggleRefresh.style.display = "none";
+    // }
+    // if HTM.toggleEditMode.style.display = "none";
+    safeStyleDisplay(HTM.toggleRefresh);
+    safeStyleDisplay(HTM.toggleEditMode);
     HTM.backupButton.style.display = "none";
     HTM.backupSave.style.display = "none";
   } else {
     // document.getElementById("set-refresh").style.display = "block";
-    HTM.toggleRefresh.style.display = "block";
-    HTM.toggleEditMode.style.display = "block";
+    // HTM.toggleRefresh.style.display = "block";
+    // HTM.toggleEditMode.style.display = "block";
+    safeStyleDisplay(HTM.toggleRefresh, "block");
+    safeStyleDisplay(HTM.toggleEditMode, "block");
     HTM.backupButton.style.display = "block";
     HTM.backupSave.style.display = "block";
+    displayDbNameInTab2();
+    // HTM.workingDiv.focus();
   }
   toggleRefreshButton();
   localStorage.setItem(C.SAVE_TAB_STATE, V.currentTab);
+  displayInputCursor();
+}
+
+function safeStyleDisplay(el, displayState="none") {
+  if (el.hasOwnProperty("style")) el.style.display = displayState;
 }
 
 function isTab1() {
   return V.currentTab === 0;
 }
 
+function displayInputCursor(){
+  if(isTab1()) HTM.inputLemma.focus();
+  else HTM.workingDiv.focus();
+}
 
+
+// ## CURSOR HANDLING ######################################
+
+function insertCursorPlaceholder(text) {
+  return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
+}
+
+function getCursorInfoInEl(element) {
+  let cursorOffset = 0;
+  let cursorOffsetNoMarks = 0;
+  // let divText = "";
+  let isInMark = false;
+  let sel = window.getSelection();
+  if (sel.rangeCount > 0) {
+    // ** Create a range stretching from beginning of div to cursor
+    const currentRange = window.getSelection().getRangeAt(0);
+    const preCursorRange = document.createRange();
+    preCursorRange.selectNodeContents(element);
+    preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
+    cursorOffset = preCursorRange.toString().length;
+    // ** Make a copy of this and remove <mark> (i.e. additional) tag content
+    cursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
+    isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
+  }
+  return [cursorOffset, cursorOffsetNoMarks, isInMark];
+}
+
+function getCopyWithoutMarks(range) {
+  const noMarksNodes = document.createElement("root");
+  noMarksNodes.append(range.cloneContents());
+  return removeTagContentFromElement(noMarksNodes);
+}
+
+function cursorIsInTag(cursorEl, tagName) {
+  return [cursorEl.tagName, cursorEl.parentElement.tagName, cursorEl.parentElement.parentElement.tagName].includes(tagName);
+}
+
+function removeTagContentFromElement(node, tagName = "mark") {
+  const divText = node.cloneNode(true);
+  const marks = divText.querySelectorAll(tagName);
+  for (let i = 0; i < marks.length; i++) {
+    marks[i].innerHTML = "";
+  }
+  const EOLs = divText.querySelectorAll("br");
+  for (let i = 0; i < EOLs.length; i++) {
+    EOLs[i].innerHTML = ` ${EOL.text} `;
+  }
+  const flatText = divText.innerText;
+  return flatText;
+}
+
+function saveCursorPos(e) {
+  // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
+  V.isTextEdit = (e.key) ? e.key === "Backspace" || e.key.length === 1 : false;
+  [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
+  // console.log("\n")
+  // debug("updated cursor pos:", e.key, V_SUPP.cursorOffset, V_SUPP.cursorOffsetNoMarks)
+  // console.log(">>", V_SUPP.cursorOffset, "<<", V_SUPP.isInMark, V_SUPP.isKeyText, e.key);
+  // ## discard new text if cursor is in non-editable area (i.e. in <mark>)
+  if (V.isInMark && V.isTextEdit) {
+    e.preventDefault();
+  }
+}
+function setCursorPosToStartOf(el, textToInsert = "") {
+  if (!el) return;
+  // debug(el, ...V_SUPP.cursorPosInTextArr, V_SUPP.cursorOffsetNoMarks)
+  const selectedRange = document.createRange();
+  selectedRange.setStart(el, 0);
+  if (textToInsert) {
+    const text = document.createTextNode(textToInsert);
+    selectedRange.insertNode(text);
+  }
+  selectedRange.collapse(true);
+  const selectedText = window.getSelection();
+  selectedText.removeAllRanges();
+  selectedText.addRange(selectedRange);
+  el.remove();
+  el.focus();
+}
+
+function removeMarkupFromCopiedText(e) {
+  const sel = document.getSelection();
+  // debug(sel)
+  const copiedText = document.createRange();
+  copiedText.setStart(sel.anchorNode, sel.anchorOffset);
+  copiedText.setEnd(sel.focusNode, sel.focusOffset);
+  // event.clipboardData.setData("text/plain", sel.toString().toUpperCase());
+  const normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  e.clipboardData.setData("text/plain", normalizedText);
+  e.preventDefault();
+}

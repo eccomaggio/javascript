@@ -11,6 +11,7 @@ const HTM = {
   K_theme: document.getElementById("t1_theme"),
   B_AWL: document.getElementById("t1_awl"),
   form: document.getElementById("t1_form"),
+  inputLemma: document.getElementById("t1_term_i"),
   resultsLegend: document.getElementById("t1_results_legend"),
   resultsText: document.getElementById("t1_results_text"),
   t1_title: document.getElementById("t1_term_legend"),
@@ -28,6 +29,7 @@ const HTM = {
   resetButton: document.getElementById("reset_button"),
   refreshButton: document.getElementById("refresh_button"),
   refreshButtonSpacer: document.getElementById("refresh_button_spacer"),
+  settingsMenu: document.getElementById("dropdown"),
   toggleRefresh: document.getElementById("set-refresh"),
   toggleEditMode: document.getElementById("set-edit-mode"),
   backupButton: document.getElementById("backup-btn"),
@@ -105,7 +107,8 @@ const CURSOR = {
 
 const EOL = {
   text: "*EOL",
-  HTMLtext: "<br>",
+  // HTMLtext: "<br>",
+  HTMLtext: "</p>\n<p>",
 }
 
 
@@ -207,13 +210,29 @@ const LOOKUP = {
     f: 'infinitive'
   },
 
+  symbols: [
+    "&",
+    "=",
+    "%",
+    "<",
+    ">",
+    "+",
+    "#",
+    "@",
+    "$",
+    "£",
+    "¢",
+    "¥"
+  ],
+
   // ## Computed levels
   offlist_subs: [
     "unknown",
     "offlist",
     "contraction",
     "digit",
-    "name"
+    "name",
+    "symbol"
   ],
 
 
@@ -353,6 +372,7 @@ const LOOKUP = {
     "d",
     "t",
     "s",
+    "&",
   ],
 
   irregPlural: {

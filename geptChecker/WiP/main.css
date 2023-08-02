@@ -49,11 +49,13 @@
     #right-bot {
       display: flex;
       flex-direction: column;
-      width: 33%;
+      /* width: 33%; */
+      width: 50%;
     }
 
     #left-top {
-      width: 67%;
+      /* width: 67%; */
+      width: 50%;
     }
 
     /* ## TABS ############################################ */
