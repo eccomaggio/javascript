@@ -674,7 +674,8 @@ const LOOKUP = {
     "sr",
     "some",
     "other",
-    "about"
+    "about",
+    "&"
   ],
 
   setOfCommonNames: new Set([

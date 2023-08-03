@@ -112,6 +112,13 @@ function setEditModeListeners(){
 
 // *****  FUNCTIONS
 
+function isArrayElementInOtherArray(x, y) {
+  for (let el of x) {
+    if (y.indexOf(el) > -1) return true;
+  }
+  return false;
+}
+
 function dropdown(e) {
   // ## toggle visibility of settings dropdown
   // ## was originally handled in css but firefox has mouseout quirks
@@ -150,7 +157,7 @@ function loadBackup(id) {
   const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
   const restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
-  HTM.workingDiv.innerText = restoredContent;
+  HTM.workingDiv.innerText = normalizeRawText(restoredContent);
   getUpdatedText();
   if (swap) localStorage.setItem(id, swap);
   closeBackupDialog("backup-dlg");
@@ -723,6 +730,7 @@ function normalizeRawText(text) {
     .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
+    .replace(/[\n\r]+/g, "\n")
     .replace(/[\n\r]/g, ` ${EOL.text} `) // encode EOLs
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
@@ -733,7 +741,9 @@ function splitTextIntoPhrases(text) {
   return text
     .trim()
     .replace(/([.,;():?!])\s+/gi, "$1@@") // ## break at punctuation
-    .replace(/(\d+\s*)/gi, "@@$1@@")      // ## separate out digits
+    // .replace(/(\d+\s*)/g, "@@$1@@")      // ## separate out digits
+    .replace(/((\d+(\.|\,)?\d+|\d+)%?)/g, "@@$1@@")      // ## separate out digits
+    // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%
     .split("@@");
 }
 
@@ -905,11 +915,18 @@ function lookupDerivations([word, rawWord], matches = []) {
         addToMatches(word, matches, LOOKUP.er_subs, "j");
       }
       else if (word.slice(-1) === "s") {
-        /* ## test: families tries potatoes scarves crises boxes dogs ## Filter out adjs (can't take '-s') */
+        /* ## test: families tries potatoes scarves crises boxes dogs ## only noun/verb/pronoun can take '-s') */
         const candidates = findBaseForm(word, LOOKUP.s_subs);
         for (const id of candidates) {
           const candidate = getDbEntry(id);
-          if (candidate.length > 0 && candidate[C.POS] !== "j") {
+          if (
+            candidate.length > 0 &&
+            // candidate[C.POS] !== "j"
+            isArrayElementInOtherArray(
+              ["n", "v","r"],
+              candidate[C.POS]
+              )
+            ) {
             matches.push(id);
           }
         }
@@ -1039,7 +1056,11 @@ function buildRepeatList(wordCount) {
       const entry = getDbEntry(key);
       const word = entry[C.LEMMA];
       const level_arr = entry[C.LEVEL];
-      if (V.wordStats[key] > 1 && !LOOKUP.repeatableWords.includes(word)) {
+      if (
+        V.wordStats[key] > 1 &&
+        !LOOKUP.repeatableWords.includes(word) &&
+        !LOOKUP.symbols.includes(word)
+        ) {
         countReps++;
         let anchors = "";
         for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
