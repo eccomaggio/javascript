@@ -1897,7 +1897,8 @@ const LOOKUP = {
     "sr",
     "some",
     "other",
-    "about"
+    "about",
+    "&"
   ],
 
   setOfCommonNames: new Set([
@@ -2175,8 +2176,7 @@ function initialize() {
 }
 
 function addListeners() {
-  document
-    .getElementById("t1_theme_select");
+  document.getElementById("t1_theme_select");
   // .addEventListener("change", submitWordSearchForm);
 
   HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
@@ -2212,7 +2212,10 @@ function addListeners() {
 }
 
 function setEditModeListeners(){
+  // document.body.addEventListener("keydown", catchKeyboardCopyEvent);
+  HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
+
   if (V.isInPlaceEditing) {
     // debug("listeners set for in-place")
     // HTM.workingDiv.removeEventListener("paste", normalizePastedText);
@@ -2220,6 +2223,8 @@ function setEditModeListeners(){
     HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
 
+    // ## "copy" only works from menu; add keydown listener to catch Ctrl_C
+    // HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
     HTM.workingDiv.addEventListener("copy", removeMarkupFromCopiedText);
     HTM.workingDiv.addEventListener("keydown", saveCursorPos);
     HTM.workingDiv.addEventListener("keyup", debounce(refreshGatekeeper, 500));
@@ -2228,6 +2233,7 @@ function setEditModeListeners(){
   }
   else {
     // debug("listeners set for 2-col")
+    // HTM.workingDiv.removeEventListener("keydown", catchKeyboardCopyEvent);
     HTM.workingDiv.removeEventListener("copy", removeMarkupFromCopiedText);
     HTM.workingDiv.removeEventListener("keydown", saveCursorPos);
     HTM.workingDiv.removeEventListener("keyup", debounce(refreshGatekeeper, 500));
@@ -2242,6 +2248,13 @@ function setEditModeListeners(){
 }
 
 // *****  FUNCTIONS
+
+function isArrayElementInOtherArray(x, y) {
+  for (let el of x) {
+    if (y.indexOf(el) > -1) return true;
+  }
+  return false;
+}
 
 function dropdown(e) {
   // ## toggle visibility of settings dropdown
@@ -2281,7 +2294,7 @@ function loadBackup(id) {
   const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
   const restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
-  HTM.workingDiv.innerText = restoredContent;
+  HTM.workingDiv.innerText = normalizeRawText(restoredContent);
   getUpdatedText();
   if (swap) localStorage.setItem(id, swap);
   closeBackupDialog("backup-dlg");
@@ -2713,6 +2726,17 @@ function normalizePastedText(e) {
   saveBackup();
 }
 
+function catchKeyboardCopyEvent(e) {
+  // let isV = (e.keyCode === 86 || e.key === "v"); // this is to detect keyCode
+  let isC = (e.keyCode === 67 || e.key === "c"); // this is to detect keyCode
+  let isCtrl = (e.keyCode === 17 || e.key === "Control");
+  let isMeta = (e.keyCode === 91 || e.key === "Meta");
+  if (isC && (e.metaKey || e.ctrlKey)){
+      // debug("kachink! Meta_C was pressed!")
+      removeMarkupFromCopiedText();
+  }
+}
+
 function refreshGatekeeper(e) {
   // debug("autorefresh",V.isAutoRefresh);
   if (V.isAutoRefresh) {
@@ -2854,6 +2878,7 @@ function normalizeRawText(text) {
     .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
+    .replace(/[\n\r]+/g, "\n")
     .replace(/[\n\r]/g, ` ${EOL.text} `) // encode EOLs
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
@@ -2864,7 +2889,9 @@ function splitTextIntoPhrases(text) {
   return text
     .trim()
     .replace(/([.,;():?!])\s+/gi, "$1@@") // ## break at punctuation
-    .replace(/(\d+\s*)/gi, "@@$1@@")      // ## separate out digits
+    // .replace(/(\d+\s*)/g, "@@$1@@")      // ## separate out digits
+    .replace(/((\d+(\.|\,)?\d+|\d+)%?)/g, "@@$1@@")      // ## separate out digits
+    // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%
     .split("@@");
 }
 
@@ -3036,11 +3063,18 @@ function lookupDerivations([word, rawWord], matches = []) {
         addToMatches(word, matches, LOOKUP.er_subs, "j");
       }
       else if (word.slice(-1) === "s") {
-        /* ## test: families tries potatoes scarves crises boxes dogs ## Filter out adjs (can't take '-s') */
+        /* ## test: families tries potatoes scarves crises boxes dogs ## only noun/verb/pronoun can take '-s') */
         const candidates = findBaseForm(word, LOOKUP.s_subs);
         for (const id of candidates) {
           const candidate = getDbEntry(id);
-          if (candidate.length > 0 && candidate[C.POS] !== "j") {
+          if (
+            candidate.length > 0 &&
+            // candidate[C.POS] !== "j"
+            isArrayElementInOtherArray(
+              ["n", "v","r"],
+              candidate[C.POS]
+              )
+            ) {
             matches.push(id);
           }
         }
@@ -3170,7 +3204,11 @@ function buildRepeatList(wordCount) {
       const entry = getDbEntry(key);
       const word = entry[C.LEMMA];
       const level_arr = entry[C.LEVEL];
-      if (V.wordStats[key] > 1 && !LOOKUP.repeatableWords.includes(word)) {
+      if (
+        V.wordStats[key] > 1 &&
+        !LOOKUP.repeatableWords.includes(word) &&
+        !LOOKUP.symbols.includes(word)
+        ) {
         countReps++;
         let anchors = "";
         for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
@@ -3654,13 +3692,17 @@ function setCursorPosToStartOf(el, textToInsert = "") {
 }
 
 function removeMarkupFromCopiedText(e) {
+  if (!e) {
+    e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
+  }
   const sel = document.getSelection();
   // debug(sel)
   const copiedText = document.createRange();
   copiedText.setStart(sel.anchorNode, sel.anchorOffset);
   copiedText.setEnd(sel.focusNode, sel.focusOffset);
   // event.clipboardData.setData("text/plain", sel.toString().toUpperCase());
-  const normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  let normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  normalizedText = normalizedText.replace(/\s{2,}/gm, " ");
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
 }

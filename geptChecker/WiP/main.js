@@ -44,8 +44,7 @@ function initialize() {
 }
 
 function addListeners() {
-  document
-    .getElementById("t1_theme_select");
+  document.getElementById("t1_theme_select");
   // .addEventListener("change", submitWordSearchForm);
 
   HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
@@ -81,7 +80,10 @@ function addListeners() {
 }
 
 function setEditModeListeners(){
+  // document.body.addEventListener("keydown", catchKeyboardCopyEvent);
+  HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
+
   if (V.isInPlaceEditing) {
     // debug("listeners set for in-place")
     // HTM.workingDiv.removeEventListener("paste", normalizePastedText);
@@ -89,6 +91,8 @@ function setEditModeListeners(){
     HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
 
+    // ## "copy" only works from menu; add keydown listener to catch Ctrl_C
+    // HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
     HTM.workingDiv.addEventListener("copy", removeMarkupFromCopiedText);
     HTM.workingDiv.addEventListener("keydown", saveCursorPos);
     HTM.workingDiv.addEventListener("keyup", debounce(refreshGatekeeper, 500));
@@ -97,6 +101,7 @@ function setEditModeListeners(){
   }
   else {
     // debug("listeners set for 2-col")
+    // HTM.workingDiv.removeEventListener("keydown", catchKeyboardCopyEvent);
     HTM.workingDiv.removeEventListener("copy", removeMarkupFromCopiedText);
     HTM.workingDiv.removeEventListener("keydown", saveCursorPos);
     HTM.workingDiv.removeEventListener("keyup", debounce(refreshGatekeeper, 500));
@@ -587,6 +592,17 @@ function normalizePastedText(e) {
   getUpdatedText(e);
   // resetBackup();
   saveBackup();
+}
+
+function catchKeyboardCopyEvent(e) {
+  // let isV = (e.keyCode === 86 || e.key === "v"); // this is to detect keyCode
+  let isC = (e.keyCode === 67 || e.key === "c"); // this is to detect keyCode
+  let isCtrl = (e.keyCode === 17 || e.key === "Control");
+  let isMeta = (e.keyCode === 91 || e.key === "Meta");
+  if (isC && (e.metaKey || e.ctrlKey)){
+      // debug("kachink! Meta_C was pressed!")
+      removeMarkupFromCopiedText();
+  }
 }
 
 function refreshGatekeeper(e) {
@@ -1544,13 +1560,17 @@ function setCursorPosToStartOf(el, textToInsert = "") {
 }
 
 function removeMarkupFromCopiedText(e) {
+  if (!e) {
+    e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
+  }
   const sel = document.getSelection();
   // debug(sel)
   const copiedText = document.createRange();
   copiedText.setStart(sel.anchorNode, sel.anchorOffset);
   copiedText.setEnd(sel.focusNode, sel.focusOffset);
   // event.clipboardData.setData("text/plain", sel.toString().toUpperCase());
-  const normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  let normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  normalizedText = normalizedText.replace(/\s{2,}/gm, " ");
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
 }
