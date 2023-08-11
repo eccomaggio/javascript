@@ -18,13 +18,18 @@
       background-color: yellow;
     }
 
-    /* #t2_raw_text br {
+    /* #t2_raw_text {
+      display: inline-block;
+    } */
+
+    #t2_raw_text br {
       display: block;
       content: " ";
       margin-bottom: 1.5em;
-    } */
+    }
 
-    #t2_raw_text p, #t2_final_text p {
+    /* #t2_raw_text p, #t2_final_text p { */
+    #t2_raw_text, #t2_final_text {
       /* margin: 0 1.5em 0 0; */
       margin-top: 1.5em;
       margin-bottom: 0;

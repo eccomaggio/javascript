@@ -107,8 +107,11 @@ const CURSOR = {
 
 const EOL = {
   text: "*EOL",
-  // HTMLtext: "<br>",
-  HTMLtext: "</p>\n<p>",
+  HTMLtext: "<br>",
+  tagName: "br",
+  // HTMLtext: ["","<br>"],
+  // HTMLtext: "</p>\n<p>",
+  // HTMLtext: ["</p>\n", "<p>"],
 }
 
 
