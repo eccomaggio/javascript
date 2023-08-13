@@ -17,7 +17,6 @@ const HTM = {
   t1_title: document.getElementById("t1_term_legend"),
   root_css: document.documentElement,
   workingDiv: document.getElementById("t2_raw_text"),
-  // workingDiv: document.getElementById("t2_raw_text"),
   finalTextDiv: document.getElementById("t2_final_text"),
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
@@ -62,7 +61,8 @@ const C = {
   SAVE_EDIT_STATE: "edit_state",
   DEFAULT_db: "0",
   DEFAULT_tab: 0,
-  DEFAULT_refresh: "0",
+  // DEFAULT_refresh: "0",
+  DEFAULT_refresh: "1",
   DEFAULT_edit: "0",
   MATCHES: {
     exact: ["^", "$"],
@@ -92,6 +92,8 @@ let V = {
   cursorOffsetNoMarks: 0,
   isInMark: false,
   isTextEdit: false,
+  forceUpdate: false,
+  // cursorIncrement: 0,
   // # key: [index in textArr, index in normalized word]
   cursorPosInTextArr: [0, 0],
 }
@@ -102,13 +104,15 @@ const CURSOR = {
   // HTMLtext: "<span id='cursorPosHere'>@</span>",
   HTMLtext: "<span id='cursorPosHere'></span>",
   // text: "@CRSR",
-  text: "*CRSR"
+  text: "@CRSR@"
 }
 
 const EOL = {
-  text: "*EOL",
-  HTMLtext: "<br>",
-  tagName: "br",
+  text: "@EOL@",
+  // HTMLtext: "<br>",
+  // tagName: "br",
+  HTMLtext: "<hr>",
+  tagName: "hr",
   // HTMLtext: ["","<br>"],
   // HTMLtext: "</p>\n<p>",
   // HTMLtext: ["</p>\n", "<p>"],

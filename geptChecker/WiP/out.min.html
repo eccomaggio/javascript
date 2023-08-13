@@ -54,12 +54,14 @@
 
             <select name="set-refresh" id="set-refresh" style="display: block;">
               <option value="1">auto refresh</option>
-              <option id="set-refresh-manual" value="0">manual refresh</option>
+              <!-- <option value="0" id="set-refresh-manual">manual refresh</option> -->
+              <option value="0">manual refresh</option>
             </select>
 
             <select name="set-edit-mode" id="set-edit-mode" style="display: block;">
               <option value="1">In-place editing</option>
-              <option id="set-edit-2col" value="0">2-column editing</option>
+              <!-- <option value="0" id="set-edit-2col">2-column editing</option> -->
+              <option value="0">2-column editing</option>
             </select>
 
             <button id="backup-btn" style="display: block;">backups</button>
@@ -259,14 +261,10 @@
           <div id="left-top">
             <div id="t2_raw_text" contenteditable="true"
               placeholder="Paste or type text here. (Choose Settings/manual-refresh if you have a lot of text.)"></div>
-            <!-- <div id="t2_repeats_list"></div> -->
           </div>
           <div id="separator">&nbsp;</div>
           <div id="right-bot">
-            <!-- <div id="t2_final_legend">Text checked against <span class="dbColor" id="db_name2">GEPT</span>:</div> -->
-            <!-- <div id="t2_final_legend">Checking against <span id="db_name2" class="dbColor">GEPT</span></div> -->
             <div id="t2_final_legend">></div>
-            <!-- <div id="t2_final_info" style="display: none;"></div> -->
             <div id="t2_final_info"></div>
             <div id="t2_final_text"></div>
             <div id="t2_repeats_list"></div>
