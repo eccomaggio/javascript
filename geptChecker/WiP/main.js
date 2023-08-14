@@ -590,10 +590,17 @@ function catchKeyboardCopyEvent(e) {
 }
 
 function updateCursorPos(){
+  // ## Update cursor position on keyup (when movement has taken place)
+  // ## Override cursor update if inside markup
+  // if (V.skipMarkup) {
+  // debug("skipping cursor update");
+  //   return;
+  // }
   [
     V.cursorOffset,
     V.cursorOffsetNoMarks,
   ] = getCursorInfoInEl(HTM.workingDiv);
+  if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
 }
 
 function updateInputDiv(e) {
@@ -602,17 +609,15 @@ function updateInputDiv(e) {
     // debug("reprocessing must be triggered manually...")
     return;
   }
+  debug("is in mark?", V.isInMark)
   let revisedText = "";
   if (V.isInPlaceEditing) {
-      if (!(V.isTextEdit || V.forceUpdate)) {
-      setCursorPos(document.getElementById(CURSOR.id));
-      // debug("No reprocessing needed...")
-      return;
+    if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup)) {
+    setCursorPos(document.getElementById(CURSOR.id));
+    // debug("No reprocessing needed...")
+    return;
     }
-    // debug("Text amended -> reprocess", HTM.workingDiv.innerHTML);
-    // debug("Text amended -> reprocess");
-    revisedText = removeTagContentFromElement(HTM.workingDiv);
-    revisedText = insertCursorPlaceholder(revisedText);
+  revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
   }
   else {
     // revisedText = HTM.workingDiv.textContent.trim();
@@ -626,18 +631,16 @@ function updateInputDiv(e) {
     repeatsAsHTML,
     wordCount
   ] = processText(revisedText);
+  displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
+  V.forceUpdate = false;
+  V.skipMarkup = false;
+}
+
+function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
   displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsAsHTML);
   displayWorkingText(resultsAsHTML);
-  V.forceUpdate = false;
-  // displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
 }
-
-// function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
-//   displayDbNameInTab2(getWordCountForDisplay(wordCount));
-//   displayRepeatsList(repeatsAsHTML);
-//   displayWorkingText(resultsAsHTML);
-// }
 
 function displayWorkingText(html) {
   if (V.isInPlaceEditing) {
@@ -980,6 +983,7 @@ function buildMarkupAsHTML(textArr) {
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
+  let isWithoutCursor = true;
   let wordIndex = 0;
   for (let wordArr of textArr) {
     let word = wordArr[0];
@@ -989,10 +993,11 @@ function buildMarkupAsHTML(textArr) {
       wasEOL = true;
       continue;
     }
-    let rawWord = wordArr[1]
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    let rawWord = escapeHTMLentities(wordArr[1]);
+    // let rawWord = wordArr[1]
+    //   .replace(/&/g, "&amp;")
+    //   .replace(/</g, "&lt;")
+    //   .replace(/>/g, "&gt;");
     const trailingPunctuation = rawWord.match(/\W+$/) || "";
     let leaveSpace = " ";
     if ((wordArr[2][0] && getDbEntry(wordArr[2][0][0])[2] == "contraction") || isFirstWord || wasEOL) {
@@ -1021,7 +1026,7 @@ function buildMarkupAsHTML(textArr) {
         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
-      if (V.isInPlaceEditing) {
+      if (isWithoutCursor && V.isInPlaceEditing) {
         const [word_i, char_i] = V.cursorPosInTextArr;
         if (wordIndex === word_i) {
           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
@@ -1041,6 +1046,13 @@ function buildMarkupAsHTML(textArr) {
   // ## add this to even up </p><p> added in in lieu of EOLs
   // htmlString = "<p>" + htmlString + "</p>";
   return htmlString;
+}
+
+function escapeHTMLentities(text){
+  return text.replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
 }
 
 function getLevelPrefix(level_num) {
@@ -1465,13 +1477,20 @@ function displayInputCursor(){
 
 // ## CURSOR HANDLING ######################################
 
-function insertCursorPlaceholder(text) {
-  return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
+// function insertCursorPlaceholder(text) {
+//   return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
+// }
+
+function insertCursorPlaceholder(el, index) {
+  let flatText = removeTagContentFromElement(el);
+  const updatedText = flatText.slice(0, index) + CURSOR.text + flatText.slice(index);
+  // debug(flatText, updatedText)
+  return updatedText;
 }
 
 function getCursorInfoInEl(element) {
-  let cursorOffset = 0;
-  let cursorOffsetNoMarks = 0;
+  let tmpCursorOffset = 0;
+  let tmpCursorOffsetNoMarks = 0;
   // let divText = "";
   let isInMark = false;
   let sel = window.getSelection();
@@ -1481,12 +1500,12 @@ function getCursorInfoInEl(element) {
     const preCursorRange = document.createRange();
     preCursorRange.selectNodeContents(element);
     preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
-    cursorOffset = preCursorRange.toString().length;
+    tmpCursorOffset = preCursorRange.toString().length;
     // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-    cursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
+    tmpCursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
     isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
   }
-  return [cursorOffset, cursorOffsetNoMarks, isInMark];
+  return [tmpCursorOffset, tmpCursorOffsetNoMarks, isInMark];
 }
 
 function getCopyWithoutMarks(range) {
@@ -1521,21 +1540,36 @@ function removeTagContentFromElement(node, tagName = "mark") {
   for (let el of EOLs) {
     el.textContent = ` ${EOL.text} `;
   }
-  const flatText = divTextCopy.textContent;
+  // const flatText = divTextCopy.textContent;
+  const flatText = divTextCopy.innerText;
   return flatText;
 }
 
 function validateKeyPress(e) {
   try {
     // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
-    V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
     [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
-    // ## discard new text if cursor is in non-editable area (i.e. in <mark>)
-    if (V.isInMark && V.isTextEdit) {
+    if (V.isInMark) {
       e.preventDefault();
-      debug("keystroke supressed...")
+      // debug("keystroke supressed...")
     }
-    // debug("key pressed:", e.key, e)
+
+    /*
+SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE CURSOR AT THESE TWO STATES...
+
+    */
+
+    V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
+    V.cursorIncrement = 0;
+    if (e.key === "ArrowRight") {
+      V.cursorIncrement = 1;
+    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
+      V.cursorIncrement = -1;
+    }
+    if (V.isInMark) {
+      V.skipMarkup = true;
+    }
+    // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
   } catch (error) {
     debug(error)
   }

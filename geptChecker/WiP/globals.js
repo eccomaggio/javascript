@@ -93,7 +93,8 @@ let V = {
   isInMark: false,
   isTextEdit: false,
   forceUpdate: false,
-  // cursorIncrement: 0,
+  skipMarkup: false,
+  cursorIncrement: 0,
   // # key: [index in textArr, index in normalized word]
   cursorPosInTextArr: [0, 0],
 }
