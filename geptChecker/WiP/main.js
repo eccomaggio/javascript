@@ -431,6 +431,7 @@ function getDerivedForms(term) {
 function getAwlSublist(level_arr) {
   return (V.isBEST && level_arr[1]) ? level_arr[1] - C.awl_level_offset : -1;
 }
+
 function highlightAwlWord(level_arr, word) {
   return (V.isBEST && level_arr[1] > -1) ? `<span class="awl-word">${word}</span>` : word;
 }
@@ -852,21 +853,26 @@ function updateWordStats(id) {
 function markOfflist(word, type) {
   // ## adds entry to offlistDb & returns ID (always negative number)
   // ## This creates a dummy dB entry for offlist words
-  let tmp = "";
+  let offlistEntry = [];
+  let offlistID;
   let isUnique = true;
   for (const i in V.offlistDb) {
     if (V.offlistDb[i][C.LEMMA] === word) {
       isUnique = false;
-      tmp = V.offlistDb[i];
+      // offlistEntry = V.offlistDb[i];
+      offlistID = V.offlistDb[i][0];
       break;
     }
   }
   if (isUnique) {
-    tmp = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
-    V.offlistDb.push(tmp);
+    offlistID = -(V.offlistIndex);
+    // offlistEntry = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
+    offlistEntry = [offlistID, word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
+    V.offlistDb.push(offlistEntry);
     V.offlistIndex++
   }
-  return tmp[0];
+  // return offlistEntry[0];
+  return [offlistID];
 }
 
 function lookupWord([word, rawWord]) {
@@ -878,218 +884,183 @@ function lookupWord([word, rawWord]) {
   return matches;
 }
 
-// function lookupDerivations([word, rawWord], matches = []) {
-//   /*
-//   returns => array of matched ids
-//   NB. always returns a match, even if it is just "offlist"
-//   */
-//   if (word.match(/\d/i)) {
-//     matches.push(markOfflist(word, "digit"));
-//     return matches;
-//   }
-//   else if (LOOKUP.symbols.includes(word)) {
-//     matches.push(markOfflist(word, "symbol"));
-//   }
-//   else if (!word.match(/[a-z]/i)) {
-//     matches.push(markOfflist(word, "unknown"));
-//     return matches;
-//   }
-//   else if (LOOKUP.contractions.includes(word)) {
-//     matches.push(markOfflist(word, "contraction"));
-//   }
-//   else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
-//     matches.push(markOfflist(word, "proper name"))
-//   }
-//   else {
-//     // matches = dbLookup(word); ## remove as produces accidental recursions
-//     if (LOOKUP.irregNegVerb[word]) {
-//       /* ## test = aren't won't cannot */
-//       addIfPOS(dbLookup(LOOKUP.irregNegVerb[word]), matches, ["x","v"]);
-//     }
-//     else if (LOOKUP.irregVerb[word]) {
-//       /* ## test = hidden written stole lain */
-//       addIfPOS(dbLookup(LOOKUP.irregVerb[word]), matches, ["v"]);
-//     }
-//     if (word.slice(-3) === "ing") {
-//       /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
-//       addIfPOS(findBaseForm(word, LOOKUP.g_subs), matches, ["v"]);
-
-//     }
-//     if (word.slice(-2) === "ed") {
-//       /* ## test = robbed gagged passed busied played visited */
-//       addIfPOS(findBaseForm(word, LOOKUP.d_subs), matches, ["v"]);
-//     }
-//     if (!matches.length) {
-//       if (word.slice(-2) === "st") {
-//         /* ## test = "longest hottest prettiest closest soonest" */
-//         addIfPOS(findBaseForm(word, LOOKUP.est_subs), matches, ["j"]);
-//       }
-//       else if (word.slice(-1) === "r") {
-//         /* ## test = "longer hotter prettier closer sooner" */
-//         addIfPOS(findBaseForm(word, LOOKUP.er_subs), matches, ["j"]);
-//       }
-//       else if (word.slice(-1) === "s") {
-//         /* ## test: families tries potatoes scarves crises boxes dogs ## only noun/verb/pronoun can take '-s') */
-//         addIfPOS(findBaseForm(word, LOOKUP.s_subs), matches, ["n", "v","r"]);
-
-//       }
-//       else if (word.slice(-2) === "ly") {
-//         /* ## test: happily clumsily annually finely sensibly sadly automatically */
-//         addIfPOS(findBaseForm(word, LOOKUP.y_subs), matches, ["j"]);
-//       }
-//       else if (LOOKUP.irregPlural[word]) {
-//         /* ## test: indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crises */
-//         matches.push(dbLookup(LOOKUP.irregPlural[word])[0]);
-//       }
-//       for (const match of checkForeignPlurals(word)) {
-//         matches.push(...match)
-//       }
-//       if (typeof matches[0] === 'undefined') {
-//         matches.push(markOfflist(word, "offlist"));
-//       }
-//     }
-//   }
-//   return matches;
-// }
 
 function lookupDerivations([word, rawWord], matches = []) {
   /*
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
   */
-  if (word.match(/\d/i)) {
-    matches.push(markOfflist(word, "digit"));
-    // return matches;
-  }
-  else if (!word.match(/[a-z]/i)) {
-    matches.push(markOfflist(word, "unknown"));
-    // return matches;
-  }
-  else if (LOOKUP.symbols.includes(word)) {
-    matches.push(markOfflist(word, "symbol"));
-  }
-  else if (LOOKUP.contractions.includes(word)) {
-    matches.push(markOfflist(word, "contraction"));
-  }
-  // else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
-  else if (LOOKUP.personalNames.includes(word)) {
-    matches.push(markOfflist(word, "proper name"))
-  }
-  else {
-    if (word === "an") {
-      matches.push(dbLookup("a"));
-    }
-      /* Tests
-      negatives = aren't won't cannot
-      irregular pasts = hidden written stole lain
-      irregular plurals = indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crises */
-    else {
-      for (guess of [
-        checkIrregularNegatives,
-        checkIrregularVerbs,
-        checkIrregularPlurals
-      ]) {
-        const result = guess(word, matches);
-        if (result) {
-          addIfPOS(result[0], matches, result[1]);
-          break;
-        }
-      }
-    }
-  }
 
-  /* ## Tests for inflected words
+  /* Tests
+  negatives = aren't won't cannot
+  irregular pasts = hidden written stole lain
+  irregular plurals = indices, cacti, criteria, phenomena, radii, formulae, bases, children, crises
   Ving = "bobbing begging swimming buzzing picnicking hoping dying going flying"
   Vpp = robbed gagged passed busied played visited
   Superlatives = "longest hottest prettiest closest soonest"
   Comparatives = "longer hotter prettier closer sooner"
-  Final -s =  families tries potatoes scarves crises boxes dogs
+  Final-s =  families tries potatoes scarves crises boxes dogs
   regular ADVs =  happily clumsily annually finely sensibly sadly automatically
   */
 
   for (guess of [
-    { ends: "ing", action: matchVing },
-    { ends: "ed", action: matchVpp },
-    { ends: "st", action: matchSuperlatives },
-    { ends: "r", action: matchComparatives },
-    { ends: "s", action: matchFinalS },
-    { ends: "ly", action: matchRegAdv }
+    checkDigits,
+    checkUnknown,
+    checkSymbols,
+    checkContractions,
+    checkNames,
+    checkArticle,
+    checkIrregularNegatives,
+    checkIrregularVerbs,
+    checkIrregularPlurals,
+    checkForeignPlurals,
+    checkVing,
+    checkVpp,
+    checkSuperlatives,
+    checkComparatives,
+    // checkFinalS,
+    checkRegAdv,
   ]) {
-    if (word.endsWith(guess.ends)) {
-      guess.action(word, matches);
+    const result = guess(word);
+    if (result) {
+      matches.push(...result);
       break;
     }
   }
 
-  for (const match of checkForeignPlurals(word)) {
-    matches.push(...match)
+  // ## -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
+  const result = checkFinalS(word);
+  if (result) {
+    matches.push(...result);
   }
-  if (typeof matches[0] === 'undefined') {
-    matches.push(markOfflist(word, "offlist"));
+
+  if (!matches.length) {
+    matches.push(markOfflist(word,"offlist"));
   }
-  return matches;
+  return dedupeArray(matches);
 }
 
+function dedupeArray(array) {
+  return [...new Set(array)];
+}
 
-function checkIrregularNegatives(word, match) {
+function checkDigits(word) {
+  if (word.match(/(\d+|\d+,\d+|\d+\.\d+|\d+,\d+\.d+)/i)) {
+    return markOfflist(word, "digit");
+  }
+}
+
+function checkUnknown(word) {
+  if (!word.match(/[a-z]/i)) {
+    return markOfflist(word, "unknown");
+  }
+}
+
+function checkSymbols(word) {
+  if (LOOKUP.symbols.includes(word)) {
+    return markOfflist(word, "symbol");
+  }
+}
+
+function checkContractions(word) {
+  if (LOOKUP.contractions.includes(word)) {
+    return markOfflist(word, "contraction");
+  }
+}
+
+function checkNames(word) {
+  if (LOOKUP.personalNames.includes(word)) {
+    return markOfflist(word, "personal name");
+  }
+}
+
+function checkArticle(word) {
+  if (word === "an") {
+    return dbLookup("a");
+  }
+}
+
+function checkIrregularNegatives(word) {
   const lookup = LOOKUP.irregNegVerb[word];
   if (lookup){
-    return [dbLookup(lookup), ["x", "v"]];
-    // addIfPOS(dbLookup(lookup), matches, ["x", "v"]);
-    // break;
+    return winnowPoS(dbLookup(lookup), ["x","v"]);
   }
-};
+}
 
-function checkIrregularVerbs(word, match) {
+function checkIrregularVerbs(word) {
   const lookup = LOOKUP.irregVerb[word];
   if (lookup){
-    return [dbLookup(lookup), ["x", "v"]];
-    // addIfPOS(dbLookup(lookup), matches, ["x", "v"]);
-    // break;
+    return winnowPoS(dbLookup(lookup), ["x","v"]);
   }
-};
+}
 
-function checkIrregularPlurals(word, match) {
+function checkIrregularPlurals(word) {
   const lookup = LOOKUP.irregPlural[word];
   if (lookup){
-    return [dbLookup(lookup), ["x", "v"]];
-    // addIfPOS(dbLookup(lookup), matches, ["x", "v"]);
-    // break;
+    return winnowPoS(dbLookup(lookup), ["x","v"]);
   }
-};
+}
 
-function matchVing(word, matches) {
-  addIfPOS(findBaseForm(word, LOOKUP.g_subs), matches, ["v"]);
-};
+function checkForeignPlurals(word) {
+  if (word.length <= 2) return;
+  for (const [plural, singular] of LOOKUP.foreign_plurals) {
+    const root = word.slice(0, -plural.length);
+    const ending = word.slice(-plural.length);
+    if (ending === plural) {
+      const lookup = dbLookup(root + singular);
+      if (lookup) {
+        return winnowPoS(lookup, ["n"]);
+      }
+    }
+  }
+}
 
-function matchVpp(word, matches) {
-  addIfPOS(findBaseForm(word, LOOKUP.d_subs), matches, ["v"]);
-};
+function checkVing(word) {
+  if (word.endsWith("ing")) {
+    return winnowPoS(findBaseForm(word,LOOKUP.g_subs), ["v"]);
+  }
+}
 
-function matchSuperlatives(word, matches) {
-  addIfPOS(findBaseForm(word, LOOKUP.est_subs), matches, ["j"]);
-};
+function checkVpp(word) {
+  if (word.endsWith("ed")) {
+    return winnowPoS(findBaseForm(word,LOOKUP.d_subs), ["v"]);
+  }
+}
 
-function matchComparatives(word, matches) {
-  addIfPOS(findBaseForm(word, LOOKUP.er_subs), matches, ["j"]);
-};
+function checkSuperlatives(word) {
+  if (word.endsWith("st")) {
+    return winnowPoS(findBaseForm(word,LOOKUP.est_subs), ["j"]);
+  }
+}
 
-function matchFinalS(word, matches) {
-  addIfPOS(findBaseForm(word, LOOKUP.s_subs), matches, ["n", "v"]);
-};
+function checkComparatives(word) {
+  if (word.endsWith("r")) {
+    return winnowPoS(findBaseForm(word,LOOKUP.er_subs), ["j"]);
+  }
+}
 
-function matchRegAdv(word, matches) {
-  addIfPOS(findBaseForm(word, LOOKUP.y_subs), matches, ["j"]);
-};
+function checkFinalS(word) {
+  if (word.endsWith("s")) {
+    return winnowPoS(findBaseForm(word,LOOKUP.s_subs), ["n","v"]);
+  }
+}
 
+function checkRegAdv(word) {
+  if (word.endsWith("ly")) {
+    return winnowPoS(findBaseForm(word,LOOKUP.y_subs), ["j"]);
+  }
+}
 
-function addIfPOS(roughMatches, matches, posArr) {
+function winnowPoS(roughMatches, posArr) {
+  // ## returns array, empty or otherwise
+  let localMatches = [];
   for (const id of roughMatches) {
     const match = getDbEntry(id);
     for (const pos of posArr) {
-      if (match && match[C.POS].includes(pos)) matches.push(id);
+      if (match && match[C.POS].includes(pos)) localMatches.push(id);
     }
   }
+  return localMatches;
 }
 
 function getDbEntry(id) {
@@ -1251,7 +1222,7 @@ function displayDbNameInTab2(msg) {
 }
 
 function dbLookup(word) {
-  // ## returns array of matched IDs
+  // ## returns empty array or array of matched IDs [4254, 4255]
   if (typeof word !== "string") throw new Error("Search term must be a string.")
   if (!word) return [];
   word = word.toLowerCase();
@@ -1281,19 +1252,6 @@ function findBaseForm(word, subs) {
     if (tmp_match.length) localMatches.push(...tmp_match);
   }
   return localMatches;
-}
-
-function checkForeignPlurals(word) {
-  let candidates = [];
-  for (const ending of LOOKUP.foreign_plurals) {
-    const len = ending[0].length;
-    const guess = word.slice(0, -len) + ending[1];
-    if (ending[0] === word.slice(-len)) {
-      const result = dbLookup(guess);
-      if (result.length) candidates.push(result)
-    }
-  }
-  return candidates;
 }
 
 function clearTab2() {
