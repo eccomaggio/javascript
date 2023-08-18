@@ -592,15 +592,23 @@ function catchKeyboardCopyEvent(e) {
 function updateCursorPos(){
   // ## Update cursor position on keyup (when movement has taken place)
   // ## Override cursor update if inside markup
-  // if (V.skipMarkup) {
-  // debug("skipping cursor update");
-  //   return;
-  // }
-  [
-    V.cursorOffset,
-    V.cursorOffsetNoMarks,
-  ] = getCursorInfoInEl(HTM.workingDiv);
-  if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
+  if (V.skipMarkup) {
+    debug("skipping cursor update");
+    V.cursorOffsetNoMarks += V.cursorIncrement;
+    // return;
+  }
+  else {
+    [
+      V.cursorOffset,
+      V.cursorOffsetNoMarks,
+      // V.isInMark
+    ] = getCursorInfoInEl(HTM.workingDiv);
+  }
+  // [
+  //   V.cursorOffset,
+  //   V.cursorOffsetNoMarks,
+  // ] = getCursorInfoInEl(HTM.workingDiv);
+  // if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
 }
 
 function updateInputDiv(e) {
@@ -609,12 +617,12 @@ function updateInputDiv(e) {
     // debug("reprocessing must be triggered manually...")
     return;
   }
-  debug("is in mark?", V.isInMark)
+  debug("is in mark?", V.isInMark, "skipMarkup?", V.skipMarkup, "offset:", V.cursorOffsetNoMarks, "cursorPos", ...V.cursorPosInTextArr)
   let revisedText = "";
   if (V.isInPlaceEditing) {
-    if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup)) {
+    if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup || V.isInMark)) {
     setCursorPos(document.getElementById(CURSOR.id));
-    // debug("No reprocessing needed...")
+    debug("No reprocessing needed...")
     return;
     }
   revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
@@ -634,6 +642,7 @@ function updateInputDiv(e) {
   displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
   V.forceUpdate = false;
   V.skipMarkup = false;
+  HTM.finalInfoDiv.innerText = "";
 }
 
 function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
@@ -869,6 +878,80 @@ function lookupWord([word, rawWord]) {
   return matches;
 }
 
+// function lookupDerivations([word, rawWord], matches = []) {
+//   /*
+//   returns => array of matched ids
+//   NB. always returns a match, even if it is just "offlist"
+//   */
+//   if (word.match(/\d/i)) {
+//     matches.push(markOfflist(word, "digit"));
+//     return matches;
+//   }
+//   else if (LOOKUP.symbols.includes(word)) {
+//     matches.push(markOfflist(word, "symbol"));
+//   }
+//   else if (!word.match(/[a-z]/i)) {
+//     matches.push(markOfflist(word, "unknown"));
+//     return matches;
+//   }
+//   else if (LOOKUP.contractions.includes(word)) {
+//     matches.push(markOfflist(word, "contraction"));
+//   }
+//   else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
+//     matches.push(markOfflist(word, "proper name"))
+//   }
+//   else {
+//     // matches = dbLookup(word); ## remove as produces accidental recursions
+//     if (LOOKUP.irregNegVerb[word]) {
+//       /* ## test = aren't won't cannot */
+//       addIfPOS(dbLookup(LOOKUP.irregNegVerb[word]), matches, ["x","v"]);
+//     }
+//     else if (LOOKUP.irregVerb[word]) {
+//       /* ## test = hidden written stole lain */
+//       addIfPOS(dbLookup(LOOKUP.irregVerb[word]), matches, ["v"]);
+//     }
+//     if (word.slice(-3) === "ing") {
+//       /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
+//       addIfPOS(findBaseForm(word, LOOKUP.g_subs), matches, ["v"]);
+
+//     }
+//     if (word.slice(-2) === "ed") {
+//       /* ## test = robbed gagged passed busied played visited */
+//       addIfPOS(findBaseForm(word, LOOKUP.d_subs), matches, ["v"]);
+//     }
+//     if (!matches.length) {
+//       if (word.slice(-2) === "st") {
+//         /* ## test = "longest hottest prettiest closest soonest" */
+//         addIfPOS(findBaseForm(word, LOOKUP.est_subs), matches, ["j"]);
+//       }
+//       else if (word.slice(-1) === "r") {
+//         /* ## test = "longer hotter prettier closer sooner" */
+//         addIfPOS(findBaseForm(word, LOOKUP.er_subs), matches, ["j"]);
+//       }
+//       else if (word.slice(-1) === "s") {
+//         /* ## test: families tries potatoes scarves crises boxes dogs ## only noun/verb/pronoun can take '-s') */
+//         addIfPOS(findBaseForm(word, LOOKUP.s_subs), matches, ["n", "v","r"]);
+
+//       }
+//       else if (word.slice(-2) === "ly") {
+//         /* ## test: happily clumsily annually finely sensibly sadly automatically */
+//         addIfPOS(findBaseForm(word, LOOKUP.y_subs), matches, ["j"]);
+//       }
+//       else if (LOOKUP.irregPlural[word]) {
+//         /* ## test: indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crises */
+//         matches.push(dbLookup(LOOKUP.irregPlural[word])[0]);
+//       }
+//       for (const match of checkForeignPlurals(word)) {
+//         matches.push(...match)
+//       }
+//       if (typeof matches[0] === 'undefined') {
+//         matches.push(markOfflist(word, "offlist"));
+//       }
+//     }
+//   }
+//   return matches;
+// }
+
 function lookupDerivations([word, rawWord], matches = []) {
   /*
   returns => array of matched ids
@@ -876,93 +959,136 @@ function lookupDerivations([word, rawWord], matches = []) {
   */
   if (word.match(/\d/i)) {
     matches.push(markOfflist(word, "digit"));
-    return matches;
+    // return matches;
+  }
+  else if (!word.match(/[a-z]/i)) {
+    matches.push(markOfflist(word, "unknown"));
+    // return matches;
   }
   else if (LOOKUP.symbols.includes(word)) {
     matches.push(markOfflist(word, "symbol"));
   }
-  else if (!word.match(/[a-z]/i)) {
-    matches.push(markOfflist(word, "unknown"));
-    return matches;
-  }
   else if (LOOKUP.contractions.includes(word)) {
     matches.push(markOfflist(word, "contraction"));
   }
-  else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
+  // else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
+  else if (LOOKUP.personalNames.includes(word)) {
     matches.push(markOfflist(word, "proper name"))
   }
-  else if (V.currentDb.language === "en") {
-    // matches = dbLookup(word); ## remove as produces accidental recursions
-    if (LOOKUP.irregNegVerb[word]) {
-      /* ## test = hidden written stole lain */
-      const candidate = dbLookup(LOOKUP.irregNegVerb[word])[0];
-      // ## Check for GEPTKids to ensure word is in the very limited wordlist
-      if (candidate) matches.push(candidate);
+  else {
+    if (word === "an") {
+      matches.push(dbLookup("a"));
     }
-    else if (LOOKUP.irregVerb[word]) {
-      /* ## test = aren't won't cannot */
-      const candidate = dbLookup(LOOKUP.irregVerb[word])[0];
-      // ## Check for GEPTKids to ensure word is in the very limited wordlist
-      if (candidate) matches.push(candidate);
-    }
-    if (word.slice(-3) === "ing") {
-      /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
-      addToMatches(word, matches, LOOKUP.g_subs, "v");
-
-    }
-    if (word.slice(-2) === "ed") {
-      /* ## test = robbed gagged passed busied played visited */
-      addToMatches(word, matches, LOOKUP.d_subs, "v");
-    }
-    if (!matches.length) {
-      if (word.slice(-2) === "st") {
-        /* ## test = "longest hottest prettiest closest soonest" */
-        addToMatches(word, matches, LOOKUP.est_subs, "j");
-      }
-      else if (word.slice(-1) === "r") {
-        /* ## test = "longer hotter prettier closer sooner" */
-        addToMatches(word, matches, LOOKUP.er_subs, "j");
-      }
-      else if (word.slice(-1) === "s") {
-        /* ## test: families tries potatoes scarves crises boxes dogs ## only noun/verb/pronoun can take '-s') */
-        const candidates = findBaseForm(word, LOOKUP.s_subs);
-        for (const id of candidates) {
-          const candidate = getDbEntry(id);
-          if (
-            candidate.length > 0 &&
-            // candidate[C.POS] !== "j"
-            isArrayElementInOtherArray(
-              ["n", "v","r"],
-              candidate[C.POS]
-              )
-            ) {
-            matches.push(id);
-          }
+      /* Tests
+      negatives = aren't won't cannot
+      irregular pasts = hidden written stole lain
+      irregular plurals = indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crises */
+    else {
+      for (guess of [
+        checkIrregularNegatives,
+        checkIrregularVerbs,
+        checkIrregularPlurals
+      ]) {
+        const result = guess(word, matches);
+        if (result) {
+          addIfPOS(result[0], matches, result[1]);
+          break;
         }
       }
-      else if (word.slice(-2) === "ly") {
-        /* ## test: happily clumsily annually finely sensibly sadly automatically */
-        addToMatches(word, matches, LOOKUP.y_subs, "j");
-      }
-      else if (LOOKUP.irregPlural[word]) {
-        /* ## test: indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crisis */
-        matches.push(dbLookup(LOOKUP.irregPlural[word])[0]);
-      }
-      for (const match of checkForeignPlurals(word)) {
-        matches.push(...match)
-      }
-      if (typeof matches[0] === 'undefined') {
-        matches.push(markOfflist(word, "offlist"));
-      }
     }
+  }
+
+  /* ## Tests for inflected words
+  Ving = "bobbing begging swimming buzzing picnicking hoping dying going flying"
+  Vpp = robbed gagged passed busied played visited
+  Superlatives = "longest hottest prettiest closest soonest"
+  Comparatives = "longer hotter prettier closer sooner"
+  Final -s =  families tries potatoes scarves crises boxes dogs
+  regular ADVs =  happily clumsily annually finely sensibly sadly automatically
+  */
+
+  for (guess of [
+    { ends: "ing", action: matchVing },
+    { ends: "ed", action: matchVpp },
+    { ends: "st", action: matchSuperlatives },
+    { ends: "r", action: matchComparatives },
+    { ends: "s", action: matchFinalS },
+    { ends: "ly", action: matchRegAdv }
+  ]) {
+    if (word.endsWith(guess.ends)) {
+      guess.action(word, matches);
+      break;
+    }
+  }
+
+  for (const match of checkForeignPlurals(word)) {
+    matches.push(...match)
+  }
+  if (typeof matches[0] === 'undefined') {
+    matches.push(markOfflist(word, "offlist"));
   }
   return matches;
 }
 
-function addToMatches(word, matches, lookup, pos) {
-  for (const id of findBaseForm(word, lookup)) {
+
+function checkIrregularNegatives(word, match) {
+  const lookup = LOOKUP.irregNegVerb[word];
+  if (lookup){
+    return [dbLookup(lookup), ["x", "v"]];
+    // addIfPOS(dbLookup(lookup), matches, ["x", "v"]);
+    // break;
+  }
+};
+
+function checkIrregularVerbs(word, match) {
+  const lookup = LOOKUP.irregVerb[word];
+  if (lookup){
+    return [dbLookup(lookup), ["x", "v"]];
+    // addIfPOS(dbLookup(lookup), matches, ["x", "v"]);
+    // break;
+  }
+};
+
+function checkIrregularPlurals(word, match) {
+  const lookup = LOOKUP.irregPlural[word];
+  if (lookup){
+    return [dbLookup(lookup), ["x", "v"]];
+    // addIfPOS(dbLookup(lookup), matches, ["x", "v"]);
+    // break;
+  }
+};
+
+function matchVing(word, matches) {
+  addIfPOS(findBaseForm(word, LOOKUP.g_subs), matches, ["v"]);
+};
+
+function matchVpp(word, matches) {
+  addIfPOS(findBaseForm(word, LOOKUP.d_subs), matches, ["v"]);
+};
+
+function matchSuperlatives(word, matches) {
+  addIfPOS(findBaseForm(word, LOOKUP.est_subs), matches, ["j"]);
+};
+
+function matchComparatives(word, matches) {
+  addIfPOS(findBaseForm(word, LOOKUP.er_subs), matches, ["j"]);
+};
+
+function matchFinalS(word, matches) {
+  addIfPOS(findBaseForm(word, LOOKUP.s_subs), matches, ["n", "v"]);
+};
+
+function matchRegAdv(word, matches) {
+  addIfPOS(findBaseForm(word, LOOKUP.y_subs), matches, ["j"]);
+};
+
+
+function addIfPOS(roughMatches, matches, posArr) {
+  for (const id of roughMatches) {
     const match = getDbEntry(id);
-    if (match[C.POS].includes(pos)) matches.push(id);
+    for (const pos of posArr) {
+      if (match && match[C.POS].includes(pos)) matches.push(id);
+    }
   }
 }
 
@@ -983,7 +1109,7 @@ function buildMarkupAsHTML(textArr) {
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
-  let isWithoutCursor = true;
+  // let isWithoutCursor = true;
   let wordIndex = 0;
   for (let wordArr of textArr) {
     let word = wordArr[0];
@@ -994,10 +1120,6 @@ function buildMarkupAsHTML(textArr) {
       continue;
     }
     let rawWord = escapeHTMLentities(wordArr[1]);
-    // let rawWord = wordArr[1]
-    //   .replace(/&/g, "&amp;")
-    //   .replace(/</g, "&lt;")
-    //   .replace(/>/g, "&gt;");
     const trailingPunctuation = rawWord.match(/\W+$/) || "";
     let leaveSpace = " ";
     if ((wordArr[2][0] && getDbEntry(wordArr[2][0][0])[2] == "contraction") || isFirstWord || wasEOL) {
@@ -1026,7 +1148,8 @@ function buildMarkupAsHTML(textArr) {
         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
-      if (isWithoutCursor && V.isInPlaceEditing) {
+      // if (isWithoutCursor && V.isInPlaceEditing) {
+      if (V.isInPlaceEditing && matchCount === 0) {
         const [word_i, char_i] = V.cursorPosInTextArr;
         if (wordIndex === word_i) {
           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
@@ -1034,10 +1157,11 @@ function buildMarkupAsHTML(textArr) {
       }
       let localWord = highlightAwlWord(level_arr,rawWord);
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
-      if (matchCount > 0 && matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
       if (matchCount > 0) {
-        htmlString += `<mark>${displayWord}</mark>`;
-      } else htmlString += displayWord;
+        if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
+        displayWord = "<mark>" + displayWord + "</mark>";
+      }
+      htmlString += displayWord;
       matchCount++;
       wasEOL = false;
     }
@@ -1052,7 +1176,6 @@ function escapeHTMLentities(text){
   return text.replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-
 }
 
 function getLevelPrefix(level_num) {
@@ -1351,7 +1474,7 @@ function changeDb_shared(e) {
     V.isBEST = false;
     V.isGEPT = false;
   }
-  V.currentDb.language = "en";
+  // V.currentDb.language = "en";
   V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
   for (let key in V.currentDb.css) {
     const property = key[0] == "_" ? `--${key.slice(1)}` : key;
@@ -1546,33 +1669,31 @@ function removeTagContentFromElement(node, tagName = "mark") {
 }
 
 function validateKeyPress(e) {
-  try {
-    // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
-    [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
-    if (V.isInMark) {
-      e.preventDefault();
-      // debug("keystroke supressed...")
-    }
+  // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
+  [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
+  if (V.isInMark) {
+    e.preventDefault();
+    // debug("keystroke supressed...")
+  }
 
+  // try {
     /*
-SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE CURSOR AT THESE TWO STATES...
-
+SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE CURSOR AT THESE TWO STATES
     */
-
     V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
     V.cursorIncrement = 0;
-    if (e.key === "ArrowRight") {
-      V.cursorIncrement = 1;
-    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-      V.cursorIncrement = -1;
-    }
     if (V.isInMark) {
+      if (e.key === "ArrowRight") {
+        V.cursorIncrement = 1;
+      } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
+        V.cursorIncrement = -1;
+      }
       V.skipMarkup = true;
     }
     // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
-  } catch (error) {
-    debug(error)
-  }
+  // } catch (error) {
+  //   debug(error)
+  // }
 }
 
 // function moveCursorOutOfMarkup(e){

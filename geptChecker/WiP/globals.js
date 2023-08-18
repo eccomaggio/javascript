@@ -7,6 +7,7 @@ function indexDb(db) {
 
 
 const HTM = {
+  root_css: document.documentElement,
   G_level: document.getElementById("t1_level"),
   K_theme: document.getElementById("t1_theme"),
   B_AWL: document.getElementById("t1_awl"),
@@ -15,7 +16,6 @@ const HTM = {
   resultsLegend: document.getElementById("t1_results_legend"),
   resultsText: document.getElementById("t1_results_text"),
   t1_title: document.getElementById("t1_term_legend"),
-  root_css: document.documentElement,
   workingDiv: document.getElementById("t2_raw_text"),
   finalTextDiv: document.getElementById("t2_final_text"),
   finalLegend: document.getElementById("t2_final_legend"),
@@ -102,21 +102,14 @@ let V = {
 const CURSOR = {
   tag: "span",
   id: "cursorPosHere",
-  // HTMLtext: "<span id='cursorPosHere'>@</span>",
   HTMLtext: "<span id='cursorPosHere'></span>",
-  // text: "@CRSR",
   text: "@CRSR@"
 }
 
 const EOL = {
   text: "@EOL@",
-  // HTMLtext: "<br>",
-  // tagName: "br",
   HTMLtext: "<hr>",
   tagName: "hr",
-  // HTMLtext: ["","<br>"],
-  // HTMLtext: "</p>\n<p>",
-  // HTMLtext: ["</p>\n", "<p>"],
 }
 
 
@@ -245,6 +238,7 @@ const LOOKUP = {
 
 
   // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
+
   // ## plural nouns, 3rd person present verbs
   s_subs: {
     // _: [-3, -2],
@@ -252,26 +246,23 @@ const LOOKUP = {
     ies: "y",
     oes: "o",
     ves: "f",
-    ses: "sis",
+    // ses: "sis",
     es: "" //,
     //s: ""
   },
 
   // ## adverbs
   y_subs: {
-    // _: [-3],
     _suffix: "ly",
     ily: "y",
     lly: "l",
     ely: "e",
     ically: "ic",
-    bly: "ble" //,
-    //ly: ""
+    bly: "ble"
   },
 
   // ## gerunds
   g_subs: {
-    // _: [-5, -4, -3],
     _suffix: "ing",
     bbing: "b",
     dding: "d",
@@ -294,7 +285,6 @@ const LOOKUP = {
 
   // ## superlative adjs
   est_subs: {
-    // _: [-5, -4, -3],
     _suffix: "est",
     bbest: "b",
     ddest: "d",
@@ -315,7 +305,6 @@ const LOOKUP = {
 
   // ## comparative adjs & agent nouns? (good idea??)
   er_subs: {
-    // _: [-4, -3, -2],
     _suffix: "er",
     bber: "b",
     dder: "d",
@@ -336,7 +325,6 @@ const LOOKUP = {
 
   // ## regular past -ed endings
   d_subs: {
-    // _: [-4, -3, -2],
     _suffix: "ed",
     bbed: "b",
     dded: "d",
@@ -392,7 +380,7 @@ const LOOKUP = {
     women: "woman",
     children: "child",
     oxen: "ox",
-    an: "a"
+    // an: "a"
   },
 
   irregNegVerb: {
@@ -686,7 +674,8 @@ const LOOKUP = {
     "&"
   ],
 
-  setOfCommonNames: new Set([
+  // setOfCommonNames: new Set([
+  personalNames: [
     "aaron",
     "abigail",
     "adam",
@@ -903,7 +892,8 @@ const LOOKUP = {
     "william",
     "willie",
     "zachary"
-  ])
+  // ])
+  ]
 }
 
 V.OFFLIST = LOOKUP.level_headings.length;
