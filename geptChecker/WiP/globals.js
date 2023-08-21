@@ -59,11 +59,13 @@ const C = {
   SAVE_TAB_STATE: "tab_state",
   SAVE_REFRESH_STATE: "refresh_state",
   SAVE_EDIT_STATE: "edit_state",
-  DEFAULT_db: "0",
+  // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
+  DEFAULT_db: 0,
   DEFAULT_tab: 0,
-  // DEFAULT_refresh: "0",
-  DEFAULT_refresh: "1",
-  DEFAULT_edit: "0",
+  // ## 0 = manual refresh, 1 = autorefresh
+  DEFAULT_refresh: 1,
+  // ## 0 = 2-col editing, 1 = in-place editing
+  DEFAULT_edit: 0,
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
@@ -79,15 +81,20 @@ let V = {
   offlistDb: [["unused"]],
   offlistIndex: 1,
   wordStats: {},
-  isAutoRefresh: true,
-  isInPlaceEditing: true,
+  // isAutoRefresh: C.DEFAULT_refresh,
+  // isInPlaceEditing: C.DEFAULT_edit,
+  isAutoRefresh: null,
+  isInPlaceEditing: null,
   currentDb: {},
+  currentDbChoice: null,
   // OFFLIST: LOOKUP.level_headings.length,
   // level_subs: LOOKUP.level_headings.concat(LOOKUP.offlist_subs),
   // const level_subs = lookup.level_headings.concat(lookup.offlist_subs);
   OFFLIST: 0,
   level_subs: [],
-  currentTab: 0,
+  // currentTab: 0,
+  // currentTab: C.DEFAULT_tab,
+  currentTab: null,
   cursorOffset: 0,
   cursorOffsetNoMarks: 0,
   isInMark: false,
@@ -345,9 +352,10 @@ const LOOKUP = {
 
   foreign_plurals: [
     ["ae", "a"],
+    // ["ia","ion"],
     ["a", "um"],
     ["a", "on"],
-    // ["ia","ion"],
+    ["ia","ion"],
     ["i", "us"],
     ["i", "o"],
     ["es", "is"],

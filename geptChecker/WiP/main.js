@@ -1,7 +1,21 @@
+/*
+Fixed:
+excessive EOLs
+compounds erase cursor placeholder
+save app status anomalies
+streamlined lookupDerivations
+refresh & editing states not always respected
+
+TODO:
+sort out in-place editing:
+cursor needs to avoid <mark> elements
+need to be able to add text after <mark> element / at end of text
+work out logic (& necessity of forceUpdate & skipMarkup) in updateInputDiv
+*/
 // ## SETUP ############################################
 
 
-initializeApp();
+init();
 addListeners();
 
 
@@ -9,56 +23,71 @@ addListeners();
 
 // ***** INIT FUNCTIONS
 
-function initializeApp() {
+function init() {
+  if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
   let [
     dbState,
     tabState,
     refreshState,
     editState
   ] = retrieveAppState();
+  // debug(`db: ${dbState}, tab: ${tabState}, autorefresh? ${refreshState}, in-place? ${editState}`)
+  // let [
+  //   V.currentDbChoice,
+  //   V.currentTab,
+  //   V.isAutoRefresh,
+  //   V.isInPlaceEditing
+  // ] = retrieveAppState();
   // ## Apply defaults if nothing in storage
-  dbState = (dbState) ? dbState : C.DEFAULT_db;
-  tabState = (tabState) ? tabState : C.DEFAULT_tab;
-  refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
-  editState = (editState) ? editState : C.DEFAULT_edit;
+  // dbState = (dbState) ? dbState : C.DEFAULT_db;
+  // tabState = (tabState) ? tabState : C.DEFAULT_tab;
+  // refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
+  // editState = (editState) ? editState : C.DEFAULT_edit;
   // debug(`db:${dbState}, tab:${tabState}, isAutoRefresh: ${refreshState}, isIn-Place: ${editState}`)
+  V.currentDbChoice = dbState;
+  V.currentTab = tabState;
+  V.isAutoRefresh = parseInt(refreshState);
+  V.isInPlaceEditing = parseInt(editState);
 
   changeDb_shared(dbState);
   displayDbNameInTab2();
 
-  V.currentTab = tabState;
-  activateTab(HTM.tabHead.children[V.currentTab]);
+  activateTab(V.currentTab);
   clearTab1();
 
-  V.isAutoRefresh = (refreshState === "1");
-  V.isInPlaceEditing = (editState === "1");
-  // setEditModeListeners();
   toggleFinalTextDiv();
 
   // # update dropdown menu select options
   HTM.changeDb.value = dbState;
-  HTM.toggleRefresh.value = refreshState;
-  HTM.toggleEditMode.value = editState;
+  HTM.toggleEditMode.value = V.isInPlaceEditing;
   toggleRefreshButton();
   refreshLabels("t1_form");
 }
 
 function addListeners() {
-  document.getElementById("t1_theme_select");
+  addTabListeners();
+  addMenuListeners();
+  addWordInputListeners();
+  addEditModeListeners();
+}
 
+function addWordInputListeners(){
   HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
-
   for (const el of document.getElementsByTagName("input")) {
     if (el.type != "text") {
       const label = el.labels[0];
       if (label.htmlFor) label.addEventListener("click", registerLabelClick);
     }
   }
-  // ## for tabs
+}
+
+function addTabListeners(){
   for (const el of document.getElementsByClassName("tab")) {
     el.addEventListener("click", activateTab);
   }
-  // ## for refresh button
+}
+
+function addMenuListeners(){
   HTM.clearButton.addEventListener("click", clearTab);
   HTM.resetButton.addEventListener("click", resetApp);
 
@@ -74,11 +103,9 @@ function addListeners() {
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
-
-  setEditModeListeners();
 }
 
-function setEditModeListeners(){
+function addEditModeListeners(){
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
 
@@ -613,37 +640,66 @@ function updateCursorPos(){
 }
 
 function updateInputDiv(e) {
+  const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
+  debug("valid refresh?", isValidManualRefresh)
   // debug("isInPlaceEditing?", V.isInPlaceEditing)
-  if (!V.isAutoRefresh) {
-    // debug("reprocessing must be triggered manually...")
-    return;
-  }
+  // if (!V.isAutoRefresh) {
+  // if (!isValidManualRefresh) {
+  //   // debug("reprocessing must be triggered manually...")
+  //   return;
+  // }
   debug("is in mark?", V.isInMark, "skipMarkup?", V.skipMarkup, "offset:", V.cursorOffsetNoMarks, "cursorPos", ...V.cursorPosInTextArr)
-  let revisedText = "";
-  if (V.isInPlaceEditing) {
-    if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup || V.isInMark)) {
-    setCursorPos(document.getElementById(CURSOR.id));
-    debug("No reprocessing needed...")
-    return;
-    }
-  revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-  }
-  else {
-    // revisedText = HTM.workingDiv.textContent.trim();
-    // ## use innerText; textContent loses newlines
-    revisedText = HTM.workingDiv.innerText.trim();
-  }
+  const revisedText = grabRevisedText(isValidManualRefresh);
+  // let revisedText = "";
+  // if (V.isInPlaceEditing) {
+  //   if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup || V.isInMark)) {
+  //   setCursorPos(document.getElementById(CURSOR.id));
+  //   debug("No reprocessing needed...")
+  //   return;
+  //   }
+  // revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
+  // }
+  // else {
+  //   // revisedText = HTM.workingDiv.textContent.trim();
+  //   // ## use innerText; textContent loses newlines
+  //   revisedText = HTM.workingDiv.innerText.trim();
+  // }
 
-  if (!revisedText) return;
-  const [
-    resultsAsHTML,
-    repeatsAsHTML,
-    wordCount
-  ] = processText(revisedText);
-  displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
-  V.forceUpdate = false;
-  V.skipMarkup = false;
-  HTM.finalInfoDiv.innerText = "";
+  if (revisedText) {
+    const [
+      resultsAsHTML,
+      repeatsAsHTML,
+      wordCount
+    ] = processText(revisedText);
+    displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
+    V.forceUpdate = false;
+    V.skipMarkup = false;
+    HTM.finalInfoDiv.innerText = "";
+  } else {
+    return;
+  }
+}
+
+function grabRevisedText(isValidManualRefresh){
+  let textToRevise = "";
+  // ## IN-PLACE EDITING
+  if (V.isInPlaceEditing) {
+    if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh){
+      textToRevise = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
+    } else {
+      setCursorPos(document.getElementById(CURSOR.id));
+      debug("No reprocessing needed...")
+      return "";
+    }
+  }
+  // ## 2-COL EDITING
+  else {
+    if (V.isAutoRefresh || isValidManualRefresh){
+      // ## use innerText; textContent loses newlines
+      textToRevise = HTM.workingDiv.innerText.trim();
+    }
+  }
+  return textToRevise;
 }
 
 function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
@@ -679,7 +735,7 @@ function processText(rawText) {
   // debug(">> has cursor?", text.indexOf(CURSOR.text))
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
-  const [resultsAsTextArr, wordCount] = addLookUps(flatTextArr);
+  const [resultsAsTextArr, wordCount] = pushLookups(flatTextArr);
   const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr);
   const repeatsAsHTML = buildRepeatList(wordCount);
   return [resultsAsHTML, repeatsAsHTML, wordCount];
@@ -703,30 +759,25 @@ function splitText(rawText) {
   // ## text format = [processed word for lookup + tagging, raw word for display]
   const raw_chunks = splitTextIntoPhrases(rawText);
   let arrayOfPhrases = [];
-  let indexOfCurrentWord = 0;
+  // let indexOfCurrentWord = 0;
   let cursorFound = false;
   let wordToAdd;
   for (let phrase of raw_chunks) {
     let arrayOfWords = [];
-    for (let word of phrase.split(/\s+/)) {
+    for (let [word_i, word] of phrase.split(/\s+/).entries()) {
       if (word.indexOf(EOL.text) >= 0) {
         wordToAdd = [EOL.text, EOL.HTMLtext];
       } else {
         if (!cursorFound) {
           // # Save position of cursor externally so it can be reinserted after text parsing
-          const indexOfCursorText = word.indexOf(CURSOR.text);
-          if (indexOfCursorText >= 0) {
-            V.cursorPosInTextArr = [
-              indexOfCurrentWord,
-              indexOfCursorText
-            ];
+          const char_i = word.indexOf(CURSOR.text);
+          if (char_i >= 0) {
+            V.cursorPosInTextArr = [word_i, char_i];
             word = word.replace(CURSOR.text, "");
             cursorFound = true;
           }
-          indexOfCurrentWord++;
         }
         let normalizedWord = word.replace(C.punctuation, "").toLowerCase();
-        // arrayOfWords.push([normalizedWord, word]);
         wordToAdd = [normalizedWord, word];
       }
       arrayOfWords.push(wordToAdd);
@@ -785,7 +836,7 @@ function findCompoundsAndFlattenArray(chunks) {
       for (let compound in V.currentDb.compounds) {
         if (flattenedTail.startsWith(compound)) {
           const c_id = V.currentDb.compounds[compound];
-          addMatch(matches, c_id);
+          pushMatch(matches, c_id);
         }
       }
       chunk[word_i].push(matches);
@@ -798,12 +849,12 @@ function findCompoundsAndFlattenArray(chunks) {
   return flatArray;
 }
 
-function addMatch(matches, id) {
+function pushMatch(matches, id) {
   matches.push([id, updateWordStats(id)]);
   return this;
 }
 
-function addLookUps(textArr) {
+function pushLookups(textArr) {
   /* textArr = array of [normalized, raw]
   return => processedTextArr, array of [normalized-word, raw-word, [[matched-ID, duplicate-count], ...]]
     Words are counted + line breaks dealt with
@@ -814,9 +865,11 @@ function addLookUps(textArr) {
   let wordCount = 0;
   let matches = [];
   // ## capture EOL and insert line breaks
+  // for (const wordArr of textArr) {
   for (const wordArr of textArr) {
-    const word = wordArr[0];
-    let preMatchArr = wordArr[2];
+    let [word, rawWord, preMatchArr] = wordArr;
+    // const word = wordArr[0];
+    // let preMatchArr = wordArr[2];
     const matchedIDs = [];
     // if (word === "*EOL") {
     if (word === EOL.text) {
@@ -831,11 +884,12 @@ function addLookUps(textArr) {
         const match = getDbEntry(id);
         // ## don't count contractions as separate words
         if (["contraction"].includes(match[C.POS])) { wordCount-- };
-        if (!V.currentDb.compounds[word]) addMatch(matchedIDs, id);
+        if (!V.currentDb.compounds[word]) pushMatch(matchedIDs, id);
       }
       // ## filter out matched compounds without spaces
       preMatchArr.push(...matchedIDs);
-      processedTextArr.push([word, wordArr[1], preMatchArr]);
+      // processedTextArr.push([word, wordArr[1], preMatchArr]);
+      processedTextArr.push([word, rawWord, preMatchArr]);
     }
   }
   return [processedTextArr, wordCount];
@@ -1008,7 +1062,7 @@ function checkForeignPlurals(word) {
     const ending = word.slice(-plural.length);
     if (ending === plural) {
       const lookup = dbLookup(root + singular);
-      if (lookup) {
+      if (lookup.length) {
         return winnowPoS(lookup, ["n"]);
       }
     }
@@ -1080,33 +1134,30 @@ function buildMarkupAsHTML(textArr) {
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
-  // let isWithoutCursor = true;
   let wordIndex = 0;
-  for (let wordArr of textArr) {
-    let word = wordArr[0];
-    // debug(word, word === EOL.text, wordIndex, wordIndex == V_SUPP.cursorPosInTextArr[0])
+  for (let [word, rawWord, wordInfo] of textArr) {
+    // debug("wordInfo for:", word, wordInfo)
     if (word === EOL.text) {
       htmlString += EOL.HTMLtext;
       wasEOL = true;
       continue;
     }
-    let rawWord = escapeHTMLentities(wordArr[1]);
-    const trailingPunctuation = rawWord.match(/\W+$/) || "";
+    rawWord = escapeHTMLentities(rawWord);
     let leaveSpace = " ";
-    if ((wordArr[2][0] && getDbEntry(wordArr[2][0][0])[2] == "contraction") || isFirstWord || wasEOL) {
+    if ((wordInfo[0] && getDbEntry(wordInfo[0][0])[2] == "contraction") || isFirstWord || wasEOL) {
       leaveSpace = "";
     }
     isFirstWord = false;
     // ## duplicateCount = running total; totalRepeats = total
-    const matches = wordArr[2];
+    const matches = wordInfo;
     let matchCount = 0;
     for (const [id, count] of matches) {
       const match = getDbEntry(id);
       let displayWord = "";
       const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-      const level_arr = match[C.LEVEL];
-      const level_num = level_arr[0];
-      const levelClass = "level-" + getLevelPrefix(level_num);
+      const levelArr = match[C.LEVEL];
+      const levelNum = levelArr[0];
+      const levelClass = "level-" + getLevelPrefix(levelNum);
       const totalRepeats = V.wordStats[id];
       let duplicateClass = "";
       const duplicateCount = count;
@@ -1126,7 +1177,7 @@ function buildMarkupAsHTML(textArr) {
           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
         }
       }
-      let localWord = highlightAwlWord(level_arr,rawWord);
+      let localWord = highlightAwlWord(levelArr,rawWord);
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
       if (matchCount > 0) {
         if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
@@ -1278,19 +1329,25 @@ function changeFont(e) {
 }
 
 function changeRefresh(e) {
-  V.isAutoRefresh = (e.target.value === "1");
+  // V.isAutoRefresh = (e.target.value === "1");
+  V.isAutoRefresh = parseInt(e.target.value);
+  localStorage.setItem(C.SAVE_REFRESH_STATE, V.isAutoRefresh);
   toggleRefreshButton();
-  localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "1" : "0");
-  updateInputDiv();
+  // localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "1" : "0");
+  // updateInputDiv();
   // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
 }
 
 function toggleRefreshButton() {
-  // debug("isAutoRefresh:",V.isAutoRefresh)
-  if (V.isAutoRefresh || isTab1()) {
+  // debug(`isAutoRefresh: ${V.isAutoRefresh}, isTab1: ${isFirstTab()}, autorefresh OR firstTab: ${Boolean(V.isAutoRefresh || isFirstTab())}`)
+  HTM.toggleRefresh.value = V.isAutoRefresh;
+  // if (V.isAutoRefresh === 0 || isFirstTab()) {
+  if (V.isAutoRefresh || isFirstTab()) {
+    // debug("hide")
     HTM.refreshButton.style.display = "none";
     HTM.refreshButtonSpacer.style.display = "none";
   } else {
+    // debug("show")
     HTM.refreshButton.style.display = "block";
     HTM.refreshButtonSpacer.style.display = "block";
     updateInputDiv();
@@ -1298,17 +1355,18 @@ function toggleRefreshButton() {
 }
 
 function changeEditingMode(e) {
-  V.isInPlaceEditing = (e.target.value === "1");
-  localStorage.setItem(C.SAVE_EDIT_STATE, (V.isInPlaceEditing) ? "1" : "0");
+  // V.isInPlaceEditing = (e.target.value === "1");
+  V.isInPlaceEditing = parseInt(e.target.value);
+  localStorage.setItem(C.SAVE_EDIT_STATE, V.isInPlaceEditing);
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.innerHTML = "";
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
   }
-  setEditModeListeners();
+  addEditModeListeners();
   V.forceUpdate = true;
-  updateInputDiv();
   toggleFinalTextDiv();
+  updateInputDiv();
 }
 
 function convertMarkupToText(el) {
@@ -1324,7 +1382,16 @@ function convertMarkupToText(el) {
 }
 
 function toggleFinalTextDiv() {
-  HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
+  // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
+  if (V.isInPlaceEditing){
+    debug("hide")
+    HTM.finalTextDiv.style.display = "none";
+  } else {
+    // HTM.finalTextDiv.style.display = "flex";
+    debug("show")
+    HTM.finalTextDiv.style.display = "block";
+    // HTM.finalTextDiv.style.flexGrow = 1;
+  }
 }
 
 function jumpToDuplicate(id) {
@@ -1344,7 +1411,7 @@ function jumpToDuplicate(id) {
 
 function clearTab(event) {
   event.preventDefault();
-  if (isTab1()) {
+  if (isFirstTab()) {
     clearTab1();
   } else {
     clearTab2();
@@ -1353,10 +1420,11 @@ function clearTab(event) {
 }
 
 function resetApp() {
-  localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
-  localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
-  localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
-  localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
+  // localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
+  // localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
+  // localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
+  // localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
+  setAppStateToDefault();
   V.currentTab = C.DEFAULT_tab;
   clearTab1();
   clearTab2();
@@ -1364,8 +1432,16 @@ function resetApp() {
   HTM.toggleEditMode = C.DEFAULT_edit;
   HTM.toggleRefresh = C.DEFAULT_refresh;
   toggleRefreshButton();
-  activateTab(HTM.tabHead.children[0]);
+  // activateTab(HTM.tabHead.children[0]);
+  activateTab(V.currentTab);
   changeDb_shared(0);
+}
+
+function setAppStateToDefault(){
+  localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
+  localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
+  localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
+  localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
 }
 
 function retrieveAppState() {
@@ -1380,9 +1456,11 @@ function retrieveAppState() {
 
 function changeDb_shared(e) {
   let choice = (e.target) ? e.target.value : e;
-  choice = parseInt(choice);
+  // choice = parseInt(choice);
+  V.currentDbChoice = parseInt(choice);
   V.currentDb = [];
-  if (choice === parseInt(C.DEFAULT_db)) {
+  // if (choice === 0) {
+  if (V.currentDbChoice === 0) {
     V.currentDb = {
       name: "GEPT",
       db: indexDb(makeGEPTdb()),
@@ -1398,7 +1476,8 @@ function changeDb_shared(e) {
     V.isKids = false;
     V.isBEST = false;
     V.isGEPT = true;
-  } else if (choice === 1) {
+  // } else if (choice === 1) {
+  } else if (V.currentDbChoice === 1) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
       name: "BEST",
@@ -1440,7 +1519,8 @@ function changeDb_shared(e) {
   }
   changeDb_text();
   changeDb_words();
-  localStorage.setItem(C.SAVE_DB_STATE, choice);
+  // localStorage.setItem(C.SAVE_DB_STATE, choice);
+  localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
 }
 
 function buildListOfCompoundWords(dB) {
@@ -1503,9 +1583,10 @@ function debug(...params) {
 
 // ## TABS ############################################
 
+// function activateTab(tab) {
 function activateTab(tab) {
-  if (tab.target) tab = tab.target
-  // debug(tab)
+  if (tab.target) tab = tab.target;
+  else tab = HTM.tabHead.children[tab];
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
@@ -1520,7 +1601,7 @@ function activateTab(tab) {
     }
     i++;
   }
-  if (isTab1()) {
+  if (isFirstTab()) {
     safeStyleDisplay(HTM.toggleRefresh);
     safeStyleDisplay(HTM.toggleEditMode);
     HTM.backupButton.style.display = "none";
@@ -1546,12 +1627,13 @@ function safeStyleDisplay(el, displayState="none") {
   // if (el.hasOwnProperty("style")) el.style.display = displayState;
 }
 
-function isTab1() {
-  return V.currentTab === 0;
+function isFirstTab() {
+  // debug(">>>current tab=", V.currentTab, parseInt(V.currentTab) === 0)
+  return parseInt(V.currentTab) === 0;
 }
 
 function displayInputCursor(){
-  if(isTab1()) HTM.inputLemma.focus();
+  if(isFirstTab()) HTM.inputLemma.focus();
   else HTM.workingDiv.focus();
 }
 
@@ -1563,8 +1645,8 @@ function displayInputCursor(){
 // }
 
 function insertCursorPlaceholder(el, index) {
-  let flatText = removeTagContentFromElement(el);
-  const updatedText = flatText.slice(0, index) + CURSOR.text + flatText.slice(index);
+  let plainText = removeTagContentFromElement(el);
+  const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
   // debug(flatText, updatedText)
   return updatedText;
 }
@@ -1572,7 +1654,6 @@ function insertCursorPlaceholder(el, index) {
 function getCursorInfoInEl(element) {
   let tmpCursorOffset = 0;
   let tmpCursorOffsetNoMarks = 0;
-  // let divText = "";
   let isInMark = false;
   let sel = window.getSelection();
   if (sel.rangeCount > 0) {
@@ -1597,7 +1678,7 @@ function getCopyWithoutMarks(range) {
   return flattenedDivText;
 }
 
-function cursorIsInTag(cursorEl, tagName) {
+function cursorIsInTag(cursorEl, tagName="MARK") {
   return [cursorEl.tagName, cursorEl.parentElement.tagName, cursorEl.parentElement.parentElement.tagName].includes(tagName);
 }
 
@@ -1628,30 +1709,27 @@ function removeTagContentFromElement(node, tagName = "mark") {
 
 function validateKeyPress(e) {
   // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
-  [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
+  // [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
+  V.isInMark = cursorIsInTag(HTM.workingDiv);
   if (V.isInMark) {
     e.preventDefault();
     // debug("keystroke supressed...")
   }
 
-  // try {
-    /*
+  /*
 SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE CURSOR AT THESE TWO STATES
-    */
-    V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
-    V.cursorIncrement = 0;
-    if (V.isInMark) {
-      if (e.key === "ArrowRight") {
-        V.cursorIncrement = 1;
-      } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-        V.cursorIncrement = -1;
-      }
-      V.skipMarkup = true;
+  */
+  V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
+  V.cursorIncrement = 0;
+  if (V.isInMark) {
+    if (e.key === "ArrowRight") {
+      V.cursorIncrement = 1;
+    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
+      V.cursorIncrement = -1;
     }
-    // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
-  // } catch (error) {
-  //   debug(error)
-  // }
+    V.skipMarkup = true;
+  }
+  // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
 }
 
 // function moveCursorOutOfMarkup(e){

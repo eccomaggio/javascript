@@ -226,6 +226,10 @@
       margin: 10px 0 6px 10px;
     }
 
+    #t2_repeats_list, #t2_final_text {
+      flex-grow: 1;
+    }
+
     #t2_final_info {
       background-color: var(--light);
       border-radius: 5px;

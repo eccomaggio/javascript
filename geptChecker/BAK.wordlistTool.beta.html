@@ -259,10 +259,6 @@
       margin: 10px 0 6px 10px;
     }
 
-    #t2_repeats_list, #t2_final_text {
-      flex-grow: 1;
-    }
-
     #t2_final_info {
       background-color: var(--light);
       border-radius: 5px;
@@ -821,8 +817,7 @@
         <div class="spacer">&nbsp;</div>
         <button class="dropbtn" id="clear_button" type="button">Clear</button>
         <div class="spacer">&nbsp;</div>
-        <!-- <button class="dropbtn" id="refresh_button" type="button" style="display: none">Refresh</button> -->
-        <button class="dropbtn" id="refresh_button" type="button">Refresh</button>
+        <button class="dropbtn" id="refresh_button" type="button" style="display: none">Refresh</button>
         <div class="spacer" id="refresh_button_spacer">&nbsp;</div>
         <!-- adapted from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_dropdown_right -->
         <div class="dropdown" id="dropdown">
@@ -1243,7 +1238,6 @@ function indexDb(db) {
 
 
 const HTM = {
-  root_css: document.documentElement,
   G_level: document.getElementById("t1_level"),
   K_theme: document.getElementById("t1_theme"),
   B_AWL: document.getElementById("t1_awl"),
@@ -1252,6 +1246,7 @@ const HTM = {
   resultsLegend: document.getElementById("t1_results_legend"),
   resultsText: document.getElementById("t1_results_text"),
   t1_title: document.getElementById("t1_term_legend"),
+  root_css: document.documentElement,
   workingDiv: document.getElementById("t2_raw_text"),
   finalTextDiv: document.getElementById("t2_final_text"),
   finalLegend: document.getElementById("t2_final_legend"),
@@ -1295,13 +1290,11 @@ const C = {
   SAVE_TAB_STATE: "tab_state",
   SAVE_REFRESH_STATE: "refresh_state",
   SAVE_EDIT_STATE: "edit_state",
-  // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
-  DEFAULT_db: 0,
+  DEFAULT_db: "0",
   DEFAULT_tab: 0,
-  // ## 0 = manual refresh, 1 = autorefresh
-  DEFAULT_refresh: 1,
-  // ## 0 = 2-col editing, 1 = in-place editing
-  DEFAULT_edit: 0,
+  // DEFAULT_refresh: "0",
+  DEFAULT_refresh: "1",
+  DEFAULT_edit: "0",
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
@@ -1317,27 +1310,21 @@ let V = {
   offlistDb: [["unused"]],
   offlistIndex: 1,
   wordStats: {},
-  // isAutoRefresh: C.DEFAULT_refresh,
-  // isInPlaceEditing: C.DEFAULT_edit,
-  isAutoRefresh: null,
-  isInPlaceEditing: null,
+  isAutoRefresh: true,
+  isInPlaceEditing: true,
   currentDb: {},
-  currentDbChoice: null,
   // OFFLIST: LOOKUP.level_headings.length,
   // level_subs: LOOKUP.level_headings.concat(LOOKUP.offlist_subs),
   // const level_subs = lookup.level_headings.concat(lookup.offlist_subs);
   OFFLIST: 0,
   level_subs: [],
-  // currentTab: 0,
-  // currentTab: C.DEFAULT_tab,
-  currentTab: null,
+  currentTab: 0,
   cursorOffset: 0,
   cursorOffsetNoMarks: 0,
   isInMark: false,
   isTextEdit: false,
   forceUpdate: false,
-  skipMarkup: false,
-  cursorIncrement: 0,
+  // cursorIncrement: 0,
   // # key: [index in textArr, index in normalized word]
   cursorPosInTextArr: [0, 0],
 }
@@ -1345,14 +1332,21 @@ let V = {
 const CURSOR = {
   tag: "span",
   id: "cursorPosHere",
+  // HTMLtext: "<span id='cursorPosHere'>@</span>",
   HTMLtext: "<span id='cursorPosHere'></span>",
+  // text: "@CRSR",
   text: "@CRSR@"
 }
 
 const EOL = {
   text: "@EOL@",
+  // HTMLtext: "<br>",
+  // tagName: "br",
   HTMLtext: "<hr>",
   tagName: "hr",
+  // HTMLtext: ["","<br>"],
+  // HTMLtext: "</p>\n<p>",
+  // HTMLtext: ["</p>\n", "<p>"],
 }
 
 
@@ -1481,7 +1475,6 @@ const LOOKUP = {
 
 
   // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
-
   // ## plural nouns, 3rd person present verbs
   s_subs: {
     // _: [-3, -2],
@@ -1489,23 +1482,26 @@ const LOOKUP = {
     ies: "y",
     oes: "o",
     ves: "f",
-    // ses: "sis",
+    ses: "sis",
     es: "" //,
     //s: ""
   },
 
   // ## adverbs
   y_subs: {
+    // _: [-3],
     _suffix: "ly",
     ily: "y",
     lly: "l",
     ely: "e",
     ically: "ic",
-    bly: "ble"
+    bly: "ble" //,
+    //ly: ""
   },
 
   // ## gerunds
   g_subs: {
+    // _: [-5, -4, -3],
     _suffix: "ing",
     bbing: "b",
     dding: "d",
@@ -1528,6 +1524,7 @@ const LOOKUP = {
 
   // ## superlative adjs
   est_subs: {
+    // _: [-5, -4, -3],
     _suffix: "est",
     bbest: "b",
     ddest: "d",
@@ -1548,6 +1545,7 @@ const LOOKUP = {
 
   // ## comparative adjs & agent nouns? (good idea??)
   er_subs: {
+    // _: [-4, -3, -2],
     _suffix: "er",
     bber: "b",
     dder: "d",
@@ -1568,6 +1566,7 @@ const LOOKUP = {
 
   // ## regular past -ed endings
   d_subs: {
+    // _: [-4, -3, -2],
     _suffix: "ed",
     bbed: "b",
     dded: "d",
@@ -1588,10 +1587,9 @@ const LOOKUP = {
 
   foreign_plurals: [
     ["ae", "a"],
-    // ["ia","ion"],
     ["a", "um"],
     ["a", "on"],
-    ["ia","ion"],
+    // ["ia","ion"],
     ["i", "us"],
     ["i", "o"],
     ["es", "is"],
@@ -1624,7 +1622,7 @@ const LOOKUP = {
     women: "woman",
     children: "child",
     oxen: "ox",
-    // an: "a"
+    an: "a"
   },
 
   irregNegVerb: {
@@ -1918,8 +1916,7 @@ const LOOKUP = {
     "&"
   ],
 
-  // setOfCommonNames: new Set([
-  personalNames: [
+  setOfCommonNames: new Set([
     "aaron",
     "abigail",
     "adam",
@@ -2136,8 +2133,7 @@ const LOOKUP = {
     "william",
     "willie",
     "zachary"
-  // ])
-  ]
+  ])
 }
 
 V.OFFLIST = LOOKUP.level_headings.length;
@@ -2149,24 +2145,10 @@ V.level_subs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
   <!-- <script src="upgrade.js"></script> -->
 
   <script data-title="main.js">
-/*
-Fixed:
-excessive EOLs
-compounds erase cursor placeholder
-save app status anomalies
-streamlined lookupDerivations
-refresh & editing states not always respected
-
-TODO:
-sort out in-place editing:
-cursor needs to avoid <mark> elements
-need to be able to add text after <mark> element / at end of text
-work out logic (& necessity of forceUpdate & skipMarkup) in updateInputDiv
-*/
 // ## SETUP ############################################
 
 
-init();
+initializeApp();
 addListeners();
 
 
@@ -2174,71 +2156,56 @@ addListeners();
 
 // ***** INIT FUNCTIONS
 
-function init() {
-  if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
+function initializeApp() {
   let [
     dbState,
     tabState,
     refreshState,
     editState
   ] = retrieveAppState();
-  // debug(`db: ${dbState}, tab: ${tabState}, autorefresh? ${refreshState}, in-place? ${editState}`)
-  // let [
-  //   V.currentDbChoice,
-  //   V.currentTab,
-  //   V.isAutoRefresh,
-  //   V.isInPlaceEditing
-  // ] = retrieveAppState();
   // ## Apply defaults if nothing in storage
-  // dbState = (dbState) ? dbState : C.DEFAULT_db;
-  // tabState = (tabState) ? tabState : C.DEFAULT_tab;
-  // refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
-  // editState = (editState) ? editState : C.DEFAULT_edit;
+  dbState = (dbState) ? dbState : C.DEFAULT_db;
+  tabState = (tabState) ? tabState : C.DEFAULT_tab;
+  refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
+  editState = (editState) ? editState : C.DEFAULT_edit;
   // debug(`db:${dbState}, tab:${tabState}, isAutoRefresh: ${refreshState}, isIn-Place: ${editState}`)
-  V.currentDbChoice = dbState;
-  V.currentTab = tabState;
-  V.isAutoRefresh = parseInt(refreshState);
-  V.isInPlaceEditing = parseInt(editState);
 
   changeDb_shared(dbState);
   displayDbNameInTab2();
 
-  activateTab(V.currentTab);
+  V.currentTab = tabState;
+  activateTab(HTM.tabHead.children[V.currentTab]);
   clearTab1();
 
+  V.isAutoRefresh = (refreshState === "1");
+  V.isInPlaceEditing = (editState === "1");
+  // setEditModeListeners();
   toggleFinalTextDiv();
 
   // # update dropdown menu select options
   HTM.changeDb.value = dbState;
-  HTM.toggleEditMode.value = V.isInPlaceEditing;
+  HTM.toggleRefresh.value = refreshState;
+  HTM.toggleEditMode.value = editState;
   toggleRefreshButton();
   refreshLabels("t1_form");
 }
 
 function addListeners() {
-  addTabListeners();
-  addMenuListeners();
-  addWordInputListeners();
-  addEditModeListeners();
-}
+  document.getElementById("t1_theme_select");
 
-function addWordInputListeners(){
   HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
+
   for (const el of document.getElementsByTagName("input")) {
     if (el.type != "text") {
       const label = el.labels[0];
       if (label.htmlFor) label.addEventListener("click", registerLabelClick);
     }
   }
-}
-
-function addTabListeners(){
+  // ## for tabs
   for (const el of document.getElementsByClassName("tab")) {
     el.addEventListener("click", activateTab);
   }
-}
-
-function addMenuListeners(){
+  // ## for refresh button
   HTM.clearButton.addEventListener("click", clearTab);
   HTM.resetButton.addEventListener("click", resetApp);
 
@@ -2254,9 +2221,11 @@ function addMenuListeners(){
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
+
+  setEditModeListeners();
 }
 
-function addEditModeListeners(){
+function setEditModeListeners(){
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
 
@@ -2609,7 +2578,6 @@ function getDerivedForms(term) {
 function getAwlSublist(level_arr) {
   return (V.isBEST && level_arr[1]) ? level_arr[1] - C.awl_level_offset : -1;
 }
-
 function highlightAwlWord(level_arr, word) {
   return (V.isBEST && level_arr[1] > -1) ? `<span class="awl-word">${word}</span>` : word;
 }
@@ -2769,95 +2737,54 @@ function catchKeyboardCopyEvent(e) {
 }
 
 function updateCursorPos(){
-  // ## Update cursor position on keyup (when movement has taken place)
-  // ## Override cursor update if inside markup
-  if (V.skipMarkup) {
-    debug("skipping cursor update");
-    V.cursorOffsetNoMarks += V.cursorIncrement;
-    // return;
-  }
-  else {
-    [
-      V.cursorOffset,
-      V.cursorOffsetNoMarks,
-      // V.isInMark
-    ] = getCursorInfoInEl(HTM.workingDiv);
-  }
-  // [
-  //   V.cursorOffset,
-  //   V.cursorOffsetNoMarks,
-  // ] = getCursorInfoInEl(HTM.workingDiv);
-  // if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
+  [
+    V.cursorOffset,
+    V.cursorOffsetNoMarks,
+  ] = getCursorInfoInEl(HTM.workingDiv);
 }
 
 function updateInputDiv(e) {
-  const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
-  debug("valid refresh?", isValidManualRefresh)
   // debug("isInPlaceEditing?", V.isInPlaceEditing)
-  // if (!V.isAutoRefresh) {
-  // if (!isValidManualRefresh) {
-  //   // debug("reprocessing must be triggered manually...")
-  //   return;
-  // }
-  debug("is in mark?", V.isInMark, "skipMarkup?", V.skipMarkup, "offset:", V.cursorOffsetNoMarks, "cursorPos", ...V.cursorPosInTextArr)
-  const revisedText = grabRevisedText(isValidManualRefresh);
-  // let revisedText = "";
-  // if (V.isInPlaceEditing) {
-  //   if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup || V.isInMark)) {
-  //   setCursorPos(document.getElementById(CURSOR.id));
-  //   debug("No reprocessing needed...")
-  //   return;
-  //   }
-  // revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-  // }
-  // else {
-  //   // revisedText = HTM.workingDiv.textContent.trim();
-  //   // ## use innerText; textContent loses newlines
-  //   revisedText = HTM.workingDiv.innerText.trim();
-  // }
-
-  if (revisedText) {
-    const [
-      resultsAsHTML,
-      repeatsAsHTML,
-      wordCount
-    ] = processText(revisedText);
-    displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
-    V.forceUpdate = false;
-    V.skipMarkup = false;
-    HTM.finalInfoDiv.innerText = "";
-  } else {
+  if (!V.isAutoRefresh) {
+    // debug("reprocessing must be triggered manually...")
     return;
   }
-}
-
-function grabRevisedText(isValidManualRefresh){
-  let textToRevise = "";
-  // ## IN-PLACE EDITING
+  let revisedText = "";
   if (V.isInPlaceEditing) {
-    if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh){
-      textToRevise = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-    } else {
+      if (!(V.isTextEdit || V.forceUpdate)) {
       setCursorPos(document.getElementById(CURSOR.id));
-      debug("No reprocessing needed...")
-      return "";
+      // debug("No reprocessing needed...")
+      return;
     }
+    // debug("Text amended -> reprocess", HTM.workingDiv.innerHTML);
+    // debug("Text amended -> reprocess");
+    revisedText = removeTagContentFromElement(HTM.workingDiv);
+    revisedText = insertCursorPlaceholder(revisedText);
   }
-  // ## 2-COL EDITING
   else {
-    if (V.isAutoRefresh || isValidManualRefresh){
-      // ## use innerText; textContent loses newlines
-      textToRevise = HTM.workingDiv.innerText.trim();
-    }
+    // revisedText = HTM.workingDiv.textContent.trim();
+    // ## use innerText; textContent loses newlines
+    revisedText = HTM.workingDiv.innerText.trim();
   }
-  return textToRevise;
-}
 
-function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
+  if (!revisedText) return;
+  const [
+    resultsAsHTML,
+    repeatsAsHTML,
+    wordCount
+  ] = processText(revisedText);
   displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsAsHTML);
   displayWorkingText(resultsAsHTML);
+  V.forceUpdate = false;
+  // displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
 }
+
+// function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
+//   displayDbNameInTab2(getWordCountForDisplay(wordCount));
+//   displayRepeatsList(repeatsAsHTML);
+//   displayWorkingText(resultsAsHTML);
+// }
 
 function displayWorkingText(html) {
   if (V.isInPlaceEditing) {
@@ -2886,7 +2813,7 @@ function processText(rawText) {
   // debug(">> has cursor?", text.indexOf(CURSOR.text))
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
-  const [resultsAsTextArr, wordCount] = pushLookups(flatTextArr);
+  const [resultsAsTextArr, wordCount] = addLookUps(flatTextArr);
   const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr);
   const repeatsAsHTML = buildRepeatList(wordCount);
   return [resultsAsHTML, repeatsAsHTML, wordCount];
@@ -2910,25 +2837,30 @@ function splitText(rawText) {
   // ## text format = [processed word for lookup + tagging, raw word for display]
   const raw_chunks = splitTextIntoPhrases(rawText);
   let arrayOfPhrases = [];
-  // let indexOfCurrentWord = 0;
+  let indexOfCurrentWord = 0;
   let cursorFound = false;
   let wordToAdd;
   for (let phrase of raw_chunks) {
     let arrayOfWords = [];
-    for (let [word_i, word] of phrase.split(/\s+/).entries()) {
+    for (let word of phrase.split(/\s+/)) {
       if (word.indexOf(EOL.text) >= 0) {
         wordToAdd = [EOL.text, EOL.HTMLtext];
       } else {
         if (!cursorFound) {
           // # Save position of cursor externally so it can be reinserted after text parsing
-          const char_i = word.indexOf(CURSOR.text);
-          if (char_i >= 0) {
-            V.cursorPosInTextArr = [word_i, char_i];
+          const indexOfCursorText = word.indexOf(CURSOR.text);
+          if (indexOfCursorText >= 0) {
+            V.cursorPosInTextArr = [
+              indexOfCurrentWord,
+              indexOfCursorText
+            ];
             word = word.replace(CURSOR.text, "");
             cursorFound = true;
           }
+          indexOfCurrentWord++;
         }
         let normalizedWord = word.replace(C.punctuation, "").toLowerCase();
+        // arrayOfWords.push([normalizedWord, word]);
         wordToAdd = [normalizedWord, word];
       }
       arrayOfWords.push(wordToAdd);
@@ -2987,7 +2919,7 @@ function findCompoundsAndFlattenArray(chunks) {
       for (let compound in V.currentDb.compounds) {
         if (flattenedTail.startsWith(compound)) {
           const c_id = V.currentDb.compounds[compound];
-          pushMatch(matches, c_id);
+          addMatch(matches, c_id);
         }
       }
       chunk[word_i].push(matches);
@@ -3000,12 +2932,12 @@ function findCompoundsAndFlattenArray(chunks) {
   return flatArray;
 }
 
-function pushMatch(matches, id) {
+function addMatch(matches, id) {
   matches.push([id, updateWordStats(id)]);
   return this;
 }
 
-function pushLookups(textArr) {
+function addLookUps(textArr) {
   /* textArr = array of [normalized, raw]
   return => processedTextArr, array of [normalized-word, raw-word, [[matched-ID, duplicate-count], ...]]
     Words are counted + line breaks dealt with
@@ -3016,11 +2948,9 @@ function pushLookups(textArr) {
   let wordCount = 0;
   let matches = [];
   // ## capture EOL and insert line breaks
-  // for (const wordArr of textArr) {
   for (const wordArr of textArr) {
-    let [word, rawWord, preMatchArr] = wordArr;
-    // const word = wordArr[0];
-    // let preMatchArr = wordArr[2];
+    const word = wordArr[0];
+    let preMatchArr = wordArr[2];
     const matchedIDs = [];
     // if (word === "*EOL") {
     if (word === EOL.text) {
@@ -3035,12 +2965,11 @@ function pushLookups(textArr) {
         const match = getDbEntry(id);
         // ## don't count contractions as separate words
         if (["contraction"].includes(match[C.POS])) { wordCount-- };
-        if (!V.currentDb.compounds[word]) pushMatch(matchedIDs, id);
+        if (!V.currentDb.compounds[word]) addMatch(matchedIDs, id);
       }
       // ## filter out matched compounds without spaces
       preMatchArr.push(...matchedIDs);
-      // processedTextArr.push([word, wordArr[1], preMatchArr]);
-      processedTextArr.push([word, rawWord, preMatchArr]);
+      processedTextArr.push([word, wordArr[1], preMatchArr]);
     }
   }
   return [processedTextArr, wordCount];
@@ -3058,26 +2987,21 @@ function updateWordStats(id) {
 function markOfflist(word, type) {
   // ## adds entry to offlistDb & returns ID (always negative number)
   // ## This creates a dummy dB entry for offlist words
-  let offlistEntry = [];
-  let offlistID;
+  let tmp = "";
   let isUnique = true;
   for (const i in V.offlistDb) {
     if (V.offlistDb[i][C.LEMMA] === word) {
       isUnique = false;
-      // offlistEntry = V.offlistDb[i];
-      offlistID = V.offlistDb[i][0];
+      tmp = V.offlistDb[i];
       break;
     }
   }
   if (isUnique) {
-    offlistID = -(V.offlistIndex);
-    // offlistEntry = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
-    offlistEntry = [offlistID, word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
-    V.offlistDb.push(offlistEntry);
+    tmp = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
+    V.offlistDb.push(tmp);
     V.offlistIndex++
   }
-  // return offlistEntry[0];
-  return [offlistID];
+  return tmp[0];
 }
 
 function lookupWord([word, rawWord]) {
@@ -3089,183 +3013,101 @@ function lookupWord([word, rawWord]) {
   return matches;
 }
 
-
 function lookupDerivations([word, rawWord], matches = []) {
   /*
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
   */
-
-  /* Tests
-  negatives = aren't won't cannot
-  irregular pasts = hidden written stole lain
-  irregular plurals = indices, cacti, criteria, phenomena, radii, formulae, bases, children, crises
-  Ving = "bobbing begging swimming buzzing picnicking hoping dying going flying"
-  Vpp = robbed gagged passed busied played visited
-  Superlatives = "longest hottest prettiest closest soonest"
-  Comparatives = "longer hotter prettier closer sooner"
-  Final-s =  families tries potatoes scarves crises boxes dogs
-  regular ADVs =  happily clumsily annually finely sensibly sadly automatically
-  */
-
-  for (guess of [
-    checkDigits,
-    checkUnknown,
-    checkSymbols,
-    checkContractions,
-    checkNames,
-    checkArticle,
-    checkIrregularNegatives,
-    checkIrregularVerbs,
-    checkIrregularPlurals,
-    checkForeignPlurals,
-    checkVing,
-    checkVpp,
-    checkSuperlatives,
-    checkComparatives,
-    // checkFinalS,
-    checkRegAdv,
-  ]) {
-    const result = guess(word);
-    if (result) {
-      matches.push(...result);
-      break;
+  if (word.match(/\d/i)) {
+    matches.push(markOfflist(word, "digit"));
+    return matches;
+  }
+  else if (LOOKUP.symbols.includes(word)) {
+    matches.push(markOfflist(word, "symbol"));
+  }
+  else if (!word.match(/[a-z]/i)) {
+    matches.push(markOfflist(word, "unknown"));
+    return matches;
+  }
+  else if (LOOKUP.contractions.includes(word)) {
+    matches.push(markOfflist(word, "contraction"));
+  }
+  else if (LOOKUP.setOfCommonNames.has(word) && (rawWord[0] === rawWord[0].toUpperCase())) {
+    matches.push(markOfflist(word, "proper name"))
+  }
+  else if (V.currentDb.language === "en") {
+    // matches = dbLookup(word); ## remove as produces accidental recursions
+    if (LOOKUP.irregNegVerb[word]) {
+      /* ## test = hidden written stole lain */
+      const candidate = dbLookup(LOOKUP.irregNegVerb[word])[0];
+      // ## Check for GEPTKids to ensure word is in the very limited wordlist
+      if (candidate) matches.push(candidate);
     }
-  }
+    else if (LOOKUP.irregVerb[word]) {
+      /* ## test = aren't won't cannot */
+      const candidate = dbLookup(LOOKUP.irregVerb[word])[0];
+      // ## Check for GEPTKids to ensure word is in the very limited wordlist
+      if (candidate) matches.push(candidate);
+    }
+    if (word.slice(-3) === "ing") {
+      /* ## test = "bobbing begging swimming buzzing picnicking hoping dying going flying" */
+      addToMatches(word, matches, LOOKUP.g_subs, "v");
 
-  // ## -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
-  const result = checkFinalS(word);
-  if (result) {
-    matches.push(...result);
-  }
-
-  if (!matches.length) {
-    matches.push(markOfflist(word,"offlist"));
-  }
-  return dedupeArray(matches);
-}
-
-function dedupeArray(array) {
-  return [...new Set(array)];
-}
-
-function checkDigits(word) {
-  if (word.match(/(\d+|\d+,\d+|\d+\.\d+|\d+,\d+\.d+)/i)) {
-    return markOfflist(word, "digit");
-  }
-}
-
-function checkUnknown(word) {
-  if (!word.match(/[a-z]/i)) {
-    return markOfflist(word, "unknown");
-  }
-}
-
-function checkSymbols(word) {
-  if (LOOKUP.symbols.includes(word)) {
-    return markOfflist(word, "symbol");
-  }
-}
-
-function checkContractions(word) {
-  if (LOOKUP.contractions.includes(word)) {
-    return markOfflist(word, "contraction");
-  }
-}
-
-function checkNames(word) {
-  if (LOOKUP.personalNames.includes(word)) {
-    return markOfflist(word, "personal name");
-  }
-}
-
-function checkArticle(word) {
-  if (word === "an") {
-    return dbLookup("a");
-  }
-}
-
-function checkIrregularNegatives(word) {
-  const lookup = LOOKUP.irregNegVerb[word];
-  if (lookup){
-    return winnowPoS(dbLookup(lookup), ["x","v"]);
-  }
-}
-
-function checkIrregularVerbs(word) {
-  const lookup = LOOKUP.irregVerb[word];
-  if (lookup){
-    return winnowPoS(dbLookup(lookup), ["x","v"]);
-  }
-}
-
-function checkIrregularPlurals(word) {
-  const lookup = LOOKUP.irregPlural[word];
-  if (lookup){
-    return winnowPoS(dbLookup(lookup), ["x","v"]);
-  }
-}
-
-function checkForeignPlurals(word) {
-  if (word.length <= 2) return;
-  for (const [plural, singular] of LOOKUP.foreign_plurals) {
-    const root = word.slice(0, -plural.length);
-    const ending = word.slice(-plural.length);
-    if (ending === plural) {
-      const lookup = dbLookup(root + singular);
-      if (lookup.length) {
-        return winnowPoS(lookup, ["n"]);
+    }
+    if (word.slice(-2) === "ed") {
+      /* ## test = robbed gagged passed busied played visited */
+      addToMatches(word, matches, LOOKUP.d_subs, "v");
+    }
+    if (!matches.length) {
+      if (word.slice(-2) === "st") {
+        /* ## test = "longest hottest prettiest closest soonest" */
+        addToMatches(word, matches, LOOKUP.est_subs, "j");
+      }
+      else if (word.slice(-1) === "r") {
+        /* ## test = "longer hotter prettier closer sooner" */
+        addToMatches(word, matches, LOOKUP.er_subs, "j");
+      }
+      else if (word.slice(-1) === "s") {
+        /* ## test: families tries potatoes scarves crises boxes dogs ## only noun/verb/pronoun can take '-s') */
+        const candidates = findBaseForm(word, LOOKUP.s_subs);
+        for (const id of candidates) {
+          const candidate = getDbEntry(id);
+          if (
+            candidate.length > 0 &&
+            // candidate[C.POS] !== "j"
+            isArrayElementInOtherArray(
+              ["n", "v","r"],
+              candidate[C.POS]
+              )
+            ) {
+            matches.push(id);
+          }
+        }
+      }
+      else if (word.slice(-2) === "ly") {
+        /* ## test: happily clumsily annually finely sensibly sadly automatically */
+        addToMatches(word, matches, LOOKUP.y_subs, "j");
+      }
+      else if (LOOKUP.irregPlural[word]) {
+        /* ## test: indices, cacti, criteria, phenomena, radii, HTM.formulae, bases, children, crisis */
+        matches.push(dbLookup(LOOKUP.irregPlural[word])[0]);
+      }
+      for (const match of checkForeignPlurals(word)) {
+        matches.push(...match)
+      }
+      if (typeof matches[0] === 'undefined') {
+        matches.push(markOfflist(word, "offlist"));
       }
     }
   }
+  return matches;
 }
 
-function checkVing(word) {
-  if (word.endsWith("ing")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.g_subs), ["v"]);
-  }
-}
-
-function checkVpp(word) {
-  if (word.endsWith("ed")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.d_subs), ["v"]);
-  }
-}
-
-function checkSuperlatives(word) {
-  if (word.endsWith("st")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.est_subs), ["j"]);
-  }
-}
-
-function checkComparatives(word) {
-  if (word.endsWith("r")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.er_subs), ["j"]);
-  }
-}
-
-function checkFinalS(word) {
-  if (word.endsWith("s")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.s_subs), ["n","v"]);
-  }
-}
-
-function checkRegAdv(word) {
-  if (word.endsWith("ly")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.y_subs), ["j"]);
-  }
-}
-
-function winnowPoS(roughMatches, posArr) {
-  // ## returns array, empty or otherwise
-  let localMatches = [];
-  for (const id of roughMatches) {
+function addToMatches(word, matches, lookup, pos) {
+  for (const id of findBaseForm(word, lookup)) {
     const match = getDbEntry(id);
-    for (const pos of posArr) {
-      if (match && match[C.POS].includes(pos)) localMatches.push(id);
-    }
+    if (match[C.POS].includes(pos)) matches.push(id);
   }
-  return localMatches;
 }
 
 function getDbEntry(id) {
@@ -3286,29 +3128,34 @@ function buildMarkupAsHTML(textArr) {
   let isFirstWord = true;
   let wasEOL = false;
   let wordIndex = 0;
-  for (let [word, rawWord, wordInfo] of textArr) {
-    // debug("wordInfo for:", word, wordInfo)
+  for (let wordArr of textArr) {
+    let word = wordArr[0];
+    // debug(word, word === EOL.text, wordIndex, wordIndex == V_SUPP.cursorPosInTextArr[0])
     if (word === EOL.text) {
       htmlString += EOL.HTMLtext;
       wasEOL = true;
       continue;
     }
-    rawWord = escapeHTMLentities(rawWord);
+    let rawWord = wordArr[1]
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const trailingPunctuation = rawWord.match(/\W+$/) || "";
     let leaveSpace = " ";
-    if ((wordInfo[0] && getDbEntry(wordInfo[0][0])[2] == "contraction") || isFirstWord || wasEOL) {
+    if ((wordArr[2][0] && getDbEntry(wordArr[2][0][0])[2] == "contraction") || isFirstWord || wasEOL) {
       leaveSpace = "";
     }
     isFirstWord = false;
     // ## duplicateCount = running total; totalRepeats = total
-    const matches = wordInfo;
+    const matches = wordArr[2];
     let matchCount = 0;
     for (const [id, count] of matches) {
       const match = getDbEntry(id);
       let displayWord = "";
       const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-      const levelArr = match[C.LEVEL];
-      const levelNum = levelArr[0];
-      const levelClass = "level-" + getLevelPrefix(levelNum);
+      const level_arr = match[C.LEVEL];
+      const level_num = level_arr[0];
+      const levelClass = "level-" + getLevelPrefix(level_num);
       const totalRepeats = V.wordStats[id];
       let duplicateClass = "";
       const duplicateCount = count;
@@ -3321,20 +3168,18 @@ function buildMarkupAsHTML(textArr) {
         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
         anchor = ` id='all_${id}_${duplicateCount}'`;
       }
-      // if (isWithoutCursor && V.isInPlaceEditing) {
-      if (V.isInPlaceEditing && matchCount === 0) {
+      if (V.isInPlaceEditing) {
         const [word_i, char_i] = V.cursorPosInTextArr;
         if (wordIndex === word_i) {
           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
         }
       }
-      let localWord = highlightAwlWord(levelArr,rawWord);
+      let localWord = highlightAwlWord(level_arr,rawWord);
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
+      if (matchCount > 0 && matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
       if (matchCount > 0) {
-        if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
-        displayWord = "<mark>" + displayWord + "</mark>";
-      }
-      htmlString += displayWord;
+        htmlString += `<mark>${displayWord}</mark>`;
+      } else htmlString += displayWord;
       matchCount++;
       wasEOL = false;
     }
@@ -3343,12 +3188,6 @@ function buildMarkupAsHTML(textArr) {
   // ## add this to even up </p><p> added in in lieu of EOLs
   // htmlString = "<p>" + htmlString + "</p>";
   return htmlString;
-}
-
-function escapeHTMLentities(text){
-  return text.replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 function getLevelPrefix(level_num) {
@@ -3424,7 +3263,7 @@ function displayDbNameInTab2(msg) {
 }
 
 function dbLookup(word) {
-  // ## returns empty array or array of matched IDs [4254, 4255]
+  // ## returns array of matched IDs
   if (typeof word !== "string") throw new Error("Search term must be a string.")
   if (!word) return [];
   word = word.toLowerCase();
@@ -3456,6 +3295,19 @@ function findBaseForm(word, subs) {
   return localMatches;
 }
 
+function checkForeignPlurals(word) {
+  let candidates = [];
+  for (const ending of LOOKUP.foreign_plurals) {
+    const len = ending[0].length;
+    const guess = word.slice(0, -len) + ending[1];
+    if (ending[0] === word.slice(-len)) {
+      const result = dbLookup(guess);
+      if (result.length) candidates.push(result)
+    }
+  }
+  return candidates;
+}
+
 function clearTab2() {
   HTM.workingDiv.innerText = "";
   HTM.finalTextDiv.innerHTML = "";
@@ -3480,25 +3332,19 @@ function changeFont(e) {
 }
 
 function changeRefresh(e) {
-  // V.isAutoRefresh = (e.target.value === "1");
-  V.isAutoRefresh = parseInt(e.target.value);
-  localStorage.setItem(C.SAVE_REFRESH_STATE, V.isAutoRefresh);
+  V.isAutoRefresh = (e.target.value === "1");
   toggleRefreshButton();
-  // localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "1" : "0");
-  // updateInputDiv();
+  localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "1" : "0");
+  updateInputDiv();
   // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
 }
 
 function toggleRefreshButton() {
-  // debug(`isAutoRefresh: ${V.isAutoRefresh}, isTab1: ${isFirstTab()}, autorefresh OR firstTab: ${Boolean(V.isAutoRefresh || isFirstTab())}`)
-  HTM.toggleRefresh.value = V.isAutoRefresh;
-  // if (V.isAutoRefresh === 0 || isFirstTab()) {
-  if (V.isAutoRefresh || isFirstTab()) {
-    // debug("hide")
+  // debug("isAutoRefresh:",V.isAutoRefresh)
+  if (V.isAutoRefresh || isTab1()) {
     HTM.refreshButton.style.display = "none";
     HTM.refreshButtonSpacer.style.display = "none";
   } else {
-    // debug("show")
     HTM.refreshButton.style.display = "block";
     HTM.refreshButtonSpacer.style.display = "block";
     updateInputDiv();
@@ -3506,18 +3352,17 @@ function toggleRefreshButton() {
 }
 
 function changeEditingMode(e) {
-  // V.isInPlaceEditing = (e.target.value === "1");
-  V.isInPlaceEditing = parseInt(e.target.value);
-  localStorage.setItem(C.SAVE_EDIT_STATE, V.isInPlaceEditing);
+  V.isInPlaceEditing = (e.target.value === "1");
+  localStorage.setItem(C.SAVE_EDIT_STATE, (V.isInPlaceEditing) ? "1" : "0");
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.innerHTML = "";
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
   }
-  addEditModeListeners();
+  setEditModeListeners();
   V.forceUpdate = true;
-  toggleFinalTextDiv();
   updateInputDiv();
+  toggleFinalTextDiv();
 }
 
 function convertMarkupToText(el) {
@@ -3533,16 +3378,7 @@ function convertMarkupToText(el) {
 }
 
 function toggleFinalTextDiv() {
-  // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
-  if (V.isInPlaceEditing){
-    debug("hide")
-    HTM.finalTextDiv.style.display = "none";
-  } else {
-    // HTM.finalTextDiv.style.display = "flex";
-    debug("show")
-    HTM.finalTextDiv.style.display = "block";
-    // HTM.finalTextDiv.style.flexGrow = 1;
-  }
+  HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
 }
 
 function jumpToDuplicate(id) {
@@ -3562,7 +3398,7 @@ function jumpToDuplicate(id) {
 
 function clearTab(event) {
   event.preventDefault();
-  if (isFirstTab()) {
+  if (isTab1()) {
     clearTab1();
   } else {
     clearTab2();
@@ -3571,11 +3407,10 @@ function clearTab(event) {
 }
 
 function resetApp() {
-  // localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
-  // localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
-  // localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
-  // localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
-  setAppStateToDefault();
+  localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
+  localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
+  localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
+  localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
   V.currentTab = C.DEFAULT_tab;
   clearTab1();
   clearTab2();
@@ -3583,16 +3418,8 @@ function resetApp() {
   HTM.toggleEditMode = C.DEFAULT_edit;
   HTM.toggleRefresh = C.DEFAULT_refresh;
   toggleRefreshButton();
-  // activateTab(HTM.tabHead.children[0]);
-  activateTab(V.currentTab);
+  activateTab(HTM.tabHead.children[0]);
   changeDb_shared(0);
-}
-
-function setAppStateToDefault(){
-  localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
-  localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
-  localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
-  localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
 }
 
 function retrieveAppState() {
@@ -3607,11 +3434,9 @@ function retrieveAppState() {
 
 function changeDb_shared(e) {
   let choice = (e.target) ? e.target.value : e;
-  // choice = parseInt(choice);
-  V.currentDbChoice = parseInt(choice);
+  choice = parseInt(choice);
   V.currentDb = [];
-  // if (choice === 0) {
-  if (V.currentDbChoice === 0) {
+  if (choice === parseInt(C.DEFAULT_db)) {
     V.currentDb = {
       name: "GEPT",
       db: indexDb(makeGEPTdb()),
@@ -3627,8 +3452,7 @@ function changeDb_shared(e) {
     V.isKids = false;
     V.isBEST = false;
     V.isGEPT = true;
-  // } else if (choice === 1) {
-  } else if (V.currentDbChoice === 1) {
+  } else if (choice === 1) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
       name: "BEST",
@@ -3662,7 +3486,7 @@ function changeDb_shared(e) {
     V.isBEST = false;
     V.isGEPT = false;
   }
-  // V.currentDb.language = "en";
+  V.currentDb.language = "en";
   V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
   for (let key in V.currentDb.css) {
     const property = key[0] == "_" ? `--${key.slice(1)}` : key;
@@ -3670,8 +3494,7 @@ function changeDb_shared(e) {
   }
   changeDb_text();
   changeDb_words();
-  // localStorage.setItem(C.SAVE_DB_STATE, choice);
-  localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
+  localStorage.setItem(C.SAVE_DB_STATE, choice);
 }
 
 function buildListOfCompoundWords(dB) {
@@ -3734,10 +3557,9 @@ function debug(...params) {
 
 // ## TABS ############################################
 
-// function activateTab(tab) {
 function activateTab(tab) {
-  if (tab.target) tab = tab.target;
-  else tab = HTM.tabHead.children[tab];
+  if (tab.target) tab = tab.target
+  // debug(tab)
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
@@ -3752,7 +3574,7 @@ function activateTab(tab) {
     }
     i++;
   }
-  if (isFirstTab()) {
+  if (isTab1()) {
     safeStyleDisplay(HTM.toggleRefresh);
     safeStyleDisplay(HTM.toggleEditMode);
     HTM.backupButton.style.display = "none";
@@ -3778,33 +3600,26 @@ function safeStyleDisplay(el, displayState="none") {
   // if (el.hasOwnProperty("style")) el.style.display = displayState;
 }
 
-function isFirstTab() {
-  // debug(">>>current tab=", V.currentTab, parseInt(V.currentTab) === 0)
-  return parseInt(V.currentTab) === 0;
+function isTab1() {
+  return V.currentTab === 0;
 }
 
 function displayInputCursor(){
-  if(isFirstTab()) HTM.inputLemma.focus();
+  if(isTab1()) HTM.inputLemma.focus();
   else HTM.workingDiv.focus();
 }
 
 
 // ## CURSOR HANDLING ######################################
 
-// function insertCursorPlaceholder(text) {
-//   return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
-// }
-
-function insertCursorPlaceholder(el, index) {
-  let plainText = removeTagContentFromElement(el);
-  const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
-  // debug(flatText, updatedText)
-  return updatedText;
+function insertCursorPlaceholder(text) {
+  return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
 }
 
 function getCursorInfoInEl(element) {
-  let tmpCursorOffset = 0;
-  let tmpCursorOffsetNoMarks = 0;
+  let cursorOffset = 0;
+  let cursorOffsetNoMarks = 0;
+  // let divText = "";
   let isInMark = false;
   let sel = window.getSelection();
   if (sel.rangeCount > 0) {
@@ -3813,12 +3628,12 @@ function getCursorInfoInEl(element) {
     const preCursorRange = document.createRange();
     preCursorRange.selectNodeContents(element);
     preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
-    tmpCursorOffset = preCursorRange.toString().length;
+    cursorOffset = preCursorRange.toString().length;
     // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-    tmpCursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
+    cursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
     isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
   }
-  return [tmpCursorOffset, tmpCursorOffsetNoMarks, isInMark];
+  return [cursorOffset, cursorOffsetNoMarks, isInMark];
 }
 
 function getCopyWithoutMarks(range) {
@@ -3829,7 +3644,7 @@ function getCopyWithoutMarks(range) {
   return flattenedDivText;
 }
 
-function cursorIsInTag(cursorEl, tagName="MARK") {
+function cursorIsInTag(cursorEl, tagName) {
   return [cursorEl.tagName, cursorEl.parentElement.tagName, cursorEl.parentElement.parentElement.tagName].includes(tagName);
 }
 
@@ -3853,34 +3668,24 @@ function removeTagContentFromElement(node, tagName = "mark") {
   for (let el of EOLs) {
     el.textContent = ` ${EOL.text} `;
   }
-  // const flatText = divTextCopy.textContent;
-  const flatText = divTextCopy.innerText;
+  const flatText = divTextCopy.textContent;
   return flatText;
 }
 
 function validateKeyPress(e) {
-  // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
-  // [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
-  V.isInMark = cursorIsInTag(HTM.workingDiv);
-  if (V.isInMark) {
-    e.preventDefault();
-    // debug("keystroke supressed...")
-  }
-
-  /*
-SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE CURSOR AT THESE TWO STATES
-  */
-  V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
-  V.cursorIncrement = 0;
-  if (V.isInMark) {
-    if (e.key === "ArrowRight") {
-      V.cursorIncrement = 1;
-    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-      V.cursorIncrement = -1;
+  try {
+    // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
+    V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
+    [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
+    // ## discard new text if cursor is in non-editable area (i.e. in <mark>)
+    if (V.isInMark && V.isTextEdit) {
+      e.preventDefault();
+      debug("keystroke supressed...")
     }
-    V.skipMarkup = true;
+    // debug("key pressed:", e.key, e)
+  } catch (error) {
+    debug(error)
   }
-  // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
 }
 
 // function moveCursorOutOfMarkup(e){
