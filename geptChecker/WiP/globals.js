@@ -103,7 +103,7 @@ let V = {
   skipMarkup: false,
   cursorIncrement: 0,
   // # key: [index in textArr, index in normalized word]
-  cursorPosInTextArr: [0, 0],
+  cursorPosInTextArr: [0, 0], //[word, char]
 }
 
 const CURSOR = {

@@ -6,7 +6,9 @@ and external files (applies to none-http(s) .js & .css files only)
 
 Output:
 1) in deconstruct mode, it outputs out.min.html with links to css&js AND independent css&js files
-2) in assemble mode, it outputs a single, integrated file called out.htm
+2) in assemble mode, it outputs a single, integrated file called out.html
+Ensure you do not have out.html in existence then type python toggleWordlistHTML.py WiP/out.min.html
+> this will create a new combined out.html using the current set of files in WiP
 These html files can be further renamed as desired
 
 Command line: toggleWordlistHTML.py <optional filename> (defaults to wordlistCheck.html)

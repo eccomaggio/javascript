@@ -254,10 +254,10 @@ function registerLabelClick(e_label) {
     const input = document.getElementById(label.htmlFor);
     let parentID = label.htmlFor.split("_")[1];
     //console.log(`*registerLabelClick* parentID=${parentID}`);
-    if (!parentID) {
-      return;
-    } else {
+    if (parentID) {
       parentID = "t1_" + parentID;
+    } else {
+      return;
     }
     const allInputs = document
       .getElementById(parentID)
@@ -640,15 +640,16 @@ function updateCursorPos(){
 }
 
 function updateInputDiv(e) {
+  debug(e?.key, cursorIsInTag(HTM.workingDiv), ...V.cursorPosInTextArr)
   const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
-  debug("valid refresh?", isValidManualRefresh)
+  // debug("valid refresh?", isValidManualRefresh)
   // debug("isInPlaceEditing?", V.isInPlaceEditing)
   // if (!V.isAutoRefresh) {
   // if (!isValidManualRefresh) {
   //   // debug("reprocessing must be triggered manually...")
   //   return;
   // }
-  debug("is in mark?", V.isInMark, "skipMarkup?", V.skipMarkup, "offset:", V.cursorOffsetNoMarks, "cursorPos", ...V.cursorPosInTextArr)
+  // debug("is in mark?", V.isInMark, "skipMarkup?", V.skipMarkup, "offset:", V.cursorOffsetNoMarks, "cursorPos", ...V.cursorPosInTextArr)
   const revisedText = grabRevisedText(isValidManualRefresh);
   // let revisedText = "";
   // if (V.isInPlaceEditing) {
@@ -957,7 +958,7 @@ function lookupDerivations([word, rawWord], matches = []) {
   regular ADVs =  happily clumsily annually finely sensibly sadly automatically
   */
 
-  for (guess of [
+  for (const guess of [
     checkDigits,
     checkUnknown,
     checkSymbols,
@@ -1051,7 +1052,7 @@ function checkIrregularVerbs(word) {
 function checkIrregularPlurals(word) {
   const lookup = LOOKUP.irregPlural[word];
   if (lookup){
-    return winnowPoS(dbLookup(lookup), ["x","v"]);
+    return winnowPoS(dbLookup(lookup), ["n"]);
   }
 }
 
@@ -1095,7 +1096,8 @@ function checkComparatives(word) {
 
 function checkFinalS(word) {
   if (word.endsWith("s")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.s_subs), ["n","v"]);
+    // ## pronouns ("r") included to allow 'others'
+    return winnowPoS(findBaseForm(word,LOOKUP.s_subs), ["n","v","r"]);
   }
 }
 
@@ -1384,11 +1386,10 @@ function convertMarkupToText(el) {
 function toggleFinalTextDiv() {
   // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
   if (V.isInPlaceEditing){
-    debug("hide")
+    // debug("hide")
     HTM.finalTextDiv.style.display = "none";
   } else {
     // HTM.finalTextDiv.style.display = "flex";
-    debug("show")
     HTM.finalTextDiv.style.display = "block";
     // HTM.finalTextDiv.style.flexGrow = 1;
   }
@@ -1730,6 +1731,43 @@ SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE
     V.skipMarkup = true;
   }
   // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
+}
+
+/*
+integrate the following two functions into the app:
+remove everything from keyDown except preventDefault
+attach these to keyUp
+the idea is that on keyUp, the app checks to see if the cursor is in <mark>,
+and if it is, it jumps to the final char of the previous word / first char of next word
+depending on V.cursorIncrement
+** will need to involve insertCursorPlaceHolder as cursorOffsetNoMarks doesn't seem to work
+Hmmm... but cursorOffsetNoMarks should work: <marks> only appear between words, so
+incrementing/decrementing cursorOffsetNoMarks by 1 should work...
+*/
+function curateCursor(e) {
+  if (!e.key) {
+    return;
+  }
+  V.isInMark = cursorIsInTag(HTM.workingDiv);
+  V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
+  V.cursorIncrement = 0;
+  if (V.isInMark) {
+    if (e.key === "ArrowRight") {
+      V.cursorIncrement = 1;
+    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
+      V.cursorIncrement = -1;
+    }
+    // V.skipMarkup = true;
+  }
+
+}
+
+function jumpOutOfMark(){
+  // ## Assume that cursor is in <mark>
+  const endOfWord = 0; // TODO: how do i mark 'last char of word'? -1??
+  const wordPos = V.cursorPosInTextArr[0] + V.cursorIncrement;
+  const charPos = (V.cursorIncrement < 0) ? 0 : endOfWord;
+  V.cursorPosInTextArr[wordPos, charPos];
 }
 
 // function moveCursorOutOfMarkup(e){
