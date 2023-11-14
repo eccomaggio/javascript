@@ -1,0 +1,2 @@
+correct vocab mistake: (gept.js / .json) 'benefit' changed from 'nj' to 'nv' so that 'benefited' is correctly recognized 4-11-2023
+vocab mistake: (global.js) 'misunderstood' added as irregular past of 'misunderstand' 14-11-2023

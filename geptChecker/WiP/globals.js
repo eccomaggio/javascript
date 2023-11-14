@@ -1,3 +1,28 @@
+/*
+Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundation.com/vocab/academic/awllists/#):
+1) headword
+2) sublist number
+3) optional word family words
+
+[
+    "abstract",                lemma
+    "jnv",                     list of parts of speech (here: adj, noun, verb)
+    [
+        1,                     GEPT level (int+)
+        43,                    AWL level (6+)
+        3                      status++ (here: in both lists)
+    ],
+    "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
+], ...
+
+    + according to position in level_headings
+    ++ given by Pos enum:
+      AWL_ONLY = 1
+      GEPT_ONLY = 2
+      AWL_AND_GEPT = 3
+*/
+
+
 function indexDb(db) {
   for (const i in db) {
     db[i].unshift(parseInt(i));
@@ -515,6 +540,7 @@ const LOOKUP = {
     made: "make",
     meant: "mean",
     met: "meet",
+    misunderstood: "misunderstand",
     mown: "mow",
     outdid: "outdo",
     outdone: "outdo",
