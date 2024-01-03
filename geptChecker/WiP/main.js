@@ -71,7 +71,7 @@ function addListeners() {
   addEditModeListeners();
 }
 
-function addWordInputListeners(){
+function addWordInputListeners() {
   HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
   for (const el of document.getElementsByTagName("input")) {
     if (el.type != "text") {
@@ -81,13 +81,13 @@ function addWordInputListeners(){
   }
 }
 
-function addTabListeners(){
+function addTabListeners() {
   for (const el of document.getElementsByClassName("tab")) {
     el.addEventListener("click", activateTab);
   }
 }
 
-function addMenuListeners(){
+function addMenuListeners() {
   HTM.clearButton.addEventListener("click", clearTab);
   HTM.resetButton.addEventListener("click", resetApp);
 
@@ -105,7 +105,7 @@ function addMenuListeners(){
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
 }
 
-function addEditModeListeners(){
+function addEditModeListeners() {
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
 
@@ -114,35 +114,32 @@ function addEditModeListeners(){
 
     // ## "copy" only works from menu; add keydown listener to catch Ctrl_C
     HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
-    HTM.workingDiv.addEventListener("keydown", validateKeyPress);
+    HTM.workingDiv.addEventListener("keydown", blockInsertInMark);
 
-    HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
     HTM.workingDiv.addEventListener("mouseover", hoverEffects);
-
-    HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
     HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+    HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
+    HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
 
-    HTM.workingDiv.removeEventListener("input", updateCursorPos);
     HTM.workingDiv.addEventListener("keyup", updateCursorPos);
-
-    HTM.workingDiv.removeEventListener("input", debounce(updateInputDiv, 500));
     HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 500));
+    HTM.workingDiv.removeEventListener("input", updateCursorPos);
+    HTM.workingDiv.removeEventListener("input", debounce(updateInputDiv, 500));
+
   }
   else {
     // debug("listeners set for 2-col")
     HTM.workingDiv.removeEventListener("copy", normalizeTextForClipboard);
-    HTM.workingDiv.removeEventListener("keydown", validateKeyPress);
+    HTM.workingDiv.removeEventListener("keydown", blockInsertInMark);
 
     HTM.workingDiv.removeEventListener("mouseover", hoverEffects);
-    HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
-
     HTM.workingDiv.removeEventListener("mouseout", hoverEffects);
+    HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
 
     HTM.workingDiv.removeEventListener("keyup", updateCursorPos);
-    HTM.workingDiv.addEventListener("input", updateCursorPos);
-
     HTM.workingDiv.removeEventListener("keyup", debounce(updateInputDiv, 500));
+    HTM.workingDiv.addEventListener("input", updateCursorPos);
     HTM.workingDiv.addEventListener("input", debounce(updateInputDiv, 500));
   }
 }
@@ -227,7 +224,8 @@ function resetBackup() {
 }
 
 function saveBackup() {
-  const currentText = (V.isInPlaceEditing) ? removeTagContentFromElement(HTM.workingDiv) : HTM.workingDiv.innerText;
+  // const currentText = (V.isInPlaceEditing) ? removeTagContentFromElement(HTM.workingDiv) : HTM.workingDiv.innerText;
+  const currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
   if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText.trim());
     localStorage.setItem("mostRecent", C.backupIDs[1]);
@@ -601,6 +599,7 @@ function normalizePastedText(e) {
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
+  V.isTextEdit = true;
   updateInputDiv(e);
   // resetBackup();
   saveBackup();
@@ -611,60 +610,40 @@ function catchKeyboardCopyEvent(e) {
   let isC = (e.keyCode === 67 || e.key === "c"); // this is to detect keyCode
   // let isCtrl = (e.keyCode === 17 || e.key === "Control");
   // let isMeta = (e.keyCode === 91 || e.key === "Meta");
-  if (isC && (e.metaKey || e.ctrlKey)){
-      // debug("kachink! Meta_C was pressed!")
-      normalizeTextForClipboard();
+  if (isC && (e.metaKey || e.ctrlKey)) {
+    // debug("kachink! Meta_C was pressed!")
+    normalizeTextForClipboard();
   }
 }
 
-function updateCursorPos(){
-  // ## Update cursor position on keyup (when movement has taken place)
-  // ## Override cursor update if inside markup
-  if (V.skipMarkup) {
-    debug("skipping cursor update");
-    V.cursorOffsetNoMarks += V.cursorIncrement;
-    // return;
-  }
-  else {
-    [
-      V.cursorOffset,
-      V.cursorOffsetNoMarks,
-      // V.isInMark
-    ] = getCursorInfoInEl(HTM.workingDiv);
-  }
-  // [
-  //   V.cursorOffset,
-  //   V.cursorOffsetNoMarks,
-  // ] = getCursorInfoInEl(HTM.workingDiv);
-  // if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
-}
+// function updateCursorPos(){
+//   // ## Update cursor position on keyup (when movement has taken place)
+//   // ## Override cursor update if inside markup
+//   // if (V.skipMarkup) {
+//   //   debug("skipping cursor update");
+//   //   V.cursorOffsetNoMarks += V.cursorIncrement;
+//   // }
+//   // else {
+//   //   [
+//   //     V.cursorOffset,
+//   //     V.cursorOffsetNoMarks,
+//   //     // V.isInMark
+//   //   ] = getCursorInfoInEl(HTM.workingDiv);
+//   // }
+//   [
+//     V.cursorOffset,
+//     V.cursorOffsetNoMarks,
+//   ] = getCursorInfoInEl(HTM.workingDiv);
+//   // if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
+//   document.getElementById("debug_cursor_pos").innerText = `x:${V.cursorOffset} (${V.cursorOffsetNoMarks}); skip? ${V.skipMarkup}`;
+//   if (V.skipMarkup) console.log("skip!!")
+// }
 
 function updateInputDiv(e) {
-  debug(e?.key, cursorIsInTag(HTM.workingDiv), ...V.cursorPosInTextArr)
+  if (!V.isTextEdit) return;
+  debug(e?.key, "text edit?", V.isTextEdit, cursorIsInTag(HTM.workingDiv), ...V.cursorPosInTextArr)
   const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
-  // debug("valid refresh?", isValidManualRefresh)
-  // debug("isInPlaceEditing?", V.isInPlaceEditing)
-  // if (!V.isAutoRefresh) {
-  // if (!isValidManualRefresh) {
-  //   // debug("reprocessing must be triggered manually...")
-  //   return;
-  // }
-  // debug("is in mark?", V.isInMark, "skipMarkup?", V.skipMarkup, "offset:", V.cursorOffsetNoMarks, "cursorPos", ...V.cursorPosInTextArr)
   const revisedText = grabRevisedText(isValidManualRefresh);
-  // let revisedText = "";
-  // if (V.isInPlaceEditing) {
-  //   if (!(V.isTextEdit || V.forceUpdate || V.skipMarkup || V.isInMark)) {
-  //   setCursorPos(document.getElementById(CURSOR.id));
-  //   debug("No reprocessing needed...")
-  //   return;
-  //   }
-  // revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-  // }
-  // else {
-  //   // revisedText = HTM.workingDiv.textContent.trim();
-  //   // ## use innerText; textContent loses newlines
-  //   revisedText = HTM.workingDiv.innerText.trim();
-  // }
 
   if (revisedText) {
     const [
@@ -681,12 +660,14 @@ function updateInputDiv(e) {
   }
 }
 
-function grabRevisedText(isValidManualRefresh){
-  let textToRevise = "";
+function grabRevisedText(isValidManualRefresh) {
+  let revisedText = "";
   // ## IN-PLACE EDITING
   if (V.isInPlaceEditing) {
-    if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh){
-      textToRevise = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
+    grabMarkedUpText(isValidManualRefresh);
+    if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh) {
+      // textToRevise = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffset);
+      revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
     } else {
       setCursorPos(document.getElementById(CURSOR.id));
       debug("No reprocessing needed...")
@@ -695,12 +676,12 @@ function grabRevisedText(isValidManualRefresh){
   }
   // ## 2-COL EDITING
   else {
-    if (V.isAutoRefresh || isValidManualRefresh){
+    if (V.isAutoRefresh || isValidManualRefresh) {
       // ## use innerText; textContent loses newlines
-      textToRevise = HTM.workingDiv.innerText.trim();
+      revisedText = HTM.workingDiv.innerText.trim();
     }
   }
-  return textToRevise;
+  return revisedText;
 }
 
 function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
@@ -931,7 +912,7 @@ function markOfflist(word, type) {
 }
 
 function lookupWord([word, rawWord]) {
-  if (LOOKUP.symbols.includes(rawWord)){
+  if (LOOKUP.symbols.includes(rawWord)) {
     word = rawWord;
   }
   let matches = dbLookup(word);
@@ -990,7 +971,7 @@ function lookupDerivations([word, rawWord], matches = []) {
   }
 
   if (!matches.length) {
-    matches.push(markOfflist(word,"offlist"));
+    matches.push(markOfflist(word, "offlist"));
   }
   return dedupeArray(matches);
 }
@@ -1037,21 +1018,21 @@ function checkArticle(word) {
 
 function checkIrregularNegatives(word) {
   const lookup = LOOKUP.irregNegVerb[word];
-  if (lookup){
-    return winnowPoS(dbLookup(lookup), ["x","v"]);
+  if (lookup) {
+    return winnowPoS(dbLookup(lookup), ["x", "v"]);
   }
 }
 
 function checkIrregularVerbs(word) {
   const lookup = LOOKUP.irregVerb[word];
-  if (lookup){
-    return winnowPoS(dbLookup(lookup), ["x","v"]);
+  if (lookup) {
+    return winnowPoS(dbLookup(lookup), ["x", "v"]);
   }
 }
 
 function checkIrregularPlurals(word) {
   const lookup = LOOKUP.irregPlural[word];
-  if (lookup){
+  if (lookup) {
     return winnowPoS(dbLookup(lookup), ["n"]);
   }
 }
@@ -1072,38 +1053,38 @@ function checkForeignPlurals(word) {
 
 function checkVing(word) {
   if (word.endsWith("ing")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.g_subs), ["v"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.g_subs), ["v"]);
   }
 }
 
 function checkVpp(word) {
   if (word.endsWith("ed")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.d_subs), ["v"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.d_subs), ["v"]);
   }
 }
 
 function checkSuperlatives(word) {
   if (word.endsWith("st")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.est_subs), ["j"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.est_subs), ["j"]);
   }
 }
 
 function checkComparatives(word) {
   if (word.endsWith("r")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.er_subs), ["j"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.er_subs), ["j"]);
   }
 }
 
 function checkFinalS(word) {
   if (word.endsWith("s")) {
     // ## pronouns ("r") included to allow 'others'
-    return winnowPoS(findBaseForm(word,LOOKUP.s_subs), ["n","v","r"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"]);
   }
 }
 
 function checkRegAdv(word) {
   if (word.endsWith("ly")) {
-    return winnowPoS(findBaseForm(word,LOOKUP.y_subs), ["j"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.y_subs), ["j"]);
   }
 }
 
@@ -1179,7 +1160,7 @@ function buildMarkupAsHTML(textArr) {
           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
         }
       }
-      let localWord = highlightAwlWord(levelArr,rawWord);
+      let localWord = highlightAwlWord(levelArr, rawWord);
       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
       if (matchCount > 0) {
         if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
@@ -1196,7 +1177,7 @@ function buildMarkupAsHTML(textArr) {
   return htmlString;
 }
 
-function escapeHTMLentities(text){
+function escapeHTMLentities(text) {
   return text.replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
@@ -1222,7 +1203,7 @@ function buildRepeatList(wordCount) {
         V.wordStats[key] > 1 &&
         !LOOKUP.repeatableWords.includes(word) &&
         !LOOKUP.symbols.includes(word)
-        ) {
+      ) {
         countReps++;
         let anchors = "";
         for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
@@ -1261,8 +1242,8 @@ function compareByLemma(a, b) {
 }
 
 function getWordCountForDisplay(wordCount) {
-    const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
-    return numOfWords;
+  const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
+  return numOfWords;
 }
 
 function pluralNoun(amount) {
@@ -1373,19 +1354,19 @@ function changeEditingMode(e) {
 
 function convertMarkupToText(el) {
   const re = new RegExp("\s*" + EOL.text + "\s*", "g");
-  const HTMLtoPlainText = removeTagContentFromElement(el)
+  const HTMLtoPlainText = removeTags(el)
     .replace(/\s{2,}/g, " ")
     // .replace(re, " \n")
     .replace(re, "\n")
     .replace(/\n\s/g, "\n")
     .replace(/\n{2,}/g, "\n");
-    // debug(el.innerHTML,HTMLtoPlainText)
-    return HTMLtoPlainText;
+  // debug(el.innerHTML,HTMLtoPlainText)
+  return HTMLtoPlainText;
 }
 
 function toggleFinalTextDiv() {
   // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
-  if (V.isInPlaceEditing){
+  if (V.isInPlaceEditing) {
     // debug("hide")
     HTM.finalTextDiv.style.display = "none";
   } else {
@@ -1438,7 +1419,7 @@ function resetApp() {
   changeDb_shared(0);
 }
 
-function setAppStateToDefault(){
+function setAppStateToDefault() {
   localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
   localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
   localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
@@ -1477,7 +1458,7 @@ function changeDb_shared(e) {
     V.isKids = false;
     V.isBEST = false;
     V.isGEPT = true;
-  // } else if (choice === 1) {
+    // } else if (choice === 1) {
   } else if (V.currentDbChoice === 1) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
@@ -1579,7 +1560,8 @@ function debounce(callback, delay) {
 }
 
 function debug(...params) {
-  console.log(`* ${debug.caller.name.toUpperCase()}: `, params);
+  // console.log(`* ${debug.caller.name.toUpperCase()}: `, params);
+  console.log(`DEBUG: ${debug.caller.name}: `, params);
 }
 
 // ## TABS ############################################
@@ -1619,9 +1601,9 @@ function activateTab(tab) {
   displayInputCursor();
 }
 
-function safeStyleDisplay(el, displayState="none") {
+function safeStyleDisplay(el, displayState = "none") {
   try {
-    el.style.display = displayState;1
+    el.style.display = displayState; 1
   } catch (error) {
     debug(error)
   }
@@ -1633,186 +1615,11 @@ function isFirstTab() {
   return parseInt(V.currentTab) === 0;
 }
 
-function displayInputCursor(){
-  if(isFirstTab()) HTM.inputLemma.focus();
+function displayInputCursor() {
+  if (isFirstTab()) HTM.inputLemma.focus();
   else HTM.workingDiv.focus();
 }
 
 
-// ## CURSOR HANDLING ######################################
-
-// function insertCursorPlaceholder(text) {
-//   return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
-// }
-
-function insertCursorPlaceholder(el, index) {
-  let plainText = removeTagContentFromElement(el);
-  const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
-  // debug(flatText, updatedText)
-  return updatedText;
-}
-
-function getCursorInfoInEl(element) {
-  let tmpCursorOffset = 0;
-  let tmpCursorOffsetNoMarks = 0;
-  let isInMark = false;
-  let sel = window.getSelection();
-  if (sel.rangeCount > 0) {
-    // ** Create a range stretching from beginning of div to cursor
-    const currentRange = window.getSelection().getRangeAt(0);
-    const preCursorRange = document.createRange();
-    preCursorRange.selectNodeContents(element);
-    preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
-    tmpCursorOffset = preCursorRange.toString().length;
-    // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-    tmpCursorOffsetNoMarks = getCopyWithoutMarks(preCursorRange).length;
-    isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
-  }
-  return [tmpCursorOffset, tmpCursorOffsetNoMarks, isInMark];
-}
-
-function getCopyWithoutMarks(range) {
-  const noMarksNodes = document.createElement("root");
-  noMarksNodes.append(range.cloneContents());
-  // return removeTagContentFromElement(noMarksNodes);
-  const flattenedDivText = removeTagContentFromElement(noMarksNodes);
-  return flattenedDivText;
-}
-
-function cursorIsInTag(cursorEl, tagName="MARK") {
-  return [cursorEl.tagName, cursorEl.parentElement.tagName, cursorEl.parentElement.parentElement.tagName].includes(tagName);
-}
-
-function removeTagContentFromElement(node, tagName = "mark") {
-  const divTextCopy = node.cloneNode(true);
-  const marks = divTextCopy.querySelectorAll(tagName);
-  for (let el of marks) {
-    // debug("another <mark>")
-    el.innerHTML = "";
-  }
-  // ## Typing 'Enter' creates a <div>
-  const divs = divTextCopy.querySelectorAll("div");
-  for (let el of divs) {
-    // el.before(` ${EOL.text} `);
-    // ## Element.before() only introduced in Chrome 54
-    el.insertAdjacentText("beforebegin",` ${EOL.text} `);
-  }
-  // ## Pasting in text creates <br> (so have to search for both!)
-  // const EOLs = divTextCopy.querySelectorAll(EOL.tagName);
-  const EOLs = divTextCopy.querySelectorAll("br, hr");
-  for (let el of EOLs) {
-    el.textContent = ` ${EOL.text} `;
-  }
-  // const flatText = divTextCopy.textContent;
-  const flatText = divTextCopy.innerText;
-  return flatText;
-}
-
-function validateKeyPress(e) {
-  // ## arrow keys (ctrl chars) have long text values, e.g. "rightArrow"
-  // [, , V.isInMark] = getCursorInfoInEl(HTM.workingDiv);
-  V.isInMark = cursorIsInTag(HTM.workingDiv);
-  if (V.isInMark) {
-    e.preventDefault();
-    // debug("keystroke supressed...")
-  }
-
-  /*
-SHOULD I MOVE ALL OF THIS INTO KEYUP? THERE IS A MISMATCH BETWEEN THE POS OF THE CURSOR AT THESE TWO STATES
-  */
-  V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
-  V.cursorIncrement = 0;
-  if (V.isInMark) {
-    if (e.key === "ArrowRight") {
-      V.cursorIncrement = 1;
-    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-      V.cursorIncrement = -1;
-    }
-    V.skipMarkup = true;
-  }
-  // debug("V.cursorIncrement", V.cursorIncrement, "offset", V.cursorOffsetNoMarks)
-}
-
-/*
-integrate the following two functions into the app:
-remove everything from keyDown except preventDefault
-attach these to keyUp
-the idea is that on keyUp, the app checks to see if the cursor is in <mark>,
-and if it is, it jumps to the final char of the previous word / first char of next word
-depending on V.cursorIncrement
-** will need to involve insertCursorPlaceHolder as cursorOffsetNoMarks doesn't seem to work
-Hmmm... but cursorOffsetNoMarks should work: <marks> only appear between words, so
-incrementing/decrementing cursorOffsetNoMarks by 1 should work...
-*/
-function curateCursor(e) {
-  if (!e.key) {
-    return;
-  }
-  V.isInMark = cursorIsInTag(HTM.workingDiv);
-  V.isTextEdit = (["Backspace", "Enter"].includes(e.key) || e.key.length === 1);
-  V.cursorIncrement = 0;
-  if (V.isInMark) {
-    if (e.key === "ArrowRight") {
-      V.cursorIncrement = 1;
-    } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-      V.cursorIncrement = -1;
-    }
-    // V.skipMarkup = true;
-  }
-
-}
-
-function jumpOutOfMark(){
-  // ## Assume that cursor is in <mark>
-  const endOfWord = 0; // TODO: how do i mark 'last char of word'? -1??
-  const wordPos = V.cursorPosInTextArr[0] + V.cursorIncrement;
-  const charPos = (V.cursorIncrement < 0) ? 0 : endOfWord;
-  V.cursorPosInTextArr[wordPos, charPos];
-}
-
-// function moveCursorOutOfMarkup(e){
-//   updateCursorPos();
-//   if (e.key === "ArrowRight") {
-//     V.cursorIncrement = 1;
-//   } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-//     V.cursorIncrement = -1;
-//   } else V.cursorIncrement = 0;
-//   if (V.isInMark) {
-//     let text = removeTagContentFromElement(HTM.workingDiv);
-//     V.cursorOffsetNoMarks += V.cursorIncrement;
-//     HTM.workingDiv.innerText = text;
-//     V.forceUpdate = true;
-//     updateInputDiv();
-//   }
-// }
-
-function setCursorPos(el, textToInsert = "") {
-  if (!el) return;
-  // debug(el, ...V_SUPP.cursorPosInTextArr, V_SUPP.cursorOffsetNoMarks)
-  const selectedRange = document.createRange();
-  selectedRange.setStart(el, 0);
-  if (textToInsert) {
-    const text = document.createTextNode(textToInsert);
-    selectedRange.insertNode(text);
-  }
-  selectedRange.collapse(true);
-  const selectedText = window.getSelection();
-  selectedText.removeAllRanges();
-  selectedText.addRange(selectedRange);
-  el.remove();
-  el.focus();
-}
-
-function normalizeTextForClipboard(e) {
-  if (!e) {
-    e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
-  }
-  const sel = document.getSelection();
-  // debug(sel)
-  const copiedText = document.createRange();
-  copiedText.setStart(sel.anchorNode, sel.anchorOffset);
-  copiedText.setEnd(sel.focusNode, sel.focusOffset);
-  let normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
-  e.clipboardData.setData("text/plain", normalizedText);
-  e.preventDefault();
-}
+// ## IN-PLACE EDITING CODE######################################
+// currently in upgrade.js

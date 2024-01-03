@@ -7,7 +7,7 @@ and external files (applies to none-http(s) .js & .css files only)
 Output:
 1) in deconstruct mode, it outputs out.min.html with links to css&js AND independent css&js files
 2) in assemble mode, it outputs a single, integrated file called out.html
-Ensure you do not have out.html in existence then type python toggleWordlistHTML.py WiP/out.min.html
+Ensure you do NOT have out.html in existence then type `python toggleWordlistHTML.py WiP/out.min.html`
 > this will create a new combined out.html using the current set of files in WiP
 These html files can be further renamed as desired
 
@@ -18,14 +18,15 @@ open geptchecker
 read through each line
 ignore anything commented out (in html / css / javascript) EXCEPT:
 
-create files if encounter:
-<script blah title="blah.js"></script>
-—> <script blah src="blah.js"></script>
+create files (i.e. "split mode") if encounter `data-title`:
+<script data-title="blah.js"></script>
+—> <script src="blah.js"></script>
 
-<style blah title="blah.css"></style>
+<style data-title="blah.css"></style>
 —> <link href="blah.css" rel="stylesheet" />
 
 OR if finds above links to external files,
+("combine-into-single-file mode")
 open filename & replace link with contents into tags
 
 DONE: implement splitting into separate files

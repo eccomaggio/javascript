@@ -121,6 +121,7 @@ let V = {
   // currentTab: C.DEFAULT_tab,
   currentTab: null,
   cursorOffset: 0,
+  oldCursorOffset: 0,
   cursorOffsetNoMarks: 0,
   isInMark: false,
   isTextEdit: false,

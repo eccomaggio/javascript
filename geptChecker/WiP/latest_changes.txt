@@ -1,2 +1,24 @@
-correct vocab mistake: (gept.js / .json) 'benefit' changed from 'nj' to 'nv' so that 'benefited' is correctly recognized 4-11-2023
-vocab mistake: (global.js) 'misunderstood' added as irregular past of 'misunderstand' 14-11-2023
+# HOW TO WORK WITH THIS APP
+corrections should be made to individual files. Final file should be assembled using `toggleWordlistHTML.py`.
+
+## Logic:
+open geptchecker
+read through each line
+ignore anything commented out (in html / css / javascript) EXCEPT:
+
+### create files (i.e. "split mode") if encounter `data-title`:
+<script data-title="blah.js"></script>
+—> <script src="blah.js"></script>
+
+<style data-title="blah.css"></style>
+—> <link href="blah.css" rel="stylesheet" />
+
+OR
+### combine files if finds above links to external files,
+("combine-into-single-file mode")
+open filename & replace link with contents into tags
+
+
+# LIST OF CORRECTIONS:
+4-11-2023 correct vocab mistake: (gept.js / .json) 'benefit' changed from 'nj' to 'nv' so that 'benefited' is correctly recognized
+14-11-2023 vocab mistake: (global.js) 'misunderstood' added as irregular past of 'misunderstand'
