@@ -1354,7 +1354,7 @@ function changeEditingMode(e) {
 
 function convertMarkupToText(el) {
   const re = new RegExp("\s*" + EOL.text + "\s*", "g");
-  const HTMLtoPlainText = removeTags(el)
+  const HTMLtoPlainText = removeTags(el).innerText
     .replace(/\s{2,}/g, " ")
     // .replace(re, " \n")
     .replace(re, "\n")
