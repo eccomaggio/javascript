@@ -87,10 +87,10 @@ const C = {
   // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
   DEFAULT_db: 0,
   DEFAULT_tab: 0,
-  // ## 0 = manual refresh, 1 = autorefresh
   DEFAULT_refresh: 1,
-  // ## 0 = 2-col editing, 1 = in-place editing
+  // ## 0 = manual refresh, 1 = autorefresh
   DEFAULT_edit: 0,
+  // ## 0 = 2-col editing, 1 = in-place editing
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
@@ -129,7 +129,7 @@ let V = {
   skipMarkup: false,
   cursorIncrement: 0,
   // # key: [index in textArr, index in normalized word]
-  cursorPosInTextArr: [0, 0], //[word, char]
+  // cursorPosInTextArr: [0, 0], //[word, char]
 }
 
 const CURSOR = {
@@ -176,9 +176,9 @@ const LOOKUP = {
     // "elementary",
     // "intermediate",
     // "high-intermediate",
-    "elem",
-    "int",
-    "hi-int",
+    "elem (A2)",
+    "int (B1)",
+    "hi-int (B2)",
     "Animals & insects (動物/昆蟲)",
     "Articles & determiners (冠詞/限定詞)",
     "Be & auxiliarie (be動詞/助動詞)",

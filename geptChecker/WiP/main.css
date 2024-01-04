@@ -524,6 +524,11 @@
       border-bottom: 1px dotted;
     }
 
+    .debug {
+      font-size: small;
+      color: cornflowerblue;
+    }
+
 
 
     /* ## PAGE COMMON ELEMENTS #################################### */

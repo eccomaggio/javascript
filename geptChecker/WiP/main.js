@@ -5,12 +5,12 @@ compounds erase cursor placeholder
 save app status anomalies
 streamlined lookupDerivations
 refresh & editing states not always respected
+cursor needs to avoid <mark> elements
+need to be able to add text after <mark> element / at end of text
 
 TODO:
 sort out in-place editing:
-cursor needs to avoid <mark> elements
-need to be able to add text after <mark> element / at end of text
-work out logic (& necessity of forceUpdate & skipMarkup) in updateInputDiv
+can write in <mark> in manual-refresh mode (with unpredictable results)
 */
 // ## SETUP ############################################
 
@@ -31,19 +31,6 @@ function init() {
     refreshState,
     editState
   ] = retrieveAppState();
-  // debug(`db: ${dbState}, tab: ${tabState}, autorefresh? ${refreshState}, in-place? ${editState}`)
-  // let [
-  //   V.currentDbChoice,
-  //   V.currentTab,
-  //   V.isAutoRefresh,
-  //   V.isInPlaceEditing
-  // ] = retrieveAppState();
-  // ## Apply defaults if nothing in storage
-  // dbState = (dbState) ? dbState : C.DEFAULT_db;
-  // tabState = (tabState) ? tabState : C.DEFAULT_tab;
-  // refreshState = (refreshState) ? refreshState : C.DEFAULT_refresh;
-  // editState = (editState) ? editState : C.DEFAULT_edit;
-  // debug(`db:${dbState}, tab:${tabState}, isAutoRefresh: ${refreshState}, isIn-Place: ${editState}`)
   V.currentDbChoice = dbState;
   V.currentTab = tabState;
   V.isAutoRefresh = parseInt(refreshState);
@@ -641,8 +628,9 @@ function catchKeyboardCopyEvent(e) {
 
 function updateInputDiv(e) {
   if (!V.isTextEdit) return;
-  debug(e?.key, "text edit?", V.isTextEdit, cursorIsInTag(HTM.workingDiv), ...V.cursorPosInTextArr)
-  const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
+  // const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
+  const isValidManualRefresh = !V.isAutoRefresh;
+  // debug(e?.key, "text edit?", V.isTextEdit, ", auto?", V.isAutoRefresh, ", in tag?", cursorIsInTag(HTM.workingDiv), ", valid refresh?", isValidManualRefresh)
   const revisedText = grabRevisedText(isValidManualRefresh);
 
   if (revisedText) {
@@ -670,7 +658,7 @@ function grabRevisedText(isValidManualRefresh) {
       revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
     } else {
       setCursorPos(document.getElementById(CURSOR.id));
-      debug("No reprocessing needed...")
+      // debug("No reprocessing needed...")
       return "";
     }
   }
@@ -718,7 +706,8 @@ function processText(rawText) {
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
   const [resultsAsTextArr, wordCount] = pushLookups(flatTextArr);
-  const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr);
+  const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
+  // debug(resultsAsHTML)
   const repeatsAsHTML = buildRepeatList(wordCount);
   return [resultsAsHTML, repeatsAsHTML, wordCount];
 }
@@ -1316,8 +1305,6 @@ function changeRefresh(e) {
   V.isAutoRefresh = parseInt(e.target.value);
   localStorage.setItem(C.SAVE_REFRESH_STATE, V.isAutoRefresh);
   toggleRefreshButton();
-  // localStorage.setItem(C.SAVE_REFRESH_STATE, (V.isAutoRefresh) ? "1" : "0");
-  // updateInputDiv();
   // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
 }
 
@@ -1343,6 +1330,11 @@ function changeEditingMode(e) {
   localStorage.setItem(C.SAVE_EDIT_STATE, V.isInPlaceEditing);
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.innerHTML = "";
+    // ## In-place editing is very glitchy in autorefresh mode!
+    V.isAutoRefresh = 0;
+    toggleRefreshButton();
+    V.isTextEdit = true;
+    updateInputDiv();
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
   }

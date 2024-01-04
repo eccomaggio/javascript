@@ -1,17 +1,13 @@
 
 // ## CURSOR HANDLING ######################################
 
-// function insertCursorPlaceholder(text) {
-//   return text.slice(0, V.cursorOffsetNoMarks) + CURSOR.text + text.slice(V.cursorOffsetNoMarks);
-// }
-
 function grabMarkedUpText(isValidManualRefresh) {
   let revisedText;
   if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh) {
     revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
   } else {
     setCursorPos(document.getElementById(CURSOR.id));
-    debug("No reprocessing needed...")
+    // debug("No reprocessing needed...")
     revisedText = "";
   }
   return revisedText
@@ -25,30 +21,6 @@ function insertCursorPlaceholder(el, index) {
   return updatedText;
 }
 
-
-// function getCursorInfoInEl(element) {
-//   let preCursorOffset = 0;
-//   let preCursorOffsetNoMarks = 0;
-//   let isInMark = false;
-//   let sel = window.getSelection();
-//   if (sel.rangeCount > 0) {
-//     // ** Create a range stretching from beginning of div to cursor
-//     const currentRange = window.getSelection().getRangeAt(0);
-//     const preCursorRange = document.createRange();
-//     preCursorRange.selectNodeContents(element);
-//     preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
-//     preCursorOffset = preCursorRange.toString().length;
-//     // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-//     const preCursorRangeNoMarks = getCopyWithoutMarks(preCursorRange);
-//     preCursorOffsetNoMarks = preCursorRangeNoMarks.length;
-//     isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
-//     debug(isInMark, preCursorRange.toString(), preCursorRangeNoMarks.toString())
-//     // if (isInMark) debug("in mark!! direction=", V.cursorIncrement)
-//     // console.log("cursorInfo:", preCursorRange.cloneContents(),preCursorRangeNoMarks.cloneContents())
-//   }
-//   return [preCursorOffset, preCursorOffsetNoMarks, isInMark];
-// }
-
 function getCursorInfoInEl(element) {
   let preCursorOffset = 0;
   let preCursorOffsetNoMarks = 0;
@@ -56,7 +28,7 @@ function getCursorInfoInEl(element) {
   let sel = window.getSelection();
   if (sel.rangeCount > 0) {
     // ** Create a range stretching from beginning of div to cursor
-    const currentRange = window.getSelection().getRangeAt(0);
+    const currentRange = sel.getRangeAt(0);
     const preCursorRange = document.createRange();
     preCursorRange.selectNodeContents(element);
     preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
@@ -65,12 +37,10 @@ function getCursorInfoInEl(element) {
     preCursorOffset = preCursorHTML.innerText.length;
 
     // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-    // const preCursorHTMLNoMarks = getCopyWithoutMarks(preCursorRange);
     let preCursorHTMLNoMarks = removeTags(preCursorHTML);
     preCursorOffsetNoMarks = preCursorHTMLNoMarks.innerText.length;
     isInMark = cursorIsInTag(currentRange.startContainer.parentElement, "MARK");
-    // debug(isInMark, preCursorRange.toString(), preCursorHTMLNoMarks.innerText)
-    debug(isInMark, preCursorHTML.innerText, preCursorHTMLNoMarks.innerText)
+    // debug(isInMark, preCursorHTML.innerText, preCursorHTMLNoMarks.innerText)
   }
   return [preCursorOffset, preCursorOffsetNoMarks, isInMark];
 }
@@ -83,42 +53,14 @@ function rangeToHTML(range) {
 
 function getCopyWithoutMarks(range) {
   // Equivalent of newlinesToPlaintext(removeTags(rangeToHTML(range)))
-  // const divText = newlinesToPlaintext(removeTags(rangeToHTML(range)));
-  // return divText;
   const noMarksNodes = document.createElement("root");
   noMarksNodes.append(range.cloneContents());
-  // return removeTagContentFromElement(noMarksNodes);
   const divText = newlinesToPlaintext(removeTags(noMarksNodes));
-//   return divText;
 }
 
 function cursorIsInTag(cursorEl, tagName = "MARK") {
   return [cursorEl.tagName, cursorEl.parentElement.tagName, cursorEl.parentElement.parentElement.tagName].includes(tagName);
 }
-
-// // function removeTagContentFromElement(node, tagName = "mark") {
-// //   const divTextCopy = node.cloneNode(true);
-// //   const marks = divTextCopy.querySelectorAll(tagName);
-// //   for (let el of marks) {
-// //     // debug("another <mark>")
-// //     el.innerHTML = "";
-// //   }
-// //   // ## Typing 'Enter' creates a <div>
-// //   const divs = divTextCopy.querySelectorAll("div");
-// //   for (let el of divs) {
-// //     // el.before(` ${EOL.text} `);
-// //     // ## Element.before() only introduced in Chrome 54
-// //     el.insertAdjacentText("beforebegin", ` ${EOL.text} `);
-// //   }
-// //   // ## Pasting in text creates <br> (so have to search for both!)
-// //   const EOLs = divTextCopy.querySelectorAll("br, hr");
-// //   for (let el of EOLs) {
-// //     el.textContent = ` ${EOL.text} `;
-// //   }
-// //   // const flatText = divTextCopy.textContent;
-// //   const flatText = divTextCopy.innerText;
-// //   return flatText;
-// // }
 
 function removeTags(node, tagName = "mark") {
   const divTextCopy = node.cloneNode(true);
@@ -158,47 +100,8 @@ function getCursorIncrement(keypress) {
   V.cursorIncrement = 0;
   if (V.cursorOffset < V.oldCursorOffset) V.cursorIncrement = -1;
   if (V.cursorOffset > V.oldCursorOffset) V.cursorIncrement = 1;
-  // if (keypress === "ArrowRight") {
-  //   V.cursorIncrement = 1;
-  // } else if (["Backspace", "ArrowLeft"].includes(keypress)) {
-  //   V.cursorIncrement = -1;
-  // }
-  debug("key:", keypress, "V.inc:*", V.cursorIncrement, "V.offset:", V.cursorOffset, "in mark?", V.isInMark)
+  // debug("key:", keypress, "V.inc:*", V.cursorIncrement, "V.offset:", V.cursorOffset, "in mark?", V.isInMark)
 }
-
-function jumpOutOfMark() {
-  /*
-possible way to deal with it:
-if inside <mark>, simply jump to
-parentElement.previousElementSibling: insert cursor after
-Or
-parentElement.nextSibling: insert cursor before
-depending on V.cursorIncrement
-  */
-  debug(...V.cursorPosInTextArr)
-  // ## Assume that cursor is in <mark>
-  // NB. cursorPosInTextArr = [word, char]
-  const endOfWord = 0; // TODO: how do i mark 'last char of word'? -1??
-  const wordPos = V.cursorPosInTextArr[0] + V.cursorIncrement;
-  const charPos = (V.cursorIncrement < 0) ? 0 : endOfWord;
-  V.cursorPosInTextArr[wordPos, charPos];
-}
-
-// function moveCursorOutOfMarkup(e){
-//   updateCursorPos();
-//   if (e.key === "ArrowRight") {
-//     V.cursorIncrement = 1;
-//   } else if (["Backspace", "ArrowLeft"].includes(e.key)) {
-//     V.cursorIncrement = -1;
-//   } else V.cursorIncrement = 0;
-//   if (V.isInMark) {
-//     let text = removeTagContentFromElement(HTM.workingDiv);
-//     V.cursorOffsetNoMarks += V.cursorIncrement;
-//     HTM.workingDiv.innerText = text;
-//     V.forceUpdate = true;
-//     updateInputDiv();
-//   }
-// }
 
 function setCursorPos(el, textToInsert = "") {
   if (!el) return;
@@ -217,6 +120,17 @@ function setCursorPos(el, textToInsert = "") {
   el.focus();
 }
 
+function setCursorPosSafely(el, isStart=true) {
+  if (!el) return;
+  const selectedRange = document.createRange();
+  selectedRange.selectNode(el);
+  const pos = (isStart) ? true : false;
+  selectedRange.collapse(pos);
+  const selectedText = window.getSelection();
+  selectedText.removeAllRanges();
+  selectedText.addRange(selectedRange);
+  el.focus();
+}
 
 function updateCursorPos(e) {
   const keypress = e.key;
@@ -229,15 +143,32 @@ function updateCursorPos(e) {
     isInMark
   ] = getCursorInfoInEl(HTM.workingDiv);
   getCursorIncrement(keypress)
-  // if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
-  document.getElementById("debug_cursor_pos").innerText = `offset:${V.cursorOffset} (no marks:${V.cursorOffsetNoMarks}); mark? ${isInMark}, inc:${V.cursorIncrement}`;
+  // document.getElementById("debug_cursor_pos").innerHTML = `<b>offset</b>:${V.cursorOffset}/${V.cursorOffsetNoMarks}; <b>mark?</b> ${isInMark}, <b>inc</b>:${V.cursorIncrement}`;
   if (isInMark) {
-    debug("In mark!", grabMarkedUpText(true))
+    // debug("In mark!", grabMarkedUpText(true))
     jumpOutOfMark();
-    // NEED TO 'JUMP OUT OF MARK ACCORDING TO V.cursorIncrement
   }
 }
 
+function jumpOutOfMark() {
+  // ## Assume that cursor is in <mark>
+  // NB. cursorPosInTextArr = [word, char]
+  const cursorRange = window.getSelection().getRangeAt(0);
+  let focusEl = cursorRange.startContainer;
+  focusEl = (focusEl.parentElement.tagName === "MARK") ? focusEl.parentElement : focusEl.parentElement.parentElement;
+  let siblingWord = (V.cursorIncrement === -1) ? focusEl.previousElementSibling : focusEl.nextElementSibling;
+  if (V.cursorIncrement === -1) {
+    const siblingWord = focusEl.previousElementSibling;
+    // setCursorBefore(siblingWord);
+    setCursorPosSafely(siblingWord, false);
+  } else {
+    const siblingWord = focusEl.nextElementSibling;
+    // setCursorAfter(siblingWord);
+    setCursorPosSafely(siblingWord);
+
+  }
+  // debug(...V.cursorPosInTextArr, siblingWord?.innerText)
+}
 
 function normalizeTextForClipboard(e) {
   if (!e) {
