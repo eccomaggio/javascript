@@ -31,10 +31,13 @@ function init() {
     refreshState,
     editState
   ] = retrieveAppState();
+  debug(`dbState:${dbState}, tabState:${tabState}, refreshState:${refreshState}, editState:${editState}`)
   V.currentDbChoice = dbState;
   V.currentTab = tabState;
-  V.isAutoRefresh = parseInt(refreshState);
-  V.isInPlaceEditing = parseInt(editState);
+  // V.isAutoRefresh = parseInt(refreshState);
+  // V.isInPlaceEditing = parseInt(editState);
+  V.isAutoRefresh = (refreshState === "true");
+  V.isInPlaceEditing = (editState === "true");
 
   changeDb_shared(dbState);
   displayDbNameInTab2();
@@ -46,7 +49,8 @@ function init() {
 
   // # update dropdown menu select options
   HTM.changeDb.value = dbState;
-  HTM.toggleEditMode.value = V.isInPlaceEditing;
+  // HTM.toggleEditMode.value = V.isInPlaceEditing;
+  HTM.toggleEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
   toggleRefreshButton();
   refreshLabels("t1_form");
 }
@@ -83,7 +87,7 @@ function addMenuListeners() {
   HTM.changeFontSize.addEventListener("change", changeFont);
   HTM.toggleRefresh.addEventListener("change", changeRefresh);
   HTM.toggleEditMode.addEventListener("change", changeEditingMode);
-  HTM.refreshButton.addEventListener("click", updateInputDiv);
+  HTM.refreshButton.addEventListener("click", requestRefresh);
   HTM.backupButton.addEventListener("click", showBackups);
   HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
   HTM.backupSave.addEventListener("click", saveBackup);
@@ -95,41 +99,52 @@ function addMenuListeners() {
 function addEditModeListeners() {
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
+  // ## having probs removing his event listener; leave & ignore with updateInputDiv
+  HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv));
 
   if (V.isInPlaceEditing) {
-    // debug("listeners set for in-place")
-
     // ## "copy" only works from menu; add keydown listener to catch Ctrl_C
     HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
-    HTM.workingDiv.addEventListener("keydown", blockInsertInMark);
-
-    HTM.workingDiv.addEventListener("mouseover", hoverEffects);
-    HTM.workingDiv.addEventListener("mouseout", hoverEffects);
-    HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
-    HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
-
+    HTM.workingDiv.addEventListener("keydown", rejectMark);
     HTM.workingDiv.addEventListener("keyup", updateCursorPos);
-    HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 500));
-    HTM.workingDiv.removeEventListener("input", updateCursorPos);
-    HTM.workingDiv.removeEventListener("input", debounce(updateInputDiv, 500));
 
   }
   else {
-    // debug("listeners set for 2-col")
+    // ## clear 'in-place' events
     HTM.workingDiv.removeEventListener("copy", normalizeTextForClipboard);
-    HTM.workingDiv.removeEventListener("keydown", blockInsertInMark);
+    HTM.workingDiv.removeEventListener("keydown", rejectMark);
+    HTM.workingDiv.removeEventListener("keyup", updateCursorPos);
+  }
+  setHoverEffects();
+  // setUpdateDiv();
+}
 
+function setHoverEffects(){
+  if (V.isInPlaceEditing) {
+    HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
+    HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
+
+    HTM.workingDiv.addEventListener("mouseover", hoverEffects);
+    HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+
+  } else {
     HTM.workingDiv.removeEventListener("mouseover", hoverEffects);
     HTM.workingDiv.removeEventListener("mouseout", hoverEffects);
+
     HTM.finalTextDiv.addEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
-
-    HTM.workingDiv.removeEventListener("keyup", updateCursorPos);
-    HTM.workingDiv.removeEventListener("keyup", debounce(updateInputDiv, 500));
-    HTM.workingDiv.addEventListener("input", updateCursorPos);
-    HTM.workingDiv.addEventListener("input", debounce(updateInputDiv, 500));
   }
 }
+
+// function setUpdateDiv() {
+//   if (V.isAutoRefresh) {
+//     HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv));
+//     debug("A. (auto) workingDiv keyup added")
+//   } else {
+//     HTM.workingDiv.removeEventListener("keyup", debounce(updateInputDiv));
+//     debug("B. workingDiv updateInputDiv listener removed [manual refresh]")
+//   }
+// }
 
 // *****  FUNCTIONS
 
@@ -176,10 +191,15 @@ function showBackups(e) {
 
 function loadBackup(id) {
   const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
-  const restoredContent = localStorage.getItem(id);
+  let restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
+  if (V.isInPlaceEditing) {
+    // restoredContent = restoredContent.replace(/\n/, EOL.text);
+    restoredContent = newlinesToEOLs(restoredContent);
+  }
   HTM.workingDiv.innerText = restoredContent;
-  updateInputDiv();
+  // updateInputDiv();
+  forceUpdateInputDiv();
   if (swap) localStorage.setItem(id, swap);
   closeBackupDialog("backup-dlg");
 }
@@ -212,7 +232,10 @@ function resetBackup() {
 
 function saveBackup() {
   // const currentText = (V.isInPlaceEditing) ? removeTagContentFromElement(HTM.workingDiv) : HTM.workingDiv.innerText;
-  const currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
+  let currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
+  if (V.isInPlaceEditing) {
+    currentText = EOLsToNewlines(currentText);
+  }
   if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText.trim());
     localStorage.setItem("mostRecent", C.backupIDs[1]);
@@ -587,9 +610,9 @@ function normalizePastedText(e) {
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
   V.isTextEdit = true;
-  updateInputDiv(e);
-  // resetBackup();
+  requestRefresh(e);
   saveBackup();
+  V.isTextEdit = false;
 }
 
 function catchKeyboardCopyEvent(e) {
@@ -603,71 +626,92 @@ function catchKeyboardCopyEvent(e) {
   }
 }
 
-// function updateCursorPos(){
-//   // ## Update cursor position on keyup (when movement has taken place)
-//   // ## Override cursor update if inside markup
-//   // if (V.skipMarkup) {
-//   //   debug("skipping cursor update");
-//   //   V.cursorOffsetNoMarks += V.cursorIncrement;
-//   // }
-//   // else {
-//   //   [
-//   //     V.cursorOffset,
-//   //     V.cursorOffsetNoMarks,
-//   //     // V.isInMark
-//   //   ] = getCursorInfoInEl(HTM.workingDiv);
-//   // }
-//   [
-//     V.cursorOffset,
-//     V.cursorOffsetNoMarks,
-//   ] = getCursorInfoInEl(HTM.workingDiv);
-//   // if (V.skipMarkup) V.cursorOffsetNoMarks += V.cursorIncrement;
-//   document.getElementById("debug_cursor_pos").innerText = `x:${V.cursorOffset} (${V.cursorOffsetNoMarks}); skip? ${V.skipMarkup}`;
-//   if (V.skipMarkup) console.log("skip!!")
-// }
 
 function updateInputDiv(e) {
-  if (!V.isTextEdit) return;
-  // const isValidManualRefresh = (!V.isAutoRefresh && e && e.target === HTM.refreshButton);
-  const isValidManualRefresh = !V.isAutoRefresh;
-  // debug(e?.key, "text edit?", V.isTextEdit, ", auto?", V.isAutoRefresh, ", in tag?", cursorIsInTag(HTM.workingDiv), ", valid refresh?", isValidManualRefresh)
-  const revisedText = grabRevisedText(isValidManualRefresh);
-
-  if (revisedText) {
-    const [
-      resultsAsHTML,
-      repeatsAsHTML,
-      wordCount
-    ] = processText(revisedText);
-    displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
-    V.forceUpdate = false;
-    V.skipMarkup = false;
-    HTM.finalInfoDiv.innerText = "";
-  } else {
+  debug("refresh...", V.isAutoRefresh, V.refreshRequested)
+  // ## I have to make this check because I can't reliably remove the eventlistener of 'debounce(func)'
+  /*
+  This is the common gateway for all refresh & edit modes
+  so... break into modules for ease of separation.
+  LOGIC:
+  If manual refresh:
+    remove eventListener updateInputDiv from workingDiv
+    if 2-col
+      update finalTextDiv
+    else (in-place)
+      update workingDiv
+else (autorefresh):
+  if 2-col:
+    on keydown/keyup in workingDiv
+      updateInputDiv
+  else (in-place):
+    on keydown/keyup in workingDiv
+      updateInputDiv
+  */
+  if (V.isAutoRefresh || V.refreshRequested) {
+    let revisedText = grabRevisedText();
+    if (revisedText) {
+      const [
+        resultsAsHTML,
+        repeatsAsHTML,
+        wordCount
+      ] = processText(revisedText);
+      displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
+      // V.forceUpdate = false;
+      // V.skipMarkup = false;
+      HTM.finalInfoDiv.innerText = "";
+    } else {
+      return;
+    }
+  }
+  else {
+    debug("event listener not removed :S")
     return;
   }
+
+  // if (!V.isAutoRefresh && !V.refreshRequested) {
+  //   debug("event listener not removed :S")
+  //   return;
+  // }
+  // let revisedText = grabRevisedText();
+
+  // if (revisedText) {
+  //   const [
+  //     resultsAsHTML,
+  //     repeatsAsHTML,
+  //     wordCount
+  //   ] = processText(revisedText);
+  //   displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
+  //   V.forceUpdate = false;
+  //   V.skipMarkup = false;
+  //   HTM.finalInfoDiv.innerText = "";
+  // } else {
+  //   return;
+  // }
 }
 
-function grabRevisedText(isValidManualRefresh) {
-  let revisedText = "";
-  // ## IN-PLACE EDITING
+function requestRefresh(e) {
+  // ## need to close the request to make sure it gets reset
+  V.refreshRequested = true;
+  debug(V.refreshRequested)
+  updateInputDiv(e);
+  V.refreshRequested = false;
+}
+
+function grabRevisedText() {
+  let revisedText;
   if (V.isInPlaceEditing) {
-    grabMarkedUpText(isValidManualRefresh);
-    if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh) {
-      // textToRevise = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffset);
+    if (V.isTextEdit || V.refreshRequested) {
       revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-    } else {
-      setCursorPos(document.getElementById(CURSOR.id));
-      // debug("No reprocessing needed...")
-      return "";
+    }
+    else {
+      debug("not a valid text edit");
+      revisedText = "";
     }
   }
-  // ## 2-COL EDITING
   else {
-    if (V.isAutoRefresh || isValidManualRefresh) {
-      // ## use innerText; textContent loses newlines
-      revisedText = HTM.workingDiv.innerText.trim();
-    }
+    // ## 2-COL EDITING
+    revisedText = HTM.workingDiv.innerText.trim();
   }
   return revisedText;
 }
@@ -777,14 +821,34 @@ function normalizeRawText(text) {
     .replace(/\s{2,}/gm, " ");
 }
 
+// function splitTextIntoPhrases(text) {
+//   text = text.trim();
+//   // ## separate out digits
+//   // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, etc.
+//   text = text.replace(/([$£€¥₹]?((\d{1,3}(,\d{3})*(.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?)/g, "@@$1@@")
+//   // ## break at punctuation (include with digit)
+//   text = text.replace(/(@@|^\d)([.,;():?!])\s+/gi, "$2@@")
+//   text = text.replace(/@{4,}/g, "@@");
+//   text = text.split("@@");
+//   text = text.filter(el => el !== '');
+//   debug(text)
+//   return text;
+// }
+
 function splitTextIntoPhrases(text) {
-  return text
-    .trim()
-    .replace(/([.,;():?!])\s+/gi, "$1@@") // ## break at punctuation
-    // .replace(/(\d+\s*)/g, "@@$1@@")      // ## separate out digits
-    .replace(/((\d+[.,]?\d+|\d+)%?)/g, "@@$1@@")      // ## separate out digits
-    // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%
-    .split("@@");
+  // ## used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
+  text = text.trim();
+  // ## separate out digits
+  // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, etc.
+  text = text.replace(/([$£€¥₹]?((\d{1,3}(,\d{3})*(.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?)/g, "^^$1^^")
+  // ## break at punctuation (include with digit)
+  // text = text.replace(/(\^\^|^\d)([.,;():?!])\s+/gi, "$2^^")
+  text = text.replace(/(\^\^|^\d)([.,;():?!])\s*/gi, "$2^^")
+  text = text.replace(/\^{4,}/g, "^^");
+  text = text.split(/\s?\^\^\s?/);
+  text = text.filter(el => el !== '');
+  // debug(text)
+  return text;
 }
 
 function findCompoundsAndFlattenArray(chunks) {
@@ -859,7 +923,6 @@ function pushLookups(textArr) {
       }
       // ## filter out matched compounds without spaces
       preMatchArr.push(...matchedIDs);
-      // processedTextArr.push([word, wordArr[1], preMatchArr]);
       processedTextArr.push([word, rawWord, preMatchArr]);
     }
   }
@@ -1124,6 +1187,7 @@ function buildMarkupAsHTML(textArr) {
     const matches = wordInfo;
     let matchCount = 0;
     for (const [id, count] of matches) {
+      if (!word) continue;
       const match = getDbEntry(id);
       let displayWord = "";
       const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
@@ -1136,6 +1200,7 @@ function buildMarkupAsHTML(textArr) {
       const relatedWordsClass = ` all_${id}`;
       let anchor = "";
       let showDuplicateCount = "";
+      // debug(totalRepeats, match[C.LEMMA], ignoreRepeats)
       if (totalRepeats > 1 && !ignoreRepeats) {
         duplicateClass = " duplicate";
         // showDuplicateCount = "<sup>" + totalRepeats + "</sup>";
@@ -1302,15 +1367,17 @@ function changeFont(e) {
 
 function changeRefresh(e) {
   // V.isAutoRefresh = (e.target.value === "1");
-  V.isAutoRefresh = parseInt(e.target.value);
+  V.isAutoRefresh = parseInt(e.target.value) === 1;
   localStorage.setItem(C.SAVE_REFRESH_STATE, V.isAutoRefresh);
   toggleRefreshButton();
+  // setUpdateDiv();
   // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
 }
 
 function toggleRefreshButton() {
   // debug(`isAutoRefresh: ${V.isAutoRefresh}, isTab1: ${isFirstTab()}, autorefresh OR firstTab: ${Boolean(V.isAutoRefresh || isFirstTab())}`)
-  HTM.toggleRefresh.value = V.isAutoRefresh;
+  // HTM.toggleRefresh.value = V.isAutoRefresh;
+  HTM.toggleRefresh.value = (V.isAutoRefresh) ? "1" : "0";
   // if (V.isAutoRefresh === 0 || isFirstTab()) {
   if (V.isAutoRefresh || isFirstTab()) {
     // debug("hide")
@@ -1320,28 +1387,26 @@ function toggleRefreshButton() {
     // debug("show")
     HTM.refreshButton.style.display = "block";
     HTM.refreshButtonSpacer.style.display = "block";
-    updateInputDiv();
+    // updateInputDiv();
+    forceUpdateInputDiv();
   }
 }
 
 function changeEditingMode(e) {
-  // V.isInPlaceEditing = (e.target.value === "1");
-  V.isInPlaceEditing = parseInt(e.target.value);
+  V.isInPlaceEditing = Boolean(parseInt(e.target.value));
   localStorage.setItem(C.SAVE_EDIT_STATE, V.isInPlaceEditing);
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.innerHTML = "";
     // ## In-place editing is very glitchy in autorefresh mode!
-    V.isAutoRefresh = 0;
+    V.isAutoRefresh = false;
     toggleRefreshButton();
-    V.isTextEdit = true;
-    updateInputDiv();
+    forceUpdateInputDiv();
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
   }
   addEditModeListeners();
-  V.forceUpdate = true;
   toggleFinalTextDiv();
-  updateInputDiv();
+  forceUpdateInputDiv();
 }
 
 function convertMarkupToText(el) {
@@ -1537,23 +1602,22 @@ function changeDb_words() {
 function changeDb_text() {
   const dbNameText = document.getElementById('db_name2');
   if (dbNameText) dbNameText.textContent = V.currentDb.name;
-  updateInputDiv();
+  // updateInputDiv();
+  forceUpdateInputDiv();
 }
 
-function debounce(callback, delay) {
-  // ## add delay so that text is only processed after user stops typing
-  let timeout;
-  return function () {
-    let originalArguments = arguments;
-
-    clearTimeout(timeout);
-    timeout = setTimeout(() => callback.apply(this, originalArguments), delay);
-  }
+function debounce(func, timeout = 500) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { func.apply(this, args); }, timeout);
+  };
 }
 
 function debug(...params) {
   // console.log(`* ${debug.caller.name.toUpperCase()}: `, params);
-  console.log(`DEBUG: ${debug.caller.name}: `, params);
+  // console.log(">", arguments.callee.caller.toString().match(/showMe\((\S)\)/)[1])
+  console.log(`DEBUG: ${debug.caller.name}> `, params);
 }
 
 // ## TABS ############################################

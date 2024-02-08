@@ -31,4 +31,4 @@ change 'in-place' to show multiple senses ONLY as red squiggly underline; resolv
 4-11-2023 correct vocab mistake: (gept.js / .json) 'benefit' changed from 'nj' to 'nv' so that 'benefited' is correctly recognized
 14-11-2023 vocab mistake: (global.js) 'misunderstood' added as irregular past of 'misunderstand'
 03-01-2024 fixed cursor handling for in-place editing mode (but other fixes needed to make this mode work)
-
+08-01-2024 fixed switching between editing & refresh modes; cleaned up code; added more acceptable patterns for digits

@@ -87,10 +87,12 @@ const C = {
   // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
   DEFAULT_db: 0,
   DEFAULT_tab: 0,
-  DEFAULT_refresh: 1,
-  // ## 0 = manual refresh, 1 = autorefresh
-  DEFAULT_edit: 0,
-  // ## 0 = 2-col editing, 1 = in-place editing
+  // DEFAULT_refresh: 1,
+  DEFAULT_refresh: true,
+  // ## false = manual refresh, true = autorefresh
+  // DEFAULT_edit: 0,
+  DEFAULT_edit: false,
+  // ## false = 2-col editing, true = in-place editing
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
@@ -108,8 +110,9 @@ let V = {
   wordStats: {},
   // isAutoRefresh: C.DEFAULT_refresh,
   // isInPlaceEditing: C.DEFAULT_edit,
-  isAutoRefresh: null,
-  isInPlaceEditing: null,
+  isAutoRefresh: false,
+  refreshRequested: false, // This value doesn't need to be saved between sessions
+  isInPlaceEditing: false,
   currentDb: {},
   currentDbChoice: null,
   // OFFLIST: LOOKUP.level_headings.length,
@@ -125,8 +128,8 @@ let V = {
   cursorOffsetNoMarks: 0,
   isInMark: false,
   isTextEdit: false,
-  forceUpdate: false,
-  skipMarkup: false,
+  // forceUpdate: false,
+  // skipMarkup: false,
   cursorIncrement: 0,
   // # key: [index in textArr, index in normalized word]
   // cursorPosInTextArr: [0, 0], //[word, char]
@@ -256,7 +259,10 @@ const LOOKUP = {
     "$",
     "£",
     "¢",
-    "¥"
+    "¥",
+    "th",
+    "st",
+    "rd"
   ],
 
   // ## Computed levels
@@ -614,6 +620,8 @@ const LOOKUP = {
     understood: "understand",
     underlay: "underlie",
     underlain: "underlie",
+    undertook: "undertake",
+    undertaken: "undertake",
     wept: "weep",
     went: "go",
     withdrawn: "withdraw",

@@ -1,17 +1,18 @@
 
 // ## CURSOR HANDLING ######################################
 
-function grabMarkedUpText(isValidManualRefresh) {
-  let revisedText;
-  if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh) {
-    revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-  } else {
-    setCursorPos(document.getElementById(CURSOR.id));
-    // debug("No reprocessing needed...")
-    revisedText = "";
-  }
-  return revisedText
-}
+// function grabMarkedUpText() {
+//   let revisedText;
+//   // if (parseInt(V.isAutoRefresh) === 1 || isValidManualRefresh) {
+//   if (V.isAutoRefresh || V.refreshRequested) {
+//     revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
+//   } else {
+//     setCursorPos(document.getElementById(CURSOR.id));
+//     // debug("No reprocessing needed...")
+//     revisedText = "";
+//   }
+//   return revisedText
+// }
 
 function insertCursorPlaceholder(el, index) {
   // let plainText = removeTagContentFromElement(el);
@@ -56,6 +57,7 @@ function getCopyWithoutMarks(range) {
   const noMarksNodes = document.createElement("root");
   noMarksNodes.append(range.cloneContents());
   const divText = newlinesToPlaintext(removeTags(noMarksNodes));
+  // return divText;
 }
 
 function cursorIsInTag(cursorEl, tagName = "MARK") {
@@ -88,7 +90,8 @@ function newlinesToPlaintext(divText) {
   return divText;
 }
 
-function blockInsertInMark(e) {
+
+function rejectMark(e) {
   V.isInMark = cursorIsInTag(HTM.workingDiv);
   if (V.isInMark) {
     e.preventDefault();
@@ -120,7 +123,7 @@ function setCursorPos(el, textToInsert = "") {
   el.focus();
 }
 
-function setCursorPosSafely(el, isStart=true) {
+function setCursorPosSafely(el, isStart = true) {
   if (!el) return;
   const selectedRange = document.createRange();
   selectedRange.selectNode(el);
@@ -136,18 +139,20 @@ function updateCursorPos(e) {
   const keypress = e.key;
   if (!keypress) return;
   V.isTextEdit = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
+  debug(keypress,"-> isTextEdit",V.isTextEdit)
   V.oldCursorOffset = V.cursorOffset;
+  let isInMark;
   [
     V.cursorOffset,
     V.cursorOffsetNoMarks,
     isInMark
   ] = getCursorInfoInEl(HTM.workingDiv);
   getCursorIncrement(keypress)
-  // document.getElementById("debug_cursor_pos").innerHTML = `<b>offset</b>:${V.cursorOffset}/${V.cursorOffsetNoMarks}; <b>mark?</b> ${isInMark}, <b>inc</b>:${V.cursorIncrement}`;
   if (isInMark) {
     // debug("In mark!", grabMarkedUpText(true))
     jumpOutOfMark();
   }
+  debug("is valid text edit?", V.isTextEdit)
 }
 
 function jumpOutOfMark() {
@@ -179,7 +184,22 @@ function normalizeTextForClipboard(e) {
   const copiedText = document.createRange();
   copiedText.setStart(sel.anchorNode, sel.anchorOffset);
   copiedText.setEnd(sel.focusNode, sel.focusOffset);
-  let normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  // let normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
+  let normalizedText = EOLsToNewlines(getCopyWithoutMarks(copiedText));
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
+}
+
+function EOLsToNewlines(text) {
+  return text.replace(EOL.text, "\n");
+}
+
+function newlinesToEOLs(text) {
+  return text.replace("\n", EOL.text);
+}
+
+function forceUpdateInputDiv() {
+  V.refreshRequested = true;
+  updateInputDiv();
+  V.refreshRequested = false;
 }
