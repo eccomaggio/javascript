@@ -1411,13 +1411,13 @@ function changeEditingMode(e) {
 
 function convertMarkupToText(el) {
   const re = new RegExp("\s*" + EOL.text + "\s*", "g");
-  const HTMLtoPlainText = removeTags(el).innerText
+  el = removeTags(el);
+  el = newlinesToPlaintext(el);
+  const HTMLtoPlainText = el.innerText
     .replace(/\s{2,}/g, " ")
-    // .replace(re, " \n")
     .replace(re, "\n")
     .replace(/\n\s/g, "\n")
     .replace(/\n{2,}/g, "\n");
-  // debug(el.innerHTML,HTMLtoPlainText)
   return HTMLtoPlainText;
 }
 
