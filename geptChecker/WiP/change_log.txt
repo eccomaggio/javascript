@@ -33,3 +33,4 @@ change 'in-place' to show multiple senses ONLY as red squiggly underline; resolv
 03-01-2024 fixed cursor handling for in-place editing mode (but other fixes needed to make this mode work)
 07-01-2024 fixed switching between editing & refresh modes; cleaned up code; added more acceptable patterns for digits
 08-01-2024 fixed missing newlines when switching from in-place to 2-col
+... grey out 'auto refresh' option when in in-place mode

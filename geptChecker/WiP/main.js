@@ -34,8 +34,6 @@ function init() {
   debug(`dbState:${dbState}, tabState:${tabState}, refreshState:${refreshState}, editState:${editState}`)
   V.currentDbChoice = dbState;
   V.currentTab = tabState;
-  // V.isAutoRefresh = parseInt(refreshState);
-  // V.isInPlaceEditing = parseInt(editState);
   V.isAutoRefresh = (refreshState === "true");
   V.isInPlaceEditing = (editState === "true");
 
@@ -52,6 +50,7 @@ function init() {
   // HTM.toggleEditMode.value = V.isInPlaceEditing;
   HTM.toggleEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
   toggleRefreshButton();
+  toggleRefreshModeOption();
   refreshLabels("t1_form");
 }
 
@@ -1401,12 +1400,23 @@ function changeEditingMode(e) {
     V.isAutoRefresh = false;
     toggleRefreshButton();
     forceUpdateInputDiv();
+    // HTM.toggleRefresh.firstElementChild.disabled = true;
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
+    // HTM.toggleRefresh.firstElementChild.disabled = false;
   }
+  toggleRefreshModeOption();
   addEditModeListeners();
   toggleFinalTextDiv();
   forceUpdateInputDiv();
+}
+
+function toggleRefreshModeOption() {
+  if (V.isInPlaceEditing) {
+    HTM.toggleRefresh.firstElementChild.disabled = true;
+  } else {
+    HTM.toggleRefresh.firstElementChild.disabled = false;
+  }
 }
 
 function convertMarkupToText(el) {
@@ -1471,6 +1481,7 @@ function resetApp() {
   HTM.toggleEditMode = C.DEFAULT_edit;
   HTM.toggleRefresh = C.DEFAULT_refresh;
   toggleRefreshButton();
+  toggleRefreshModeOption();
   // activateTab(HTM.tabHead.children[0]);
   activateTab(V.currentTab);
   changeDb_shared(0);
