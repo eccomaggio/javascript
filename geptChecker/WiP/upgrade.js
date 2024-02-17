@@ -197,6 +197,7 @@ function normalizeTextForClipboard(e) {
   debug(copiedText.toString(), normalizedText)
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
+  //
   // navigator.clipboard
   //   .writeText(normalizedText)
   //   .then(() => {

@@ -686,6 +686,7 @@ else (autorefresh):
   }
 }
 
+
 function requestRefresh(e) {
   // ## need to close the request to make sure it gets reset
   V.refreshRequested = true;
