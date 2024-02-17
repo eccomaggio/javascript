@@ -24,20 +24,22 @@ addListeners();
 // ***** INIT FUNCTIONS
 
 function init() {
-  if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
-  let [
-    dbState,
-    tabState,
-    refreshState,
-    editState
-  ] = retrieveAppState();
-  debug(`dbState:${dbState}, tabState:${tabState}, refreshState:${refreshState}, editState:${editState}`)
-  V.currentDbChoice = dbState;
-  V.currentTab = tabState;
-  V.isAutoRefresh = (refreshState === "true");
-  V.isInPlaceEditing = (editState === "true");
+  // if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
+  // let [
+  //   dbState,
+  //   tabState,
+  //   refreshState,
+  //   editState
+  // ] = retrieveAppState();
+  // // debug(`dbState:${dbState}, tabState:${tabState}, refreshState:${refreshState}, editState:${editState}`)
+  // V.currentDbChoice = dbState;
+  // V.currentTab = tabState;
+  // V.isAutoRefresh = (refreshState === "true");
+  // V.isInPlaceEditing = (editState === "true");
 
-  changeDb_shared(dbState);
+  setGlobalState();
+  // changeDb_shared(dbState);
+  changeDb_shared(V.currentDbChoice);
   displayDbNameInTab2();
 
   activateTab(V.currentTab);
@@ -46,12 +48,27 @@ function init() {
   toggleFinalTextDiv();
 
   // # update dropdown menu select options
-  HTM.changeDb.value = dbState;
-  // HTM.toggleEditMode.value = V.isInPlaceEditing;
+  // HTM.changeDb.value = dbState;
+  HTM.changeDb.value = V.currentDbChoice;
   HTM.toggleEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
   toggleRefreshButton();
   toggleRefreshModeOption();
   refreshLabels("t1_form");
+}
+
+function setGlobalState() {
+  if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
+  let [
+    dbState,
+    tabState,
+    refreshState,
+    editState
+  ] = retrieveAppState();
+  // debug(`dbState:${dbState}, tabState:${tabState}, refreshState:${refreshState}, editState:${editState}`)
+  V.currentDbChoice = dbState;
+  V.currentTab = tabState;
+  V.isAutoRefresh = (refreshState === "true");
+  V.isInPlaceEditing = (editState === "true");
 }
 
 function addListeners() {
@@ -104,6 +121,7 @@ function addEditModeListeners() {
   if (V.isInPlaceEditing) {
     // ## "copy" only works from menu; add keydown listener to catch Ctrl_C
     HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
+    // HTM.workingDiv.addEventListener("copy", debounce(normalizeTextForClipboard));
     HTM.workingDiv.addEventListener("keydown", rejectMark);
     HTM.workingDiv.addEventListener("keyup", updateCursorPos);
 
@@ -111,6 +129,7 @@ function addEditModeListeners() {
   else {
     // ## clear 'in-place' events
     HTM.workingDiv.removeEventListener("copy", normalizeTextForClipboard);
+    // HTM.workingDiv.removeEventListener("copy", debounce(normalizeTextForClipboard));
     HTM.workingDiv.removeEventListener("keydown", rejectMark);
     HTM.workingDiv.removeEventListener("keyup", updateCursorPos);
   }
@@ -255,6 +274,8 @@ function closeBackupDialog(id) {
   document.getElementById(id).style.display = "none";
 }
 
+// ######### Tab 1 (look up word)
+
 function registerLabelClick(e_label) {
   const label = e_label.target;
   if (label.htmlFor) {
@@ -328,15 +349,18 @@ function submitWordSearchForm(e) {
   let resultsCount = 0;
   let resultsArr = [];
   let HTMLstringToDisplay = "";
-  if (!errorMsg) {
-    resultsArr = executeFormDataLookup(data);
-    resultsCount = resultsArr.length;
-    // HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
-    if (!resultsCount) errorMsg = "No matches found for this term."
-  }
+  // if (!errorMsg) {
+  //   resultsArr = executeFormDataLookup(data);
+  //   resultsCount = resultsArr.length;
+  //   // HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
+  //   if (!resultsCount) errorMsg = "No matches found for this term."
+  // }
   if (errorMsg) {
     HTMLstringToDisplay = `<p class='error'>${errorMsg}</p>`;
   } else {
+    resultsArr = executeFormDataLookup(data);
+    resultsCount = resultsArr.length;
+    if (!resultsCount) errorMsg = "No matches found for this term."
     HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
   }
   displayWordSearchResults(HTMLstringToDisplay, resultsCount);
@@ -395,7 +419,6 @@ function checkFormData(data) {
     "Please enter at least one search term to restrict the number of results.",
     "Enter a search term."
   ][status];
-  // console.log({status},errorMsg, data)
   return errorMsg;
 }
 
@@ -415,8 +438,6 @@ function executeFormDataLookup(data) {
 
 function refineSearch(find) {
   let results = V.currentDb.db.filter(el => el[C.LEMMA].search(find.term) != -1);
-  // console.log("get results for term:", find.term,results.length, results)
-  // console.log("get results for term:", find, find.level.length || find.awl.length || find.pos.length)
   results = results.concat(getDerivedForms(find.term).map(el => getDbEntry(el)));
   if (find.level.length) {
     results = results.filter(el => find.level.indexOf(el[C.LEVEL][0]) > -1);
@@ -446,7 +467,6 @@ function refineSearch(find) {
     }
   }
   results = results.filter(result => result[C.ID] > 0);
-  // console.log("refined search results",results)
   return results;
 }
 
@@ -485,9 +505,7 @@ function formatResultsAsHTML(results) {
     const awl_sublist = getAwlSublist(level_arr);
     const awlWord = highlightAwlWord(level_arr, entry[C.LEMMA]);
     const lemma = `<strong>${awlWord}</strong>`;
-    // const pos = `[${entry[C.POS].trim()}]`;
     const pos = `[${expandPos(entry)}]`;
-    // const awl_indicator = (awl_sublist >= 0) ? `; AWL${awl_sublist}` : "";
     let level = V.level_subs[level_arr[0]];
     if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
     if (!level) continue;
@@ -586,7 +604,6 @@ function displayEntryInfo(ref) {
     }
   }
   level = `<em>${level}</em>`;
-  // const pos = `[${entry[C.POS]}]`;
   const pos = `[${expandPos(entry)}]`;
   let [notes, awl_notes] = getNotes(entry);
   const html = `${level}<span>${lemma}${pos}${notes}${awl_notes}</span>`;
@@ -627,7 +644,7 @@ function catchKeyboardCopyEvent(e) {
 
 
 function updateInputDiv(e) {
-  debug("refresh...", V.isAutoRefresh, V.refreshRequested)
+  // debug("refresh...", V.isAutoRefresh, V.refreshRequested)
   // ## I have to make this check because I can't reliably remove the eventlistener of 'debounce(func)'
   /*
   This is the common gateway for all refresh & edit modes
@@ -667,32 +684,12 @@ else (autorefresh):
     debug("event listener not removed :S")
     return;
   }
-
-  // if (!V.isAutoRefresh && !V.refreshRequested) {
-  //   debug("event listener not removed :S")
-  //   return;
-  // }
-  // let revisedText = grabRevisedText();
-
-  // if (revisedText) {
-  //   const [
-  //     resultsAsHTML,
-  //     repeatsAsHTML,
-  //     wordCount
-  //   ] = processText(revisedText);
-  //   displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
-  //   V.forceUpdate = false;
-  //   V.skipMarkup = false;
-  //   HTM.finalInfoDiv.innerText = "";
-  // } else {
-  //   return;
-  // }
 }
 
 function requestRefresh(e) {
   // ## need to close the request to make sure it gets reset
   V.refreshRequested = true;
-  debug(V.refreshRequested)
+  // debug(V.refreshRequested)
   updateInputDiv(e);
   V.refreshRequested = false;
 }
@@ -820,20 +817,6 @@ function normalizeRawText(text) {
     .replace(/\s{2,}/gm, " ");
 }
 
-// function splitTextIntoPhrases(text) {
-//   text = text.trim();
-//   // ## separate out digits
-//   // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, etc.
-//   text = text.replace(/([$£€¥₹]?((\d{1,3}(,\d{3})*(.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?)/g, "@@$1@@")
-//   // ## break at punctuation (include with digit)
-//   text = text.replace(/(@@|^\d)([.,;():?!])\s+/gi, "$2@@")
-//   text = text.replace(/@{4,}/g, "@@");
-//   text = text.split("@@");
-//   text = text.filter(el => el !== '');
-//   debug(text)
-//   return text;
-// }
-
 function splitTextIntoPhrases(text) {
   // ## used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
   text = text.trim();
@@ -899,13 +882,10 @@ function pushLookups(textArr) {
   let wordCount = 0;
   let matches = [];
   // ## capture EOL and insert line breaks
-  // for (const wordArr of textArr) {
   for (const wordArr of textArr) {
     let [word, rawWord, preMatchArr] = wordArr;
     // const word = wordArr[0];
-    // let preMatchArr = wordArr[2];
     const matchedIDs = [];
-    // if (word === "*EOL") {
     if (word === EOL.text) {
       processedTextArr.push([word]);
     } else {
@@ -1375,7 +1355,6 @@ function changeRefresh(e) {
 
 function toggleRefreshButton() {
   // debug(`isAutoRefresh: ${V.isAutoRefresh}, isTab1: ${isFirstTab()}, autorefresh OR firstTab: ${Boolean(V.isAutoRefresh || isFirstTab())}`)
-  // HTM.toggleRefresh.value = V.isAutoRefresh;
   HTM.toggleRefresh.value = (V.isAutoRefresh) ? "1" : "0";
   // if (V.isAutoRefresh === 0 || isFirstTab()) {
   if (V.isAutoRefresh || isFirstTab()) {
@@ -1400,10 +1379,8 @@ function changeEditingMode(e) {
     V.isAutoRefresh = false;
     toggleRefreshButton();
     forceUpdateInputDiv();
-    // HTM.toggleRefresh.firstElementChild.disabled = true;
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
-    // HTM.toggleRefresh.firstElementChild.disabled = false;
   }
   toggleRefreshModeOption();
   addEditModeListeners();
@@ -1670,7 +1647,7 @@ function activateTab(tab) {
 
 function safeStyleDisplay(el, displayState = "none") {
   try {
-    el.style.display = displayState; 1
+    el.style.display = displayState;
   } catch (error) {
     debug(error)
   }

@@ -87,10 +87,8 @@ const C = {
   // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
   DEFAULT_db: 0,
   DEFAULT_tab: 0,
-  // DEFAULT_refresh: 1,
   DEFAULT_refresh: true,
   // ## false = manual refresh, true = autorefresh
-  // DEFAULT_edit: 0,
   DEFAULT_edit: false,
   // ## false = 2-col editing, true = in-place editing
   MATCHES: {
@@ -280,7 +278,6 @@ const LOOKUP = {
 
   // ## plural nouns, 3rd person present verbs
   s_subs: {
-    // _: [-3, -2],
     _suffix: "s",
     ies: "y",
     oes: "o",
@@ -384,7 +381,6 @@ const LOOKUP = {
 
   foreign_plurals: [
     ["ae", "a"],
-    // ["ia","ion"],
     ["a", "um"],
     ["a", "on"],
     ["ia","ion"],

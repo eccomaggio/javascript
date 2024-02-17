@@ -56,8 +56,11 @@ function getCopyWithoutMarks(range) {
   // Equivalent of newlinesToPlaintext(removeTags(rangeToHTML(range)))
   const noMarksNodes = document.createElement("root");
   noMarksNodes.append(range.cloneContents());
-  const divText = newlinesToPlaintext(removeTags(noMarksNodes));
-  // return divText;
+  let divText = removeTags(noMarksNodes);
+  divText = newlinesToPlaintext(divText);
+  // debug("02", divText)
+  // const divText = newlinesToPlaintext(removeTags(noMarksNodes));
+  return divText;
 }
 
 function cursorIsInTag(cursorEl, tagName = "MARK") {
@@ -139,7 +142,7 @@ function updateCursorPos(e) {
   const keypress = e.key;
   if (!keypress) return;
   V.isTextEdit = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
-  debug(keypress,"-> isTextEdit",V.isTextEdit)
+  // debug(keypress,"-> isTextEdit",V.isTextEdit)
   V.oldCursorOffset = V.cursorOffset;
   let isInMark;
   [
@@ -152,7 +155,7 @@ function updateCursorPos(e) {
     // debug("In mark!", grabMarkedUpText(true))
     jumpOutOfMark();
   }
-  debug("is valid text edit?", V.isTextEdit)
+  // debug("is valid text edit?", V.isTextEdit)
 }
 
 function jumpOutOfMark() {
@@ -180,14 +183,28 @@ function normalizeTextForClipboard(e) {
     e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
   }
   const sel = document.getSelection();
+  // const toRange = sel.getRangeAt(0);
+  // debug("to range",toRange)
+  // debug(getCopyWithoutMarks(toRange))
   // debug(sel)
-  const copiedText = document.createRange();
-  copiedText.setStart(sel.anchorNode, sel.anchorOffset);
-  copiedText.setEnd(sel.focusNode, sel.focusOffset);
-  // let normalizedText = getCopyWithoutMarks(copiedText).replace(EOL.text, "\n");
-  let normalizedText = EOLsToNewlines(getCopyWithoutMarks(copiedText));
+  let copiedText = document.createRange();
+  copiedText = sel.getRangeAt(0);
+  // copiedText.setStart(sel.anchorNode, sel.anchorOffset);
+  // copiedText.setEnd(sel.focusNode, sel.focusOffset);
+  let normalizedText = getCopyWithoutMarks(copiedText);
+  normalizedText = normalizedText.innerText;
+  normalizedText = EOLsToNewlines(normalizedText);
+  debug(copiedText.toString(), normalizedText)
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
+  // navigator.clipboard
+  //   .writeText(normalizedText)
+  //   .then(() => {
+  //     console.log("successfully copied");
+  //   })
+  //   .catch(() => {
+  //     console.log("something went wrong");
+  //   });
 }
 
 function EOLsToNewlines(text) {
