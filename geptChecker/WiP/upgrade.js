@@ -183,18 +183,12 @@ function normalizeTextForClipboard(e) {
     e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
   }
   const sel = document.getSelection();
-  // const toRange = sel.getRangeAt(0);
-  // debug("to range",toRange)
-  // debug(getCopyWithoutMarks(toRange))
-  // debug(sel)
   let copiedText = document.createRange();
   copiedText = sel.getRangeAt(0);
-  // copiedText.setStart(sel.anchorNode, sel.anchorOffset);
-  // copiedText.setEnd(sel.focusNode, sel.focusOffset);
   let normalizedText = getCopyWithoutMarks(copiedText);
   normalizedText = normalizedText.innerText;
   normalizedText = EOLsToNewlines(normalizedText);
-  debug(copiedText.toString(), normalizedText)
+  // debug(copiedText.toString(), normalizedText)
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
   //

@@ -344,26 +344,28 @@ function refreshLabels(parentID) {
 }
 
 function submitWordSearchForm(e) {
-  const data = getFormData(e);
-  let errorMsg = checkFormData(data);
   let resultsCount = 0;
   let resultsArr = [];
   let HTMLstringToDisplay = "";
-  // if (!errorMsg) {
-  //   resultsArr = executeFormDataLookup(data);
-  //   resultsCount = resultsArr.length;
-  //   // HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
-  //   if (!resultsCount) errorMsg = "No matches found for this term."
-  // }
+  const data = getFormData(e);
+  let errorMsg = checkFormData(data);
   if (errorMsg) {
-    HTMLstringToDisplay = `<p class='error'>${errorMsg}</p>`;
+    HTMLstringToDisplay = markStringAsError(errorMsg);
   } else {
     resultsArr = executeFormDataLookup(data);
     resultsCount = resultsArr.length;
-    if (!resultsCount) errorMsg = "No matches found for this term."
-    HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
+    if (resultsCount) {
+      HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
+    } else {
+      HTMLstringToDisplay = markStringAsError("No matches found for this term.");
+    }
   }
+  // debug(resultsCount, resultsArr)
   displayWordSearchResults(HTMLstringToDisplay, resultsCount);
+}
+
+function markStringAsError(str) {
+  return `<span class='error'>${str}</span>`;
 }
 
 function getFormData(e) {
@@ -822,8 +824,9 @@ function splitTextIntoPhrases(text) {
   // ## used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
   text = text.trim();
   // ## separate out digits
-  // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, etc.
-  text = text.replace(/([$£€¥₹]?((\d{1,3}(,\d{3})*(.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?)/g, "^^$1^^")
+  // # should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
+  // text = text.replace(/([$£€¥₹]?((\d{1,3}(,\d{3})*(.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?)/g, "^^$1^^")
+  text = text.replace(/(\b\d{4}\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?))/g, "^^$1^^")
   // ## break at punctuation (include with digit)
   // text = text.replace(/(\^\^|^\d)([.,;():?!])\s+/gi, "$2^^")
   text = text.replace(/(\^\^|^\d)([.,;():?!])\s*/gi, "$2^^")
