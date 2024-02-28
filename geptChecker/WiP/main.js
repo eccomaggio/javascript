@@ -24,36 +24,18 @@ addListeners();
 // ***** INIT FUNCTIONS
 
 function init() {
-  // if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
-  // let [
-  //   dbState,
-  //   tabState,
-  //   refreshState,
-  //   editState
-  // ] = retrieveAppState();
-  // // debug(`dbState:${dbState}, tabState:${tabState}, refreshState:${refreshState}, editState:${editState}`)
-  // V.currentDbChoice = dbState;
-  // V.currentTab = tabState;
-  // V.isAutoRefresh = (refreshState === "true");
-  // V.isInPlaceEditing = (editState === "true");
-
   setGlobalState();
-  // changeDb_shared(dbState);
-  changeDb_shared(V.currentDbChoice);
-  displayDbNameInTab2();
-
-  activateTab(V.currentTab);
-  clearTab1();
-
+  setDb_shared(V.currentDbChoice);
+  setTab(V.currentTab);
+  setEditingMode();
+  HTM.form.reset();
   toggleFinalTextDiv();
+  updateDropdownMenuOptions();
+}
 
-  // # update dropdown menu select options
-  // HTM.changeDb.value = dbState;
-  HTM.changeDb.value = V.currentDbChoice;
-  HTM.toggleEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
-  toggleRefreshButton();
-  toggleRefreshModeOption();
-  refreshLabels("t1_form");
+function updateDropdownMenuOptions() {
+  HTM.selectDb.value = V.currentDbChoice;
+  HTM.selectEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
 }
 
 function setGlobalState() {
@@ -90,7 +72,7 @@ function addWordInputListeners() {
 
 function addTabListeners() {
   for (const el of document.getElementsByClassName("tab")) {
-    el.addEventListener("click", activateTab);
+    el.addEventListener("click", setTab);
   }
 }
 
@@ -99,10 +81,10 @@ function addMenuListeners() {
   HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
-  HTM.changeDb.addEventListener("change", changeDb_shared);
-  HTM.changeFontSize.addEventListener("change", changeFont);
-  HTM.toggleRefresh.addEventListener("change", changeRefresh);
-  HTM.toggleEditMode.addEventListener("change", changeEditingMode);
+  HTM.selectDb.addEventListener("change", setDb_shared);
+  HTM.selectFontSize.addEventListener("change", changeFont);
+  HTM.selectRefresh.addEventListener("change", changeRefresh);
+  HTM.selectEditMode.addEventListener("change", setEditingMode);
   HTM.refreshButton.addEventListener("click", requestRefresh);
   HTM.backupButton.addEventListener("click", showBackups);
   HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
@@ -134,10 +116,9 @@ function addEditModeListeners() {
     HTM.workingDiv.removeEventListener("keyup", updateCursorPos);
   }
   setHoverEffects();
-  // setUpdateDiv();
 }
 
-function setHoverEffects(){
+function setHoverEffects() {
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
@@ -153,16 +134,6 @@ function setHoverEffects(){
     HTM.finalTextDiv.addEventListener("mouseout", hoverEffects);
   }
 }
-
-// function setUpdateDiv() {
-//   if (V.isAutoRefresh) {
-//     HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv));
-//     debug("A. (auto) workingDiv keyup added")
-//   } else {
-//     HTM.workingDiv.removeEventListener("keyup", debounce(updateInputDiv));
-//     debug("B. workingDiv updateInputDiv listener removed [manual refresh]")
-//   }
-// }
 
 // *****  FUNCTIONS
 
@@ -192,6 +163,7 @@ function showBackups(e) {
   5) ? rationalize dialogs so there is a coherent, extendable system
   */
   for (const id of C.backupIDs) {
+    debug(id, document.getElementById(id))
     const backup = document.getElementById(id)
     const lsContent = localStorage.getItem(id);
     let content = (lsContent) ? lsContent.trim() : "";
@@ -212,7 +184,6 @@ function loadBackup(id) {
   let restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
   if (V.isInPlaceEditing) {
-    // restoredContent = restoredContent.replace(/\n/, EOL.text);
     restoredContent = newlinesToEOLs(restoredContent);
   }
   HTM.workingDiv.innerText = restoredContent;
@@ -250,9 +221,13 @@ function resetBackup() {
 
 function saveBackup() {
   // const currentText = (V.isInPlaceEditing) ? removeTagContentFromElement(HTM.workingDiv) : HTM.workingDiv.innerText;
-  let currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
+  // let currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
+  let currentText;
   if (V.isInPlaceEditing) {
+    currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
     currentText = EOLsToNewlines(currentText);
+  } else {
+    currentText = HTM.workingDiv.innerText;
   }
   if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText.trim());
@@ -380,14 +355,15 @@ function getFormData(e) {
     pos: []
   };
   // ## Read & normalize raw data into 'data' object
+  // debug("gept/kids/best",isGEPT(), isKids(), isBESTEP())
   for (let [key, value] of raw_data) {
     // ## default value of html option (but screws up db lookup)
     if (value === "-1") value = "";
     // ## ignore form elements that aren't required for current dB
-    if (key === "level" && V.currentDb.isKids) continue;
-    if (key === "theme" && (V.currentDb.isGEPT || V.currentDb.isBEST)) continue;
-    if (key === "awl" && (V.currentDb.isGEPT || V.currentDb.isKids)) continue;
-    const digit = parseInt(value);
+    if (key === "level" && isKids()) continue;
+    if (key === "theme" && !isKids()) continue;
+    if (key === "awl" && !isBESTEP()) continue;
+    const digit = parseInt(value)
     if (Number.isInteger(digit)) {
       data[key].push(digit);
     } else if (value.trim()) {
@@ -447,7 +423,7 @@ function refineSearch(find) {
   if (find.pos.length) {
     results = results.filter(el => el[C.POS]).filter(el => el[C.POS].search(find.pos) != -1);
   }
-  if (V.isBEST && find.awl && find.awl.length) {
+  if (isBESTEP() && find.awl && find.awl.length) {
     /*
     el[C.LEVEL][2]:
     1-in awl only
@@ -485,11 +461,11 @@ function getDerivedForms(term) {
 }
 
 function getAwlSublist(level_arr) {
-  return (V.isBEST && level_arr[1]) ? level_arr[1] - C.awl_level_offset : -1;
+  return (isBESTEP() && level_arr[1]) ? level_arr[1] - C.awl_level_offset : -1;
 }
 
 function highlightAwlWord(level_arr, word) {
-  return (V.isBEST && level_arr[1] > -1) ? `<span class="awl-word">${word}</span>` : word;
+  return (isBESTEP() && level_arr[1] > -1) ? `<span class="awl-word">${word}</span>` : word;
 }
 
 function formatResultsAsHTML(results) {
@@ -513,7 +489,7 @@ function formatResultsAsHTML(results) {
     if (!level) continue;
     let [note, awl_note] = getNotes(entry);
     const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}${awl_note}`;
-    let class2 = (V.currentDb.isKids) ? "level-e" : `level-${level[0]}`;
+    let class2 = (V.isKids) ? "level-e" : `level-${level[0]}`;
     output += formatResultsAsTablerows(`${i + 1}`, col2, "", class2);
     previousInitial = currentInitial;
     i++;
@@ -524,7 +500,7 @@ function formatResultsAsHTML(results) {
 function getNotes(entry) {
   let [note, awl_note] = entry[C.NOTE].trim().split(C.NOTE_SEP);
   note = note ? `, ${note}` : "";
-  awl_note = (V.isBEST && awl_note) ? ` <span class="awl-note">(headword: <span class="awl-headword">${awl_note}</span>)</span>` : "";
+  awl_note = (isBESTEP() && awl_note) ? ` <span class="awl-note">(headword: <span class="awl-headword">${awl_note}</span>)</span>` : "";
   return [note, awl_note]
 }
 
@@ -1222,7 +1198,7 @@ function escapeHTMLentities(text) {
 
 function getLevelPrefix(level_num) {
   let level = V.level_subs[level_num];
-  if (V.currentDb.isKids && level_num < V.OFFLIST) level = "k";
+  if (V.isKids && level_num < V.OFFLIST) level = "k";
   return level[0];
 }
 
@@ -1287,6 +1263,10 @@ function pluralNoun(amount) {
   return (amount > 1) ? "s" : "";
 }
 
+function displayDbNameInTab1() {
+  document.getElementById('db_name1').textContent = V.currentDb.name;
+}
+
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
@@ -1328,7 +1308,7 @@ function findBaseForm(word, subs) {
 function clearTab2() {
   HTM.workingDiv.innerText = "";
   HTM.finalTextDiv.innerHTML = "";
-  HTM.finalLegend.innerHTML = displayDbNameInTab2();
+  // HTM.finalLegend.innerHTML = displayDbNameInTab2();
   HTM.finalInfoDiv.innerText = "";
   HTM.repeatsList.innerText = "";
   displayDbNameInTab2();
@@ -1349,54 +1329,60 @@ function changeFont(e) {
 }
 
 function changeRefresh(e) {
-  // V.isAutoRefresh = (e.target.value === "1");
   V.isAutoRefresh = parseInt(e.target.value) === 1;
-  localStorage.setItem(C.SAVE_REFRESH_STATE, V.isAutoRefresh);
-  toggleRefreshButton();
-  // setUpdateDiv();
+  localStorage.setItem(C.SAVE_REFRESH_STATE_BOOL, V.isAutoRefresh);
+  setRefreshButton();
   // debug("is auto-refresh", V.isAutoRefresh, e.target.value, localStorage.getItem(C.SAVE_REFRESH_STATE))
 }
 
-function toggleRefreshButton() {
-  // debug(`isAutoRefresh: ${V.isAutoRefresh}, isTab1: ${isFirstTab()}, autorefresh OR firstTab: ${Boolean(V.isAutoRefresh || isFirstTab())}`)
-  HTM.toggleRefresh.value = (V.isAutoRefresh) ? "1" : "0";
-  // if (V.isAutoRefresh === 0 || isFirstTab()) {
+function setRefreshButton() {
+  // HTM.toggleRefresh.value = (V.isAutoRefresh) ? "1" : "0";
   if (V.isAutoRefresh || isFirstTab()) {
-    // debug("hide")
-    HTM.refreshButton.style.display = "none";
-    HTM.refreshButtonSpacer.style.display = "none";
+    // if (!HTM.selectRefresh.firstElementChild.disabled) HTM.selectRefresh.selectedIndex = 0;
+    HTM.selectRefresh.selectedIndex = 0;
+    hideRefreshButton();
   } else {
-    // debug("show")
-    HTM.refreshButton.style.display = "block";
-    HTM.refreshButtonSpacer.style.display = "block";
-    // updateInputDiv();
+    HTM.selectRefresh.selectedIndex = 1;
+    showRefreshButton();
     forceUpdateInputDiv();
   }
 }
 
-function changeEditingMode(e) {
-  V.isInPlaceEditing = Boolean(parseInt(e.target.value));
-  localStorage.setItem(C.SAVE_EDIT_STATE, V.isInPlaceEditing);
+function hideRefreshButton() {
+  HTM.refreshButton.style.display = "none";
+}
+
+function showRefreshButton() {
+  HTM.refreshButton.style.display = "block";
+}
+
+function setEditingMode(e) {
+  if (e) {
+    V.isInPlaceEditing = Boolean(parseInt(e.target.value));
+    localStorage.setItem(C.SAVE_EDIT_STATE_BOOL, V.isInPlaceEditing);
+  }
+  // debug("is in-place editing?", V.isInPlaceEditing)
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.innerHTML = "";
     // ## In-place editing is very glitchy in autorefresh mode!
     V.isAutoRefresh = false;
-    toggleRefreshButton();
+    setRefreshButton();
     forceUpdateInputDiv();
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
   }
-  toggleRefreshModeOption();
+  setRefreshModeOption();
   addEditModeListeners();
   toggleFinalTextDiv();
   forceUpdateInputDiv();
 }
 
-function toggleRefreshModeOption() {
+function setRefreshModeOption() {
+  // ## Greys out the autorefresh option
   if (V.isInPlaceEditing) {
-    HTM.toggleRefresh.firstElementChild.disabled = true;
+    HTM.selectRefresh.firstElementChild.disabled = true;
   } else {
-    HTM.toggleRefresh.firstElementChild.disabled = false;
+    HTM.selectRefresh.firstElementChild.disabled = false;
   }
 }
 
@@ -1415,7 +1401,6 @@ function convertMarkupToText(el) {
 function toggleFinalTextDiv() {
   // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
   if (V.isInPlaceEditing) {
-    // debug("hide")
     HTM.finalTextDiv.style.display = "none";
   } else {
     // HTM.finalTextDiv.style.display = "flex";
@@ -1450,48 +1435,44 @@ function clearTab(event) {
 }
 
 function resetApp() {
-  // localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
-  // localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
-  // localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
-  // localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
   setAppStateToDefault();
   V.currentTab = C.DEFAULT_tab;
   clearTab1();
   clearTab2();
-  HTM.changeDb.value = C.DEFAULT_db;
-  HTM.toggleEditMode = C.DEFAULT_edit;
-  HTM.toggleRefresh = C.DEFAULT_refresh;
-  toggleRefreshButton();
-  toggleRefreshModeOption();
-  // activateTab(HTM.tabHead.children[0]);
-  activateTab(V.currentTab);
-  changeDb_shared(0);
+  HTM.selectDb.value = C.DEFAULT_db;
+  V.isAutoRefresh = C.DEFAULT_is_autorefresh;
+  V.isInPlaceEditing = C.DEFAULT_is_inplace_edit;
+
+  setRefreshButton();
+  setRefreshModeOption();
+  setTab(V.currentTab);
+  setDb_shared(C.DEFAULT_db);
 }
 
 function setAppStateToDefault() {
   localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
-  localStorage.setItem(C.SAVE_TAB_STATE, C.DEFAULT_tab);
-  localStorage.setItem(C.SAVE_REFRESH_STATE, C.DEFAULT_refresh);
-  localStorage.setItem(C.SAVE_EDIT_STATE, C.DEFAULT_edit);
+  localStorage.setItem(C.SAVE_ACTIVE_TAB_INDEX, C.DEFAULT_tab);
+  localStorage.setItem(C.SAVE_REFRESH_STATE_BOOL, C.DEFAULT_is_autorefresh);
+  localStorage.setItem(C.SAVE_EDIT_STATE_BOOL, C.DEFAULT_is_inplace_edit);
 }
 
 function retrieveAppState() {
   return [
     localStorage.getItem(C.SAVE_DB_STATE),
-    localStorage.getItem(C.SAVE_TAB_STATE),
-    localStorage.getItem(C.SAVE_REFRESH_STATE),
-    localStorage.getItem(C.SAVE_EDIT_STATE)
+    localStorage.getItem(C.SAVE_ACTIVE_TAB_INDEX),
+    localStorage.getItem(C.SAVE_REFRESH_STATE_BOOL),
+    localStorage.getItem(C.SAVE_EDIT_STATE_BOOL)
   ];
 }
 
 
-function changeDb_shared(e) {
+function setDb_shared(e) {
   let choice = (e.target) ? e.target.value : e;
   // choice = parseInt(choice);
   V.currentDbChoice = parseInt(choice);
+  // debug("currentDbChoice", V.currentDbChoice)
   V.currentDb = [];
-  // if (choice === 0) {
-  if (V.currentDbChoice === 0) {
+  if (V.currentDbChoice === C.GEPT) {
     V.currentDb = {
       name: "GEPT",
       db: indexDb(makeGEPTdb()),
@@ -1504,14 +1485,10 @@ function changeDb_shared(e) {
         _accent: "#daebe8"
       }
     };
-    V.isKids = false;
-    V.isBEST = false;
-    V.isGEPT = true;
-    // } else if (choice === 1) {
-  } else if (V.currentDbChoice === 1) {
+  } else if (V.currentDbChoice === C.BESTEP) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
-      name: "BEST",
+      name: "BESTEP",
       db: indexDb(tmpDb.concat(makeAWLdb())),
       show: [HTM.G_level, HTM.B_AWL],
       hide: [HTM.K_theme],
@@ -1522,9 +1499,6 @@ function changeDb_shared(e) {
         _accent: "#d98284"
       }
     };
-    V.isKids = false;
-    V.isBEST = true;
-    V.isGEPT = false;
   } else {
     V.currentDb = {
       name: "GEPTKids",
@@ -1538,20 +1512,27 @@ function changeDb_shared(e) {
         _accent: "#fbefcc"
       }
     };
-    V.isKids = true;
-    V.isBEST = false;
-    V.isGEPT = false;
   }
-  // V.currentDb.language = "en";
   V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
   for (let key in V.currentDb.css) {
     const property = key[0] == "_" ? `--${key.slice(1)}` : key;
     HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
   }
-  changeDb_text();
-  changeDb_words();
-  // localStorage.setItem(C.SAVE_DB_STATE, choice);
+  setDb_tab2();
+  setDb_tab1();
   localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
+}
+
+function isGEPT() {
+  return V.currentDbChoice === C.GEPT;
+}
+
+function isBESTEP() {
+  return V.currentDbChoice === C.BESTEP;
+}
+
+function isKids() {
+  return V.currentDbChoice === C.Kids;
 }
 
 function buildListOfCompoundWords(dB) {
@@ -1579,8 +1560,8 @@ function buildListOfCompoundWords(dB) {
   return compounds;
 }
 
-function changeDb_words() {
-  document.getElementById('db_name1').textContent = V.currentDb.name;
+function setDb_tab1() {
+  displayDbNameInTab1();
   // ## Allows for multiple elements to be toggled
   for (let el of V.currentDb.show) {
     el.style.setProperty("display", "block");
@@ -1591,10 +1572,8 @@ function changeDb_words() {
   submitWordSearchForm();
 }
 
-function changeDb_text() {
-  const dbNameText = document.getElementById('db_name2');
-  if (dbNameText) dbNameText.textContent = V.currentDb.name;
-  // updateInputDiv();
+function setDb_tab2() {
+  displayDbNameInTab2();
   forceUpdateInputDiv();
 }
 
@@ -1614,10 +1593,8 @@ function debug(...params) {
 
 // ## TABS ############################################
 
-// function activateTab(tab) {
-function activateTab(tab) {
-  if (tab.target) tab = tab.target;
-  else tab = HTM.tabHead.children[tab];
+function setTab(tab) {
+  tab = (tab.target) ? tab.target : HTM.tabHead.children[tab];
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
@@ -1632,20 +1609,26 @@ function activateTab(tab) {
     }
     i++;
   }
-  if (isFirstTab()) {
-    safeStyleDisplay(HTM.toggleRefresh);
-    safeStyleDisplay(HTM.toggleEditMode);
-    HTM.backupButton.style.display = "none";
-    HTM.backupSave.style.display = "none";
-  } else {
-    safeStyleDisplay(HTM.toggleRefresh, "block");
-    safeStyleDisplay(HTM.toggleEditMode, "block");
-    HTM.backupButton.style.display = "block";
-    HTM.backupSave.style.display = "block";
-    displayDbNameInTab2();
-  }
-  toggleRefreshButton();
-  localStorage.setItem(C.SAVE_TAB_STATE, V.currentTab);
+  // if (isFirstTab()) {
+  //   // safeStyleDisplay(HTM.toggleRefresh);
+  //   // safeStyleDisplay(HTM.toggleEditMode);
+  //   HTM.selectRefresh.style.display = "none";
+  //   HTM.selectEditMode.style.display = "none";
+  //   HTM.backupButton.style.display = "none";
+  //   HTM.backupSave.style.display = "none";
+  //   displayDbNameInTab1();
+  // } else {
+  //   // safeStyleDisplay(HTM.toggleRefresh, "block");
+  //   // safeStyleDisplay(HTM.toggleEditMode, "block");
+  //   HTM.selectRefresh.style.display = "block";
+  //   HTM.selectEditMode.style.display = "block";
+  //   HTM.backupButton.style.display = "block";
+  //   HTM.backupSave.style.display = "block";
+  //   displayDbNameInTab2();
+  // }
+  setTabHead();
+  localStorage.setItem(C.SAVE_ACTIVE_TAB_INDEX, V.currentTab);
+  setRefreshButton();
   displayInputCursor();
 }
 
@@ -1656,6 +1639,14 @@ function safeStyleDisplay(el, displayState = "none") {
     debug(error)
   }
   // if (el.hasOwnProperty("style")) el.style.display = displayState;
+}
+
+function setTabHead() {
+  let mode = (isFirstTab()) ? "none" : "block";
+    HTM.selectRefresh.style.display = mode;
+    HTM.selectEditMode.style.display = mode;
+    HTM.backupButton.style.display = mode;
+    HTM.backupSave.style.display = mode;
 }
 
 function isFirstTab() {

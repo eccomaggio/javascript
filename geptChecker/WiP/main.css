@@ -236,7 +236,6 @@
       box-shadow: 5px 5px 5px grey;
       padding: 6px;
       min-height: 40px;
-      /* max-height: 40px; */
       max-height: 90px;
       width: 90%;
       flex-shrink: 1;
@@ -287,7 +286,6 @@
 
       .t1_form_in,
       .t1_form_out {
-        /* height: inherit; */
         height: auto;
         width: 50%;
       }
@@ -529,6 +527,10 @@
       color: cornflowerblue;
     }
 
+    #refresh_button::after {
+      /* Add &nbsp; after reset button*/
+      content: '\0000a0\0000a0';
+    }
 
 
     /* ## PAGE COMMON ELEMENTS #################################### */

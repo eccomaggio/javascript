@@ -52,16 +52,16 @@ const HTM = {
   clearButton: document.getElementById("clear_button"),
   resetButton: document.getElementById("reset_button"),
   refreshButton: document.getElementById("refresh_button"),
-  refreshButtonSpacer: document.getElementById("refresh_button_spacer"),
+  // refreshButtonSpacer: document.getElementById("refresh_button_spacer"),
   settingsMenu: document.getElementById("dropdown"),
-  toggleRefresh: document.getElementById("set-refresh"),
-  toggleEditMode: document.getElementById("set-edit-mode"),
+  selectRefresh: document.getElementById("select-refresh"),
+  selectEditMode: document.getElementById("select-edit-mode"),
   backupButton: document.getElementById("backup-btn"),
   backupDialog: document.getElementById("backup-dlg"),
   backupSave: document.getElementById("backup-save"),
   settingsContent: document.getElementById("settings-content"),
-  changeDb: document.getElementById("set-db"),
-  changeFontSize: document.getElementById("set-font"),
+  selectDb: document.getElementById("select-db"),
+  selectFontSize: document.getElementById("select-font"),
 };
 
 // ## Global constants
@@ -81,23 +81,25 @@ const C = {
   NOTE_SEP: "|",
   // ## names of local storage variables; default values in finalInit
   SAVE_DB_STATE: "db_state",
-  SAVE_TAB_STATE: "tab_state",
-  SAVE_REFRESH_STATE: "refresh_state",
-  SAVE_EDIT_STATE: "edit_state",
+  SAVE_ACTIVE_TAB_INDEX: "tab_state",
+  SAVE_REFRESH_STATE_BOOL: "refresh_state",
+  SAVE_EDIT_STATE_BOOL: "edit_state",
   // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
   DEFAULT_db: 0,
   DEFAULT_tab: 0,
-  DEFAULT_refresh: true,
-  // ## false = manual refresh, true = autorefresh
-  DEFAULT_edit: false,
-  // ## false = 2-col editing, true = in-place editing
+  DEFAULT_is_autorefresh: true,
+  DEFAULT_is_inplace_edit: false,
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
     starts: ["^", ".*"],
     ends: [".*", "$"]
-  }
+  },
   // compoundMaxLen: 1
+  // ## 'Enum' for dBs
+  GEPT: 0,
+  BESTEP: 1,
+  Kids: 2,
 }
 
 // ## Global variables
@@ -112,10 +114,8 @@ let V = {
   refreshRequested: false, // This value doesn't need to be saved between sessions
   isInPlaceEditing: false,
   currentDb: {},
-  currentDbChoice: null,
-  // OFFLIST: LOOKUP.level_headings.length,
-  // level_subs: LOOKUP.level_headings.concat(LOOKUP.offlist_subs),
-  // const level_subs = lookup.level_headings.concat(lookup.offlist_subs);
+  // currentDbChoice: 0,
+  currentDbChoice: C.GEPT,
   OFFLIST: 0,
   level_subs: [],
   // currentTab: 0,
@@ -137,7 +137,7 @@ const CURSOR = {
   tag: "span",
   id: "cursorPosHere",
   HTMLtext: "<span id='cursorPosHere'></span>",
-  text: "@CRSR@"
+  text: "@CRSR@",
 }
 
 const EOL = {
@@ -160,7 +160,7 @@ const LOOKUP = {
     level: "Level",
     theme: "Theme",
     pos: "PoS",
-    results: "Results"
+    results: "Results",
   },
 
   // display_levels: {
@@ -224,7 +224,7 @@ const LOOKUP = {
     "AWL 7",
     "AWL 8",
     "AWL 9",
-    "AWL 10"
+    "AWL 10",
   ],
 
   // ## PoS expansions
@@ -242,7 +242,7 @@ const LOOKUP = {
     p: 'preposition',
     r: 'pronoun',
     t: 'interjection',
-    f: 'infinitive'
+    f: 'infinitive',
   },
 
   symbols: [
@@ -260,7 +260,7 @@ const LOOKUP = {
     "¥",
     "th",
     "st",
-    "rd"
+    "rd",
   ],
 
   // ## Computed levels
@@ -270,7 +270,7 @@ const LOOKUP = {
     "contraction",
     "digit",
     "name",
-    "symbol"
+    "symbol",
   ],
 
 
@@ -294,7 +294,7 @@ const LOOKUP = {
     lly: "l",
     ely: "e",
     ically: "ic",
-    bly: "ble"
+    bly: "ble",
   },
 
   // ## gerunds
@@ -315,7 +315,7 @@ const LOOKUP = {
     zzing: "z",
     ying: "ie",
     cking: "c",
-    ing: "e"
+    ing: "e",
   },
 
 
@@ -336,7 +336,7 @@ const LOOKUP = {
     vvest: "v",
     zzest: "z",
     iest: "y",
-    est: "e"
+    est: "e",
   },
 
   // ## comparative adjs & agent nouns? (good idea??)
@@ -356,7 +356,7 @@ const LOOKUP = {
     vver: "v",
     zzer: "z",
     ier: "y",
-    er: "e"
+    er: "e",
   },
 
   // ## regular past -ed endings
@@ -376,14 +376,14 @@ const LOOKUP = {
     vved: "v",
     zzed: "z",
     ied: "y",
-    ed: "e"
+    ed: "e",
   },
 
   foreign_plurals: [
     ["ae", "a"],
     ["a", "um"],
     ["a", "on"],
-    ["ia","ion"],
+    ["ia", "ion"],
     ["i", "us"],
     ["i", "o"],
     ["es", "is"],
@@ -393,7 +393,7 @@ const LOOKUP = {
     ["ooves", "oof"],
     ["arves", "arf"],
     ["lves", "lf"],
-    ["men", "man"]
+    ["men", "man"],
   ],
 
   contractions: [
@@ -629,7 +629,7 @@ const LOOKUP = {
     worn: "wear",
     written: "write",
     wrote: "write",
-    wrung: "wring"
+    wrung: "wring",
   },
 
   repeatableWords: [
@@ -930,8 +930,8 @@ const LOOKUP = {
     "wayne",
     "william",
     "willie",
-    "zachary"
-  // ])
+    "zachary",
+    // ])
   ]
 }
 

@@ -26,14 +26,13 @@
         <div class="spacer">&nbsp;</div>
         <button class="dropbtn" id="clear_button" type="button">Clear</button>
         <div class="spacer">&nbsp;</div>
-        <!-- <button class="dropbtn" id="refresh_button" type="button" style="display: none">Refresh</button> -->
         <button class="dropbtn" id="refresh_button" type="button">Refresh</button>
-        <div class="spacer" id="refresh_button_spacer">&nbsp;</div>
+        <!-- <div class="spacer" id="refresh_button_spacer">&nbsp;</div> -->
         <!-- adapted from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_dropdown_right -->
         <div class="dropdown" id="dropdown">
           <button class="dropbtn" type="button">Settings</button>
           <div class="dropdown-content" id="settings-content">
-            <select name="set-font" id="set-font">
+            <select name="select-font" id="select-font">
               <option value="8">font 8pt</option>
               <option value="9">font 9pt</option>
               <option value="10">font 10pt</option>
@@ -47,21 +46,19 @@
               <option value="24">font 24pt</option>
             </select>
 
-            <select name="set-db" id="set-db">
+            <select name="select-db" id="select-db">
               <option value="0">database: GEPT</option>
-              <option value="1">database: BESTep</option>
+              <option value="1">database: BESTEP</option>
               <option value="2">database: GEPTKids</option>
             </select>
 
-            <select name="set-refresh" id="set-refresh" style="display: block;">
+            <select name="select-refresh" id="select-refresh" style="display: block;">
               <option value="1">auto refresh</option>
-              <!-- <option value="0" id="set-refresh-manual">manual refresh</option> -->
               <option value="0">manual refresh</option>
             </select>
 
-            <select name="set-edit-mode" id="set-edit-mode" style="display: block;">
+            <select name="select-edit-mode" id="select-edit-mode" style="display: block;">
               <option value="1">In-place editing</option>
-              <!-- <option value="0" id="set-edit-2col">2-column editing</option> -->
               <option value="0">2-column editing</option>
             </select>
 
