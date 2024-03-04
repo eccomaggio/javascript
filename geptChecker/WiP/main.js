@@ -196,7 +196,8 @@ function loadBackup(id) {
 function updateBackup(id) {
   // ## current logic: 0=from last refresh, 1=regularly updated (if longer than prev)
   if (localStorage.getItem(id)) {
-    let newContent = HTM.workingDiv.innerText.trim();
+    // let newContent = HTM.workingDiv.innerText.trim();
+    let newContent = grabText();
     if (!newContent) return;
     for (let other of C.backupIDs) {
       // ## don't hold duplicate backups
@@ -222,14 +223,17 @@ function resetBackup() {
 function saveBackup() {
   // const currentText = (V.isInPlaceEditing) ? removeTagContentFromElement(HTM.workingDiv) : HTM.workingDiv.innerText;
   // let currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
-  let currentText;
-  if (V.isInPlaceEditing) {
-    currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
-    currentText = EOLsToNewlines(currentText);
-  } else {
-    currentText = HTM.workingDiv.innerText;
-  }
-  if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
+  // let currentText;
+  // if (V.isInPlaceEditing) {
+  //   currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
+  //   currentText = EOLsToNewlines(currentText);
+  // } else {
+  //   currentText = HTM.workingDiv.innerText;
+  // }
+  let currentText = grabText();
+  if (!currentText) return;
+  // if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
+  if (currentText !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText.trim());
     localStorage.setItem("mostRecent", C.backupIDs[1]);
     HTM.backupSave.innerText = "text saved";
@@ -691,6 +695,18 @@ function grabRevisedText() {
   return revisedText;
 }
 
+function grabText(){
+  let currentText;
+  if (V.isInPlaceEditing) {
+    currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
+    currentText = EOLsToNewlines(currentText);
+  } else {
+    currentText = HTM.workingDiv.innerText;
+  }
+  currentText = currentText.trim();
+  return currentText;
+}
+
 function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
   displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsAsHTML);
@@ -783,10 +799,6 @@ function normalizeRawText(text) {
     .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
     .replace(/…/g, "...")
-    // .replace(/(\r\n|\n\r|\r)+/g, "\n")
-    // .replace(/[\n\r]+/g, "\n")
-    // .replace(/[\n\r]/g, ` ${EOL.text} `) // encode EOLs
-    // .replace(/(\r\n|\r|\n)/gm, ` ${EOL.text} `) // encode EOLs
     .replace(/(\r\n|\r|\n)/g, "\n") // encode EOLs
     .replace(/\n{2,}/g, "\n")
     .replace(/\n/g, ` ${EOL.text} `) // encode EOLs
