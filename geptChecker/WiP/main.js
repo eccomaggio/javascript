@@ -95,7 +95,7 @@ function addMenuListeners() {
 }
 
 function addEditModeListeners() {
-  HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
+  // HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
   // ## having probs removing his event listener; leave & ignore with updateInputDiv
   HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv));
@@ -103,7 +103,7 @@ function addEditModeListeners() {
   if (V.isInPlaceEditing) {
     // ## "copy" only works from menu; add keydown listener to catch Ctrl_C
     HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
-    // HTM.workingDiv.addEventListener("copy", debounce(normalizeTextForClipboard));
+    HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
     HTM.workingDiv.addEventListener("keydown", rejectMark);
     HTM.workingDiv.addEventListener("keyup", updateCursorPos);
 
@@ -111,7 +111,7 @@ function addEditModeListeners() {
   else {
     // ## clear 'in-place' events
     HTM.workingDiv.removeEventListener("copy", normalizeTextForClipboard);
-    // HTM.workingDiv.removeEventListener("copy", debounce(normalizeTextForClipboard));
+    HTM.workingDiv.removeEventListener("keydown", catchKeyboardCopyEvent);
     HTM.workingDiv.removeEventListener("keydown", rejectMark);
     HTM.workingDiv.removeEventListener("keyup", updateCursorPos);
   }
@@ -163,7 +163,7 @@ function showBackups(e) {
   5) ? rationalize dialogs so there is a coherent, extendable system
   */
   for (const id of C.backupIDs) {
-    debug(id, document.getElementById(id))
+    // debug(id, document.getElementById(id))
     const backup = document.getElementById(id)
     const lsContent = localStorage.getItem(id);
     let content = (lsContent) ? lsContent.trim() : "";
@@ -180,7 +180,8 @@ function showBackups(e) {
 }
 
 function loadBackup(id) {
-  const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
+  // const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
+  const swap = JSON.parse(JSON.stringify(grabText()));
   let restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
   if (V.isInPlaceEditing) {
@@ -195,7 +196,9 @@ function loadBackup(id) {
 
 function updateBackup(id) {
   // ## current logic: 0=from last refresh, 1=regularly updated (if longer than prev)
-  if (localStorage.getItem(id)) {
+  let thisBackup = localStorage.getItem(id);
+  // if (localStorage.getItem(id).trim()) {
+  if (thisBackup) {
     // let newContent = HTM.workingDiv.innerText.trim();
     let newContent = grabText();
     if (!newContent) return;
@@ -203,38 +206,30 @@ function updateBackup(id) {
       // ## don't hold duplicate backups
       if (id != other && newContent == localStorage.getItem(other)) return;
     }
-    if (localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
+    // if (localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
+    if (thisBackup.length < newContent.length) window.localStorage.setItem(id, newContent)
     localStorage.setItem("mostRecent", id);
   } else {
-    localStorage.setItem(id, " ")
+    localStorage.setItem(id, "")
   }
 }
 
 function resetBackup() {
   // ## logic: put current OR most recent change in first backup (2nd backup is constantly updated)
-  let mostRecent = HTM.workingDiv.innerText.trim();
+  // let mostRecent = HTM.workingDiv.innerText.trim();
+  let mostRecent = grabText();
   if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
-  if (!mostRecent || !mostRecent.trim().length) return;
+  if (!mostRecent || !mostRecent.length) return;
   localStorage.setItem(C.backupIDs[0], mostRecent);
   localStorage.setItem("mostRecent", C.backupIDs[0]);
   localStorage.setItem(C.backupIDs[1], "");
 }
 
 function saveBackup() {
-  // const currentText = (V.isInPlaceEditing) ? removeTagContentFromElement(HTM.workingDiv) : HTM.workingDiv.innerText;
-  // let currentText = (V.isInPlaceEditing) ? newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText : HTM.workingDiv.innerText;
-  // let currentText;
-  // if (V.isInPlaceEditing) {
-  //   currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
-  //   currentText = EOLsToNewlines(currentText);
-  // } else {
-  //   currentText = HTM.workingDiv.innerText;
-  // }
   let currentText = grabText();
   if (!currentText) return;
-  // if (currentText && currentText.trim() !== localStorage.getItem(C.backupIDs[1])) {
   if (currentText !== localStorage.getItem(C.backupIDs[1])) {
-    localStorage.setItem(C.backupIDs[1], currentText.trim());
+    localStorage.setItem(C.backupIDs[1], currentText);
     localStorage.setItem("mostRecent", C.backupIDs[1]);
     HTM.backupSave.innerText = "text saved";
     HTM.backupSave.classList.add("error");
@@ -663,7 +658,7 @@ else (autorefresh):
     }
   }
   else {
-    debug("event listener not removed :S")
+    // debug("event listener not removed :S")
     return;
   }
 }

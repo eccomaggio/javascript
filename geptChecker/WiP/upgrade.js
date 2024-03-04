@@ -203,7 +203,10 @@ function normalizeTextForClipboard(e) {
 }
 
 function EOLsToNewlines(text) {
-  const noEOLs = text.replace(EOL.text, "\n");
+  const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+  // const noEOLs = text.replace(EOL.text, "\n");
+  const noEOLs = text.replace(re, "\n");
+  debug()
   // debug(noEOLs)
   // return text.replace(EOL.text, "\n");
   return noEOLs;
