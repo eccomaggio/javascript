@@ -1,18 +1,10 @@
 /*
 Fixed:
-excessive EOLs
-compounds erase cursor placeholder
-save app status anomalies
-streamlined lookupDerivations
-refresh & editing states not always respected
-cursor needs to avoid <mark> elements
-need to be able to add text after <mark> element / at end of text
 
-TODO:
-sort out in-place editing:
-can write in <mark> in manual-refresh mode (with unpredictable results)
 */
 // ## SETUP ############################################
+
+// const { off } = require("process");
 
 
 init();
@@ -89,6 +81,10 @@ function addMenuListeners() {
   HTM.backupButton.addEventListener("click", showBackups);
   HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
   HTM.backupSave.addEventListener("click", saveBackup);
+  for (const id of C.backupIDs) {
+    document.getElementById(id).addEventListener("click", loadBackup);
+    // document.getElementById(id).addEventListener("click", test);
+  }
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
@@ -138,7 +134,7 @@ function setHoverEffects() {
 // *****  FUNCTIONS
 
 function isArrayElementInOtherArray(x, y) {
-  for (let el of x) {
+  for (const el of x) {
     if (y.indexOf(el) > -1) return true;
   }
   return false;
@@ -159,8 +155,11 @@ function showBackups(e) {
   1) on refresh, swap backup_0 to backup_1
   2) close backup dialog on mouseout
   3) close settings dialog when backup opens
-  4) hide backup setting on tab 1
-  5) ? rationalize dialogs so there is a coherent, extendable system
+  4) hide backup settings on tab 1
+
+  An html popup is populated with backups stored in local storage;
+  The popup is then displayed to the user
+  The text in the popups is actually in a button; clicking it populates the InputDiv
   */
   for (const id of C.backupIDs) {
     // debug(id, document.getElementById(id))
@@ -179,45 +178,43 @@ function showBackups(e) {
   HTM.backupDialog.style.setProperty("display", "flex");
 }
 
-function loadBackup(id) {
-  // const swap = JSON.parse(JSON.stringify(HTM.workingDiv.innerText));
-  const swap = JSON.parse(JSON.stringify(grabText()));
+// function loadBackup(id) {
+function loadBackup(e) {
+  /* Get backup from chosen buffer and replace contents of workingDiv with it
+  Buffer contents are then loaded with the old workingDiv content to allow undo*/
+  const id = e.target.id;
+  const swap = JSON.parse(JSON.stringify(grabWorkingDivText()));
   let restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
   if (V.isInPlaceEditing) {
     restoredContent = newlinesToEOLs(restoredContent);
   }
   HTM.workingDiv.innerText = restoredContent;
-  // updateInputDiv();
   forceUpdateInputDiv();
   if (swap) localStorage.setItem(id, swap);
   closeBackupDialog("backup-dlg");
 }
 
-function updateBackup(id) {
-  // ## current logic: 0=from last refresh, 1=regularly updated (if longer than prev)
-  let thisBackup = localStorage.getItem(id);
-  // if (localStorage.getItem(id).trim()) {
-  if (thisBackup) {
-    // let newContent = HTM.workingDiv.innerText.trim();
-    let newContent = grabText();
-    if (!newContent) return;
-    for (let other of C.backupIDs) {
-      // ## don't hold duplicate backups
-      if (id != other && newContent == localStorage.getItem(other)) return;
-    }
-    // if (localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
-    if (thisBackup.length < newContent.length) window.localStorage.setItem(id, newContent)
-    localStorage.setItem("mostRecent", id);
-  } else {
-    localStorage.setItem(id, "")
-  }
-}
+// function updateBackup(id) {
+//   let thisBackup = localStorage.getItem(id);
+//   if (thisBackup) {
+//     let newContent = grabText();
+//     if (!newContent) return;
+//     for (let other of C.backupIDs) {
+//       // ## don't hold duplicate backups
+//       if (id != other && newContent == localStorage.getItem(other)) return;
+//     }
+//     // if (localStorage.getItem(id).length < newContent.length) window.localStorage.setItem(id, newContent)
+//     if (thisBackup.length < newContent.length) window.localStorage.setItem(id, newContent)
+//     localStorage.setItem("mostRecent", id);
+//   } else {
+//     localStorage.setItem(id, "")
+//   }
+// }
 
 function resetBackup() {
   // ## logic: put current OR most recent change in first backup (2nd backup is constantly updated)
-  // let mostRecent = HTM.workingDiv.innerText.trim();
-  let mostRecent = grabText();
+  let mostRecent = grabWorkingDivText();
   if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
   if (!mostRecent || !mostRecent.length) return;
   localStorage.setItem(C.backupIDs[0], mostRecent);
@@ -226,7 +223,7 @@ function resetBackup() {
 }
 
 function saveBackup() {
-  let currentText = grabText();
+  let currentText = grabWorkingDivText();
   if (!currentText) return;
   if (currentText !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText);
@@ -380,7 +377,7 @@ function checkFormData(data) {
   2 = contains a non-default match term but no lemma (which match requires)
   3 = contains nothing beyond the default "match=contains"
   */
-  for (let el in data) {
+  for (const el in data) {
     if (el === "match") continue;
     if (data[el].length) {
       status = 0;
@@ -554,7 +551,7 @@ function hoverEffects(e) {
   }
   // const isMouseOver = e.type === "mouseover";
   function toggleHighlight(els) {
-    for (let el of els) {
+    for (const el of els) {
       el.classList.toggle("highlight");
     }
   }
@@ -690,7 +687,7 @@ function grabRevisedText() {
   return revisedText;
 }
 
-function grabText(){
+function grabWorkingDivText(){
   let currentText;
   if (V.isInPlaceEditing) {
     currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
@@ -763,7 +760,7 @@ function splitText(rawText) {
   // let indexOfCurrentWord = 0;
   let cursorFound = false;
   let wordToAdd;
-  for (let phrase of raw_chunks) {
+  for (const phrase of raw_chunks) {
     let arrayOfWords = [];
     for (let [word_i, word] of phrase.split(/\s+/).entries()) {
       if (word.indexOf(EOL.text) >= 0) {
@@ -822,7 +819,7 @@ function splitTextIntoPhrases(text) {
 
 function findCompoundsAndFlattenArray(chunks) {
   let flatArray = [];
-  for (let chunk of chunks) {
+  for (const chunk of chunks) {
     /* for each word, checks normalized words to end of chunk in search of compound match
     then adds this as a match
     "tail" is the sequence of words in a chunk (punctuation delimited block) as an array.
@@ -837,7 +834,7 @@ function findCompoundsAndFlattenArray(chunks) {
       let matches = [];
       const flattenedTail = tail.join("").replace(/-/g, "");
       // console.log("tail:",flattenedTail)
-      for (let compound in V.currentDb.compounds) {
+      for (const compound in V.currentDb.compounds) {
         if (flattenedTail.startsWith(compound)) {
           const c_id = V.currentDb.compounds[compound];
           pushMatch(matches, c_id);
@@ -878,7 +875,7 @@ function pushLookups(textArr) {
     } else {
       matches = lookupWord(wordArr);
       if (word) wordCount++;
-      for (let id of matches) {
+      for (const id of matches) {
         // ## do not check compounds (already checked)
         if (!id) continue;
         if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
@@ -1135,67 +1132,151 @@ function buildMarkupAsHTML(textArr) {
   let htmlString = "";
   let isFirstWord = true;
   let wasEOL = false;
+  let isEOL = false;
   let wordIndex = 0;
-  for (let [word, rawWord, wordInfo] of textArr) {
-    // debug("wordInfo for:", word, wordInfo)
-    if (word === EOL.text) {
-      htmlString += EOL.HTMLtext;
-      wasEOL = true;
-      continue;
-    }
-    rawWord = escapeHTMLentities(rawWord);
-    let leaveSpace = " ";
-    if ((wordInfo[0] && getDbEntry(wordInfo[0][0])[2] == "contraction") || isFirstWord || wasEOL) {
-      leaveSpace = "";
-    }
+  for (let [word, rawWord, matches] of textArr) {
+    // debug("wordInfo for:", word, matches);
+    [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
+    if (isEOL || !word || !matches[0]) continue;
+    const isContraction = getDbEntry(matches[0][0])[2] == "contraction";
+    const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
     isFirstWord = false;
     // ## duplicateCount = running total; totalRepeats = total
-    const matches = wordInfo;
     let matchCount = 0;
-    for (const [id, count] of matches) {
-      if (!word) continue;
-      const match = getDbEntry(id);
-      let displayWord = "";
-      const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-      const levelArr = match[C.LEVEL];
-      const levelNum = levelArr[0];
-      const levelClass = "level-" + getLevelPrefix(levelNum);
-      const totalRepeats = V.wordStats[id];
-      let duplicateClass = "";
-      const duplicateCount = count;
-      const relatedWordsClass = ` all_${id}`;
-      let anchor = "";
-      let showDuplicateCount = "";
-      // debug(totalRepeats, match[C.LEMMA], ignoreRepeats)
-      if (totalRepeats > 1 && !ignoreRepeats) {
-        duplicateClass = " duplicate";
-        // showDuplicateCount = "<sup>" + totalRepeats + "</sup>";
-        showDuplicateCount = ' data-reps="' + totalRepeats + '"';
-        anchor = ` id='all_${id}_${duplicateCount}'`;
-      }
-      // if (isWithoutCursor && V.isInPlaceEditing) {
-      if (V.isInPlaceEditing && matchCount === 0) {
-        const [word_i, char_i] = V.cursorPosInTextArr;
-        if (wordIndex === word_i) {
-          rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
-        }
-      }
-      let localWord = highlightAwlWord(levelArr, rawWord);
-      displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
-      if (matchCount > 0) {
-        if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
-        displayWord = "<mark>" + displayWord + "</mark>";
-      }
-      htmlString += displayWord;
-      matchCount++;
-      wasEOL = false;
+    for (const [id, duplicateCount] of matches) {
+        const match = getDbEntry(id);
+        const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+        const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+        const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(id, duplicateCount, ignoreRepeats);
+        rawWord = insertCursorInHTML(matchCount, wordIndex, escapeHTMLentities(rawWord));
+        const localWord = highlightAwlWord(levelArr, rawWord);
+        htmlString += createWordInHTML(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches);
+        matchCount++;
+        wasEOL = false;
     }
     wordIndex++;
   }
-  // ## add this to even up </p><p> added in in lieu of EOLs
-  // htmlString = "<p>" + htmlString + "</p>";
   return htmlString;
 }
+
+function renderEOLsAsHTML(word, htmlString, wasEOL) {
+  const isEOL = word === EOL.text;
+  if (isEOL) {
+    htmlString += EOL.HTMLtext;
+    wasEOL = true;
+  }
+  return [isEOL, wasEOL, htmlString];
+}
+
+function createWordInHTML(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches) {
+  let displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  if (matchCount > 0) {
+    if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
+    displayWord = "<mark>" + displayWord + "</mark>";
+  }
+  return displayWord;
+}
+
+function insertCursorInHTML(matchCount, wordIndex, rawWord) {
+  if (V.isInPlaceEditing && matchCount === 0) {
+    const [word_i, char_i] = V.cursorPosInTextArr;
+    if (wordIndex === word_i) {
+      rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
+    }
+  }
+  return rawWord;
+}
+
+function getDuplicateDetails(id, duplicateCount, ignoreRepeats) {
+  const totalRepeats = V.wordStats[id];
+  let duplicateClass = "";
+  let duplicateCountInfo = "";
+  let anchor = "";
+  const relatedWordsClass = `all_${id}`;
+  if (totalRepeats > 1 && !ignoreRepeats) {
+    duplicateClass = " duplicate";
+    duplicateCountInfo = ' data-reps="' + totalRepeats + '"';
+    // anchor = ` id='all_${id}_${duplicateCount}'`;
+    anchor = ` id='${relatedWordsClass}_${duplicateCount}'`;
+  }
+  return [" " + relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
+}
+
+function getLevelDetails(levelArr) {
+  const levelNum = levelArr[0];
+  const levelClass = "level-" + getLevelPrefix(levelNum);
+  return [levelArr, levelNum, levelClass];
+}
+
+// function buildMarkupAsHTML(textArr) {
+//   // debug(textArr)
+//   /* ## textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]]
+//   for each word, repeat the raw-word for each match, but with different interpretations
+//   */
+//   let htmlString = "";
+//   let isFirstWord = true;
+//   let wasEOL = false;
+//   let wordIndex = 0;
+//   for (let [word, rawWord, wordInfo] of textArr) {
+//     debug("wordInfo for:", word, wordInfo)
+//     if (word === EOL.text) {
+//       htmlString += EOL.HTMLtext;
+//       wasEOL = true;
+//       continue;
+//     }
+//     rawWord = escapeHTMLentities(rawWord);
+//     let leaveSpace = " ";
+//     if ((wordInfo[0] && getDbEntry(wordInfo[0][0])[2] == "contraction") || isFirstWord || wasEOL) {
+//       leaveSpace = "";
+//     }
+//     isFirstWord = false;
+//     // ## duplicateCount = running total; totalRepeats = total
+//     const matches = wordInfo;
+//     let matchCount = 0;
+//     for (const [id, count] of matches) {
+//       if (!word) continue;
+//       const match = getDbEntry(id);
+//       let displayWord = "";
+//       const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+//       const levelArr = match[C.LEVEL];
+//       const levelNum = levelArr[0];
+//       const levelClass = "level-" + getLevelPrefix(levelNum);
+//       const totalRepeats = V.wordStats[id];
+//       let duplicateClass = "";
+//       const duplicateCount = count;
+//       const relatedWordsClass = ` all_${id}`;
+//       let anchor = "";
+//       let showDuplicateCount = "";
+//       // debug(totalRepeats, match[C.LEMMA], ignoreRepeats)
+//       if (totalRepeats > 1 && !ignoreRepeats) {
+//         duplicateClass = " duplicate";
+//         // showDuplicateCount = "<sup>" + totalRepeats + "</sup>";
+//         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
+//         anchor = ` id='all_${id}_${duplicateCount}'`;
+//       }
+//       // if (isWithoutCursor && V.isInPlaceEditing) {
+//       if (V.isInPlaceEditing && matchCount === 0) {
+//         const [word_i, char_i] = V.cursorPosInTextArr;
+//         if (wordIndex === word_i) {
+//           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
+//         }
+//       }
+//       let localWord = highlightAwlWord(levelArr, rawWord);
+//       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
+//       if (matchCount > 0) {
+//         if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
+//         displayWord = "<mark>" + displayWord + "</mark>";
+//       }
+//       htmlString += displayWord;
+//       matchCount++;
+//       wasEOL = false;
+//     }
+//     wordIndex++;
+//   }
+//   // ## add this to even up </p><p> added in in lieu of EOLs
+//   // htmlString = "<p>" + htmlString + "</p>";
+//   return htmlString;
+// }
 
 function escapeHTMLentities(text) {
   return text.replace(/&/g, "&amp;")
@@ -1419,7 +1500,7 @@ function toggleFinalTextDiv() {
 function jumpToDuplicate(id) {
   // ## clean up previous highlights
   const cssClass = "jumpHighlight";
-  for (element of document.getElementsByClassName(cssClass)) {
+  for (const element of document.getElementsByClassName(cssClass)) {
     element.classList.remove(cssClass)
   }
   const duplicate = document.getElementById(id);
@@ -1521,7 +1602,7 @@ function setDb_shared(e) {
     };
   }
   V.currentDb.compounds = buildListOfCompoundWords(V.currentDb.db);
-  for (let key in V.currentDb.css) {
+  for (const key in V.currentDb.css) {
     const property = key[0] == "_" ? `--${key.slice(1)}` : key;
     HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
   }
@@ -1570,10 +1651,10 @@ function buildListOfCompoundWords(dB) {
 function setDb_tab1() {
   displayDbNameInTab1();
   // ## Allows for multiple elements to be toggled
-  for (let el of V.currentDb.show) {
+  for (const el of V.currentDb.show) {
     el.style.setProperty("display", "block");
   }
-  for (let el of V.currentDb.hide) {
+  for (const el of V.currentDb.hide) {
     el.style.setProperty("display", "none");
   }
   submitWordSearchForm();

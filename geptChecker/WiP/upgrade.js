@@ -164,7 +164,7 @@ function jumpOutOfMark() {
   const cursorRange = window.getSelection().getRangeAt(0);
   let focusEl = cursorRange.startContainer;
   focusEl = (focusEl.parentElement.tagName === "MARK") ? focusEl.parentElement : focusEl.parentElement.parentElement;
-  let siblingWord = (V.cursorIncrement === -1) ? focusEl.previousElementSibling : focusEl.nextElementSibling;
+  // let siblingWord = (V.cursorIncrement === -1) ? focusEl.previousElementSibling : focusEl.nextElementSibling;
   if (V.cursorIncrement === -1) {
     const siblingWord = focusEl.previousElementSibling;
     // setCursorBefore(siblingWord);
@@ -183,8 +183,8 @@ function normalizeTextForClipboard(e) {
     e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
   }
   const sel = document.getSelection();
-  let copiedText = document.createRange();
-  copiedText = sel.getRangeAt(0);
+  // let copiedText = document.createRange();
+  let copiedText = sel.getRangeAt(0);
   let normalizedText = getCopyWithoutMarks(copiedText);
   normalizedText = normalizedText.innerText;
   normalizedText = EOLsToNewlines(normalizedText);
@@ -204,16 +204,12 @@ function normalizeTextForClipboard(e) {
 
 function EOLsToNewlines(text) {
   const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
-  // const noEOLs = text.replace(EOL.text, "\n");
   const noEOLs = text.replace(re, "\n");
-  debug()
-  // debug(noEOLs)
-  // return text.replace(EOL.text, "\n");
   return noEOLs;
 }
 
 function newlinesToEOLs(text) {
-  return text.replace("\n", EOL.text);
+  return text.replace("\n", " " + EOL.text + " ");
 }
 
 function forceUpdateInputDiv() {
