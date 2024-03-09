@@ -1,5 +1,6 @@
 /*
-Fixed:
+Plan:
+If in-place editing stable, remove 2-col to simplify
 
 */
 // ## SETUP ############################################
@@ -533,7 +534,8 @@ function hoverEffects(e) {
   // const tooltip = el.firstElementChild;
   if (el.dataset.entry || el.parentElement.dataset.entry) {
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
-    HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
+    // HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
+    HTM.finalInfoDiv.innerHTML = (V.isInPlaceEditing) ? displayEntryInfo(ref) : displayEntryInfo_2col(ref);
     HTM.finalInfoDiv.style.display = "flex";
   }
 
@@ -557,7 +559,47 @@ function hoverEffects(e) {
   }
 }
 
-function displayEntryInfo(ref) {
+function displayEntryInfo(refs) {
+  // debug(refs, refs.split(" "))
+  /*
+GET LEVEL FROM ID
+getLevelDetails(levelArr)
+  */
+  html = "";
+  for (ref of refs.split(" ")) {
+    const [id, normalizedWord] = ref.split(":");
+    const entry = getDbEntry(id);
+    // debug(entry)
+    const [levelArr, levelNum, levelClass] = getLevelDetails(entry[C.LEVEL]);
+    // const levelClass = "dummy"
+    // console.log("display entry info>",ref, id, normalizedWord,entry)
+    let lemma = "";
+    if (entry[C.POS] !== "unknown") {
+      lemma = (normalizedWord && normalizedWord !== entry[C.LEMMA]) ? `${normalizedWord} (${entry[C.LEMMA]})` : entry[C.LEMMA];
+      lemma = `<strong>${lemma}</strong>: `;
+    }
+    let level;
+    // ## If word is offlist, use its classification (digit/name, etc.) as level
+    if (id < 0) {
+      level = entry[C.POS];
+    } else {
+      let level_arr = entry[C.LEVEL];
+      level = V.level_subs[level_arr[0]];
+      if (getAwlSublist(level_arr) >= 0) {
+        level += `; ${V.level_subs[level_arr[1]]}`;
+      }
+    }
+    level = `<em>${level}</em>`;
+    const pos = `[${expandPos(entry)}]`;
+    let [notes, awl_notes] = getNotes(entry);
+    // const html = `${level}<span>${lemma}${pos}${notes}${awl_notes}</span>`;
+    html += `<div class="word-detail ${levelClass}">${level}<br><span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
+  }
+  return html;
+}
+
+function displayEntryInfo_2col(ref) {
+  debug(ref, ref.split(" "))
   const [id, normalizedWord] = ref.split(":");
   const entry = getDbEntry(id);
   // console.log("display entry info>",ref, id, normalizedWord,entry)
@@ -733,7 +775,13 @@ function processText(rawText) {
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
   const [resultsAsTextArr, wordCount] = pushLookups(flatTextArr);
-  const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
+  // const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
+  let resultsAsHTML;
+  if (V.isInPlaceEditing) {
+    resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
+  } else {
+    resultsAsHTML = buildMarkupAsHTML_2col(resultsAsTextArr) + "<span> </span>";
+  }
   // debug(resultsAsHTML)
   const repeatsAsHTML = buildRepeatList(wordCount);
   return [resultsAsHTML, repeatsAsHTML, wordCount];
@@ -1128,6 +1176,18 @@ function buildMarkupAsHTML(textArr) {
   // debug(textArr)
   /* ## textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]]
   for each word, repeat the raw-word for each match, but with different interpretations
+
+  For each word:
+	gather levels of all matches
+	if levels are all the same
+		DON'T display underline
+	else
+		display underline
+	make word the colour of the LOWEST level
+	add as many sections to data-entry
+	*update displayEntryInfo to deal with multiple entries
+	*if approved; remove support for <mark>?
+
   */
   let htmlString = "";
   let isFirstWord = true;
@@ -1143,20 +1203,67 @@ function buildMarkupAsHTML(textArr) {
     isFirstWord = false;
     // ## duplicateCount = running total; totalRepeats = total
     let matchCount = 0;
+    let listOfMatches = [];
     for (const [id, duplicateCount] of matches) {
         const match = getDbEntry(id);
-        const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-        const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
-        const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(id, duplicateCount, ignoreRepeats);
-        rawWord = insertCursorInHTML(matchCount, wordIndex, escapeHTMLentities(rawWord));
-        const localWord = highlightAwlWord(levelArr, rawWord);
-        htmlString += createWordInHTML(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches);
+        // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+        listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
         matchCount++;
         wasEOL = false;
     }
     wordIndex++;
+    const groupedWord = getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace);
+    // debug(groupedWord)
+    htmlString += groupedWord;
+
+    // debug(word, tmp_matchesInfo, getSortedMatchesInfo(tmp_matchesInfo))
   }
   return htmlString;
+}
+
+function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
+  const [[targetLemma, targetID, targetLevel], levelsAreIdentical, isMultipleMatch] = getSortedMatchesInfo(listOfMatches);
+  // debug(targetLemma, listOfMatches, [targetLemma, targetID, targetLevel], levelsAreIdentical)
+  const match = getDbEntry(targetID);
+  const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+  const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+  const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(targetID, listOfMatches.length, ignoreRepeats);
+  rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
+  const localWord = highlightAwlWord(levelArr, rawWord);
+  const listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
+  groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch);
+  return groupedWord;
+}
+
+function createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch) {
+  let showAsMultiple = "";
+  if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same": " multi-diff";
+  let displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  return displayWord;
+}
+function getSortedMatchesInfo(matches) {
+  /* given a list of matches in this format: ['given', 3118, 0],['given', 3119, 2]]
+  i.e. [lemma, id, level]
+  sort this list by level, lowest first
+  return the lowest item & a flag specifying if matches all have same level
+  REASON: the item to display should be the lowest level one
+  also: it will not be marked as having multiple matches if they are all the same level
+  */
+  // const sorted = matches.sort((a, b) => a[2] - b[2]);
+  // const lowest = sorted[0];
+  // const levels = sorted.map(el => el[1]);
+  // const areSame = levels.every(el => el === levels[0]);
+  const isMultipleMatch = (matches.length > 1);
+  let lowest = matches[0];
+  let areSame = true;
+  if (isMultipleMatch) {
+    let sorted = matches.sort((a, b) => a[2] - b[2]);
+    lowest = sorted[0];
+    let levels = sorted.map(el => el[2]);
+    areSame = levels.every(el => el === levels[0]);
+  }
+  // debug(isMultipleMatch, lowest, areSame)
+  return [lowest, areSame, isMultipleMatch];
 }
 
 function renderEOLsAsHTML(word, htmlString, wasEOL) {
@@ -1166,15 +1273,6 @@ function renderEOLsAsHTML(word, htmlString, wasEOL) {
     wasEOL = true;
   }
   return [isEOL, wasEOL, htmlString];
-}
-
-function createWordInHTML(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches) {
-  let displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
-  if (matchCount > 0) {
-    if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
-    displayWord = "<mark>" + displayWord + "</mark>";
-  }
-  return displayWord;
 }
 
 function insertCursorInHTML(matchCount, wordIndex, rawWord) {
@@ -1203,9 +1301,71 @@ function getDuplicateDetails(id, duplicateCount, ignoreRepeats) {
 }
 
 function getLevelDetails(levelArr) {
-  const levelNum = levelArr[0];
+  // const levelNum = levelArr[0];
+  const levelNum = getLevelNum(levelArr);
   const levelClass = "level-" + getLevelPrefix(levelNum);
   return [levelArr, levelNum, levelClass];
+}
+
+function getLevelNum(levelArr) {
+  return levelArr[0];
+}
+
+function escapeHTMLentities(text) {
+  return text.replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function getLevelPrefix(level_num) {
+  let level = V.level_subs[level_num];
+  if (V.isKids && level_num < V.OFFLIST) level = "k";
+  return level[0];
+}
+
+
+
+function buildMarkupAsHTML_2col(textArr) {
+  /* ## textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]]
+  for each word, repeat the raw-word for each match, but with different interpretations
+  */
+  let htmlString = "";
+  let isFirstWord = true;
+  let wasEOL = false;
+  let isEOL = false;
+  let wordIndex = 0;
+  for (let [word, rawWord, matches] of textArr) {
+    // debug("wordInfo for:", word, matches);
+    [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
+    if (isEOL || !word || !matches[0]) continue;
+    const isContraction = getDbEntry(matches[0][0])[2] == "contraction";
+    const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
+    isFirstWord = false;
+    // ## duplicateCount = running total; totalRepeats = total
+    let matchCount = 0;
+    for (const [id, duplicateCount] of matches) {
+        const match = getDbEntry(id);
+        const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+        const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+        const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(id, duplicateCount, ignoreRepeats);
+        rawWord = insertCursorInHTML(matchCount, wordIndex, escapeHTMLentities(rawWord));
+        const localWord = highlightAwlWord(levelArr, rawWord);
+        htmlString += createWordInHTML_2col(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches);
+        matchCount++;
+        wasEOL = false;
+    }
+    wordIndex++;
+  }
+  return htmlString;
+}
+
+function createWordInHTML_2col(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches) {
+  let displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  if (matchCount > 0) {
+    if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
+    displayWord = "<mark>" + displayWord + "</mark>";
+  }
+  return displayWord;
 }
 
 // function buildMarkupAsHTML(textArr) {
@@ -1277,18 +1437,6 @@ function getLevelDetails(levelArr) {
 //   // htmlString = "<p>" + htmlString + "</p>";
 //   return htmlString;
 // }
-
-function escapeHTMLentities(text) {
-  return text.replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function getLevelPrefix(level_num) {
-  let level = V.level_subs[level_num];
-  if (V.isKids && level_num < V.OFFLIST) level = "k";
-  return level[0];
-}
 
 function buildRepeatList(wordCount) {
   let countReps = 0;
@@ -1424,9 +1572,7 @@ function changeRefresh(e) {
 }
 
 function setRefreshButton() {
-  // HTM.toggleRefresh.value = (V.isAutoRefresh) ? "1" : "0";
   if (V.isAutoRefresh || isFirstTab()) {
-    // if (!HTM.selectRefresh.firstElementChild.disabled) HTM.selectRefresh.selectedIndex = 0;
     HTM.selectRefresh.selectedIndex = 0;
     hideRefreshButton();
   } else {
@@ -1456,8 +1602,10 @@ function setEditingMode(e) {
     V.isAutoRefresh = false;
     setRefreshButton();
     forceUpdateInputDiv();
+    HTM.finalInfoDiv.classList.remove("word-detail");
   } else {
     HTM.workingDiv.innerText = convertMarkupToText(HTM.workingDiv);
+    HTM.finalInfoDiv.classList.add("word-detail");
   }
   setRefreshModeOption();
   addEditModeListeners();
@@ -1487,11 +1635,9 @@ function convertMarkupToText(el) {
 }
 
 function toggleFinalTextDiv() {
-  // HTM.finalTextDiv.style.flexGrow = (V.isInPlaceEditing) ? "0" : "1";
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.style.display = "none";
   } else {
-    // HTM.finalTextDiv.style.display = "flex";
     HTM.finalTextDiv.style.display = "block";
     // HTM.finalTextDiv.style.flexGrow = 1;
   }

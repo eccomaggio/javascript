@@ -87,8 +87,8 @@ const C = {
   // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
   DEFAULT_db: 0,
   DEFAULT_tab: 0,
-  DEFAULT_is_autorefresh: true,
-  DEFAULT_is_inplace_edit: false,
+  DEFAULT_is_autorefresh: false,
+  DEFAULT_is_inplace_edit: true,
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],

@@ -153,9 +153,8 @@
     /* #t2_repeats_list, */
     #t1_results_text,
     #t2_final_text,
-    #t2_raw_text,
-    #t2_final_info {
-      /* font-size: var(--font-size); */
+    /* #t2_final_info, */
+    #t2_raw_text {
       flex-grow: 1;
     }
 
@@ -165,7 +164,6 @@
     #t2_raw_text,
     #t2_final_info {
       font-size: var(--font-size);
-      /* flex-grow: 1; */
     }
 
 
@@ -199,6 +197,7 @@
     #t2_raw_text {
       margin: 10px;
       white-space: pre-wrap;
+      line-height: 1.5;
     }
 
     [placeholder]:empty::before {
@@ -231,6 +230,25 @@
     }
 
     #t2_final_info {
+      /* background-color: var(--light);
+      border-radius: 5px;
+      box-shadow: 5px 5px 5px grey; */
+      /* padding: 6px; */
+      /* min-height: 40px;
+      max-height: 90px; */
+      /* min-height: 40px;
+      max-height: 120px; */
+      width: 90%;
+      /* flex-shrink: 1; */
+      display: flex;
+      flex-direction: column;
+      /* align-items: center;
+      justify-content: center;
+      text-align: center; */
+      z-index: 2;
+    }
+
+    /* #t2_final_info {
       background-color: var(--light);
       border-radius: 5px;
       box-shadow: 5px 5px 5px grey;
@@ -245,7 +263,7 @@
       justify-content: center;
       text-align: center;
       z-index: 2;
-    }
+    } */
 
     #t1_results {
       flex: 100%;
@@ -315,12 +333,6 @@
       font-weight: bold;
     }
 
-    td.level-o,
-    td.level-h,
-    td.level-i {
-      font-weight: normal;
-    }
-
     .level-e,
     .level-k {
       color: var(--elem);
@@ -329,8 +341,72 @@
     /* contractions / numbers (digits) */
     .level-c,
     .level-d {
-      color: salmon;
+      color: var(--misc);
     }
+
+    td.level-o,
+    td.level-h,
+    td.level-i {
+      font-weight: normal;
+    }
+
+    .word-detail {
+      /* color: white; */
+      background-color: var(--light);
+      border-radius: 5px;
+      box-shadow: 5px 5px 5px grey;
+      padding: 3px;
+      min-height: 30px;
+      max-height: 90px;
+      width: 100%;
+      flex-shrink: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 2;
+      margin-bottom: 5px;
+    }
+
+    #t2_final_info > div {
+      color: white;
+    }
+
+    .word-detail:last-child {
+      margin-bottom: 0px;
+    }
+
+    #t2_final_info > div.level-o {
+      background-color: var(--offlist);
+    }
+
+    #t2_final_info > div.level-h {
+      background-color: var(--high);
+    }
+
+    #t2_final_info > div.level-i {
+      background-color: var(--int);
+    }
+
+    #t2_final_info > div.level-e,
+    #t2_final_info > div.level-k {
+      background-color: var(--elem);
+    }
+
+    #t2_final_info > div.level-c,
+    #t2_final_info > div.level-d {
+      background-color: var(--misc);
+    }
+
+
+    .multi-diff {
+      text-decoration: underline double;
+    }
+
+    /* .multi-same {
+      text-decoration: underline dotted;
+    } */
 
     .show-pos {
       color: dimgray;
@@ -470,13 +546,13 @@
       font-size: xx-small;
     }
 
-    .awl-note {
+    /* .awl-note {
       color:gray;
     }
 
     .awl-headword {
       color: var(--dark);
-    }
+    } */
 
     /* ## Tab2 (text) lookup ############################################## */
 
