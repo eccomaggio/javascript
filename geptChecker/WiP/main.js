@@ -729,7 +729,7 @@ function grabRevisedText() {
   return revisedText;
 }
 
-function grabWorkingDivText(){
+function grabWorkingDivText() {
   let currentText;
   if (V.isInPlaceEditing) {
     currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
@@ -1152,12 +1152,18 @@ function checkRegAdv(word) {
 }
 
 function winnowPoS(roughMatches, posArr) {
-  // ## returns array, empty or otherwise
+  /*
+  Returns possible derivations as array, or empty array
+  */
   let localMatches = [];
   for (const id of roughMatches) {
     const match = getDbEntry(id);
     for (const pos of posArr) {
-      if (match && match[C.POS].includes(pos)) localMatches.push(id);
+      if (match && match[C.POS].includes(pos)) {
+        const tmp = LOOKUP.falseDerivations[pos];
+        const isFalseDerivation = (tmp) ? tmp.includes(match[C.LEMMA]) : false;
+        if (!isFalseDerivation) localMatches.push(id);
+      }
     }
   }
   return localMatches;
@@ -1178,15 +1184,15 @@ function buildMarkupAsHTML(textArr) {
   for each word, repeat the raw-word for each match, but with different interpretations
 
   For each word:
-	gather levels of all matches
-	if levels are all the same
-		DON'T display underline
-	else
-		display underline
-	make word the colour of the LOWEST level
-	add as many sections to data-entry
-	*update displayEntryInfo to deal with multiple entries
-	*if approved; remove support for <mark>?
+  gather levels of all matches
+  if levels are all the same
+    DON'T display underline
+  else
+    display underline
+  make word the colour of the LOWEST level
+  add as many sections to data-entry
+  *update displayEntryInfo to deal with multiple entries
+  *if approved; remove support for <mark>?
 
   */
   let htmlString = "";
@@ -1205,11 +1211,11 @@ function buildMarkupAsHTML(textArr) {
     let matchCount = 0;
     let listOfMatches = [];
     for (const [id, duplicateCount] of matches) {
-        const match = getDbEntry(id);
-        // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-        listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
-        matchCount++;
-        wasEOL = false;
+      const match = getDbEntry(id);
+      // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+      listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
+      matchCount++;
+      wasEOL = false;
     }
     wordIndex++;
     const groupedWord = getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace);
@@ -1237,7 +1243,7 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
 
 function createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch) {
   let showAsMultiple = "";
-  if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same": " multi-diff";
+  if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
   let displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
@@ -1344,15 +1350,15 @@ function buildMarkupAsHTML_2col(textArr) {
     // ## duplicateCount = running total; totalRepeats = total
     let matchCount = 0;
     for (const [id, duplicateCount] of matches) {
-        const match = getDbEntry(id);
-        const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-        const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
-        const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(id, duplicateCount, ignoreRepeats);
-        rawWord = insertCursorInHTML(matchCount, wordIndex, escapeHTMLentities(rawWord));
-        const localWord = highlightAwlWord(levelArr, rawWord);
-        htmlString += createWordInHTML_2col(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches);
-        matchCount++;
-        wasEOL = false;
+      const match = getDbEntry(id);
+      const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+      const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+      const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(id, duplicateCount, ignoreRepeats);
+      rawWord = insertCursorInHTML(matchCount, wordIndex, escapeHTMLentities(rawWord));
+      const localWord = highlightAwlWord(levelArr, rawWord);
+      htmlString += createWordInHTML_2col(leaveSpace, id, word, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, matchCount, matches);
+      matchCount++;
+      wasEOL = false;
     }
     wordIndex++;
   }
@@ -1877,10 +1883,10 @@ function safeStyleDisplay(el, displayState = "none") {
 
 function setTabHead() {
   let mode = (isFirstTab()) ? "none" : "block";
-    HTM.selectRefresh.style.display = mode;
-    HTM.selectEditMode.style.display = mode;
-    HTM.backupButton.style.display = mode;
-    HTM.backupSave.style.display = mode;
+  HTM.selectRefresh.style.display = mode;
+  HTM.selectEditMode.style.display = mode;
+  HTM.backupButton.style.display = mode;
+  HTM.backupSave.style.display = mode;
 }
 
 function isFirstTab() {

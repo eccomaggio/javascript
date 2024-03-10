@@ -713,6 +713,12 @@ const LOOKUP = {
     "&"
   ],
 
+  // Disallow impossible derivations
+  // e.g. hardly is not derived from adj: hard
+  falseDerivations: {
+    j: ["in", "out", "late", "hard"],
+  },
+
   // setOfCommonNames: new Set([
   personalNames: [
     "aaron",
