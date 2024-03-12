@@ -680,6 +680,8 @@ else (autorefresh):
       updateInputDiv
   */
   if (V.isAutoRefresh || V.refreshRequested) {
+    V.tallyOfRepeats = {};
+    V.repeats = new Set();
     let revisedText = grabRevisedText();
     if (revisedText) {
       const [
@@ -1188,7 +1190,6 @@ function buildMarkupAsHTML(textArr) {
     display underline
   make word the colour of the LOWEST level
   add as many sections to data-entry
-  *update displayEntryInfo to deal with multiple entries
   *if approved; remove support for <mark>?
 
   */
@@ -1380,117 +1381,6 @@ function createWordInHTML_2col(leaveSpace, id, word, levelClass, relatedWordsCla
   return displayWord;
 }
 
-// function buildMarkupAsHTML(textArr) {
-//   // debug(textArr)
-//   /* ## textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]]
-//   for each word, repeat the raw-word for each match, but with different interpretations
-//   */
-//   let htmlString = "";
-//   let isFirstWord = true;
-//   let wasEOL = false;
-//   let wordIndex = 0;
-//   for (let [word, rawWord, wordInfo] of textArr) {
-//     debug("wordInfo for:", word, wordInfo)
-//     if (word === EOL.text) {
-//       htmlString += EOL.HTMLtext;
-//       wasEOL = true;
-//       continue;
-//     }
-//     rawWord = escapeHTMLentities(rawWord);
-//     let leaveSpace = " ";
-//     if ((wordInfo[0] && getDbEntry(wordInfo[0][0])[2] == "contraction") || isFirstWord || wasEOL) {
-//       leaveSpace = "";
-//     }
-//     isFirstWord = false;
-//     // ## duplicateCount = running total; totalRepeats = total
-//     const matches = wordInfo;
-//     let matchCount = 0;
-//     for (const [id, count] of matches) {
-//       if (!word) continue;
-//       const match = getDbEntry(id);
-//       let displayWord = "";
-//       const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-//       const levelArr = match[C.LEVEL];
-//       const levelNum = levelArr[0];
-//       const levelClass = "level-" + getLevelPrefix(levelNum);
-//       const totalRepeats = V.wordStats[id];
-//       let duplicateClass = "";
-//       const duplicateCount = count;
-//       const relatedWordsClass = ` all_${id}`;
-//       let anchor = "";
-//       let showDuplicateCount = "";
-//       // debug(totalRepeats, match[C.LEMMA], ignoreRepeats)
-//       if (totalRepeats > 1 && !ignoreRepeats) {
-//         duplicateClass = " duplicate";
-//         // showDuplicateCount = "<sup>" + totalRepeats + "</sup>";
-//         showDuplicateCount = ' data-reps="' + totalRepeats + '"';
-//         anchor = ` id='all_${id}_${duplicateCount}'`;
-//       }
-//       // if (isWithoutCursor && V.isInPlaceEditing) {
-//       if (V.isInPlaceEditing && matchCount === 0) {
-//         const [word_i, char_i] = V.cursorPosInTextArr;
-//         if (wordIndex === word_i) {
-//           rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
-//         }
-//       }
-//       let localWord = highlightAwlWord(levelArr, rawWord);
-//       displayWord = `${leaveSpace}<span data-entry="${id}:${word}" class="${levelClass}${relatedWordsClass}${duplicateClass}"${showDuplicateCount}${anchor}>${localWord}</span>`;
-//       if (matchCount > 0) {
-//         if (matchCount < matches.length) displayWord = " /" + (leaveSpace ? "" : " ") + displayWord;
-//         displayWord = "<mark>" + displayWord + "</mark>";
-//       }
-//       htmlString += displayWord;
-//       matchCount++;
-//       wasEOL = false;
-//     }
-//     wordIndex++;
-//   }
-//   // ## add this to even up </p><p> added in in lieu of EOLs
-//   // htmlString = "<p>" + htmlString + "</p>";
-//   return htmlString;
-// }
-
-// function buildRepeatList(wordCount) {
-//   let countReps = 0;
-//   let listOfRepeats = "";
-//   if (!wordCount) {
-//     V.wordStats = {};
-//   } else {
-//     for (const key of Object.keys(V.wordStats).sort(compareByLemma)) {
-//       const entry = getDbEntry(key);
-//       const word = entry[C.LEMMA];
-//       debug("in repeat list",word)
-//       const level_arr = entry[C.LEVEL];
-//       if (
-//         V.wordStats[key] > 1 &&
-//         !LOOKUP.repeatableWords.includes(word) &&
-//         !LOOKUP.symbols.includes(word)
-//       ) {
-//         countReps++;
-//         let anchors = "";
-//         for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
-//           let display = repetition;
-//           let displayClass = 'class="anchors" ';
-//           if (repetition === 1) {
-//             display = highlightAwlWord(level_arr, word);
-//             displayClass = `class="level-${getLevelPrefix(level_arr[0])}" `;
-//           }
-//           anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${key}_${repetition}'); return false;">${display}</a>`;
-//         }
-//         listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
-//       }
-//     }
-//     let repeatsHeader;
-//     if (countReps) {
-//       repeatsHeader = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p>`
-//       listOfRepeats = `${repeatsHeader}<div id='repeats'>${listOfRepeats}</div>`;
-//     } else {
-//       listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words.</strong></p>";
-//     }
-//   }
-//   return listOfRepeats
-// }
-
 function buildRepeatList(wordCount) {
   let countReps = 0;
   let listOfRepeats = "";
@@ -1502,30 +1392,6 @@ function buildRepeatList(wordCount) {
     the id with the lowest level is linked/displayed
     This fits with buildMarkupAsHTML()
     */
-    // debug("!!", V.repeats)
-    // let dedupedMapOfRepeatedLemmas = new Map();
-    // for (const id of Object.keys(V.wordStats).sort(compareByLemma)) {
-    //   const entry = getDbEntry(id);
-    //   const lemma = entry[C.LEMMA];
-    //   /*
-    //   Check if word is in list; if not, add
-    //   if already in list, check its level
-    //   if level is higher than current entry, replace it with current entry
-    //   */
-    //   const mapEntry = dedupedMapOfRepeatedLemmas.get(lemma);
-    //   const isInMap = !(typeof mapEntry === 'undefined');
-    //   if (!isInMap || mapEntry[C.LEVEL][0] > entry[C.LEVEL][0]) {
-    //     dedupedMapOfRepeatedLemmas.set(lemma, entry);
-    //   }
-    // }
-    // debug(dedupedMapOfRepeatedLemmas)
-    // const repeatsByID = new Map();
-    // dedupedMapOfRepeatedLemmas.forEach(el => repeatsByID.set(el[C.ID],el));
-    // debug(repeatsByID)
-    // dedupedMapOfRepeatedLemmas.clear();
-    // for (const [id, entry] of new Map(...V.repeats.entries()).sort()) {
-    // const sortedRepeats = new Map(Array.from(V.repeats).sort())
-    // for (const [id, entry] of V.repeats.entries()) {
     for (const el of [...V.repeats].sort()) {
       const [word, id] = el.split(":");
       const entry = getDbEntry(id);
