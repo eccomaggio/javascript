@@ -245,6 +245,7 @@
       /* align-items: center;
       justify-content: center;
       text-align: center; */
+      padding-left: 5px;
       z-index: 2;
     }
 
@@ -596,6 +597,11 @@
 
     .awl-word {
       border-bottom: 1px dotted;
+    }
+
+    .instructions {
+      color: var(--dark);
+      font-size: small;
     }
 
     .debug {

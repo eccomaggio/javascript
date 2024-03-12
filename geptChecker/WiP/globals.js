@@ -108,6 +108,9 @@ let V = {
   offlistDb: [["unused"]],
   offlistIndex: 1,
   wordStats: {},
+  // repeats: new Map(),
+  repeats: new Set(),
+  tallyOfRepeats: {},
   // isAutoRefresh: C.DEFAULT_refresh,
   // isInPlaceEditing: C.DEFAULT_edit,
   isAutoRefresh: false,
@@ -713,11 +716,9 @@ const LOOKUP = {
     "&"
   ],
 
-  // Disallow impossible derivations
+  // List of irregular lexical items (NOT regular derivations)
   // e.g. hardly is not derived from adj: hard
-  falseDerivations: {
-    j: ["in", "out", "late", "hard"],
-  },
+  falseDerivations: ["inner", "outer", "lately", "hardly"],
 
   // setOfCommonNames: new Set([
   personalNames: [

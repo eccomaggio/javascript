@@ -116,6 +116,7 @@ function addEditModeListeners() {
 }
 
 function setHoverEffects() {
+  // HTM.repeatsList.addEventListener("mouseover", hoverEffects);
   if (V.isInPlaceEditing) {
     HTM.finalTextDiv.removeEventListener("mouseover", hoverEffects);
     HTM.finalTextDiv.removeEventListener("mouseout", hoverEffects);
@@ -531,10 +532,8 @@ function hoverEffects(e) {
   const el = e.target;
   if (typeof el.classList === 'undefined') return;
   // ## 1) show information text
-  // const tooltip = el.firstElementChild;
   if (el.dataset.entry || el.parentElement.dataset.entry) {
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
-    // HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
     HTM.finalInfoDiv.innerHTML = (V.isInPlaceEditing) ? displayEntryInfo(ref) : displayEntryInfo_2col(ref);
     HTM.finalInfoDiv.style.display = "flex";
   }
@@ -979,7 +978,7 @@ function lookupWord([word, rawWord]) {
     word = rawWord;
   }
   let matches = dbLookup(word);
-  matches = lookupDerivations([word, rawWord], matches);
+  if (!matches) matches = lookupDerivations([word, rawWord], matches);
   return matches;
 }
 
@@ -1001,7 +1000,9 @@ function lookupDerivations([word, rawWord], matches = []) {
   Final-s =  families tries potatoes scarves crises boxes dogs
   regular ADVs =  happily clumsily annually finely sensibly sadly automatically
   */
-
+  if (LOOKUP.falseDerivations.includes(word)) {
+    return matches;
+  }
   for (const guess of [
     checkDigits,
     checkUnknown,
@@ -1026,13 +1027,11 @@ function lookupDerivations([word, rawWord], matches = []) {
       break;
     }
   }
-
   // ## -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   const result = checkFinalS(word);
   if (result) {
     matches.push(...result);
   }
-
   if (!matches.length) {
     matches.push(markOfflist(word, "offlist"));
   }
@@ -1160,9 +1159,7 @@ function winnowPoS(roughMatches, posArr) {
     const match = getDbEntry(id);
     for (const pos of posArr) {
       if (match && match[C.POS].includes(pos)) {
-        const tmp = LOOKUP.falseDerivations[pos];
-        const isFalseDerivation = (tmp) ? tmp.includes(match[C.LEMMA]) : false;
-        if (!isFalseDerivation) localMatches.push(id);
+        localMatches.push(id);
       }
     }
   }
@@ -1211,6 +1208,7 @@ function buildMarkupAsHTML(textArr) {
     let matchCount = 0;
     let listOfMatches = [];
     for (const [id, duplicateCount] of matches) {
+      // debug(word, id, matchCount)
       const match = getDbEntry(id);
       // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
       listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
@@ -1231,13 +1229,16 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   const [[targetLemma, targetID, targetLevel], levelsAreIdentical, isMultipleMatch] = getSortedMatchesInfo(listOfMatches);
   // debug(targetLemma, listOfMatches, [targetLemma, targetID, targetLevel], levelsAreIdentical)
   const match = getDbEntry(targetID);
+  V.repeats.add(targetLemma + ":" + targetID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
   const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
-  const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(targetID, listOfMatches.length, ignoreRepeats);
+  // const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(targetID, listOfMatches.length, ignoreRepeats);
+  const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(targetID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
   const listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
   groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch);
+  // if (isMultipleMatch) debug(targetLemma, targetID, anchor)
   return groupedWord;
 }
 
@@ -1291,17 +1292,22 @@ function insertCursorInHTML(matchCount, wordIndex, rawWord) {
   return rawWord;
 }
 
-function getDuplicateDetails(id, duplicateCount, ignoreRepeats) {
+function getDuplicateDetails(id, ignoreRepeats) {
   const totalRepeats = V.wordStats[id];
   let duplicateClass = "";
   let duplicateCountInfo = "";
   let anchor = "";
   const relatedWordsClass = `all_${id}`;
   if (totalRepeats > 1 && !ignoreRepeats) {
+    let tmp = V.tallyOfRepeats[id];
+    if (!tmp) {
+      V.tallyOfRepeats[id] = 1;
+    } else V.tallyOfRepeats[id] += 1;
+    // debug(getDbEntry(id)[C.LEMMA], id, V.tallyOfRepeats[id])
     duplicateClass = " duplicate";
     duplicateCountInfo = ' data-reps="' + totalRepeats + '"';
     // anchor = ` id='all_${id}_${duplicateCount}'`;
-    anchor = ` id='${relatedWordsClass}_${duplicateCount}'`;
+    anchor = ` id='${relatedWordsClass}_${V.tallyOfRepeats[id]}'`;
   }
   return [" " + relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
 }
@@ -1444,33 +1450,104 @@ function createWordInHTML_2col(leaveSpace, id, word, levelClass, relatedWordsCla
 //   return htmlString;
 // }
 
+// function buildRepeatList(wordCount) {
+//   let countReps = 0;
+//   let listOfRepeats = "";
+//   if (!wordCount) {
+//     V.wordStats = {};
+//   } else {
+//     for (const key of Object.keys(V.wordStats).sort(compareByLemma)) {
+//       const entry = getDbEntry(key);
+//       const word = entry[C.LEMMA];
+//       debug("in repeat list",word)
+//       const level_arr = entry[C.LEVEL];
+//       if (
+//         V.wordStats[key] > 1 &&
+//         !LOOKUP.repeatableWords.includes(word) &&
+//         !LOOKUP.symbols.includes(word)
+//       ) {
+//         countReps++;
+//         let anchors = "";
+//         for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
+//           let display = repetition;
+//           let displayClass = 'class="anchors" ';
+//           if (repetition === 1) {
+//             display = highlightAwlWord(level_arr, word);
+//             displayClass = `class="level-${getLevelPrefix(level_arr[0])}" `;
+//           }
+//           anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${key}_${repetition}'); return false;">${display}</a>`;
+//         }
+//         listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
+//       }
+//     }
+//     let repeatsHeader;
+//     if (countReps) {
+//       repeatsHeader = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p>`
+//       listOfRepeats = `${repeatsHeader}<div id='repeats'>${listOfRepeats}</div>`;
+//     } else {
+//       listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words.</strong></p>";
+//     }
+//   }
+//   return listOfRepeats
+// }
+
 function buildRepeatList(wordCount) {
   let countReps = 0;
   let listOfRepeats = "";
   if (!wordCount) {
     V.wordStats = {};
   } else {
-    for (const key of Object.keys(V.wordStats).sort(compareByLemma)) {
-      const entry = getDbEntry(key);
-      const word = entry[C.LEMMA];
+    /* List of repeated lemmas
+    in line with display policy, if two lemmas are identical,
+    the id with the lowest level is linked/displayed
+    This fits with buildMarkupAsHTML()
+    */
+    // debug("!!", V.repeats)
+    // let dedupedMapOfRepeatedLemmas = new Map();
+    // for (const id of Object.keys(V.wordStats).sort(compareByLemma)) {
+    //   const entry = getDbEntry(id);
+    //   const lemma = entry[C.LEMMA];
+    //   /*
+    //   Check if word is in list; if not, add
+    //   if already in list, check its level
+    //   if level is higher than current entry, replace it with current entry
+    //   */
+    //   const mapEntry = dedupedMapOfRepeatedLemmas.get(lemma);
+    //   const isInMap = !(typeof mapEntry === 'undefined');
+    //   if (!isInMap || mapEntry[C.LEVEL][0] > entry[C.LEVEL][0]) {
+    //     dedupedMapOfRepeatedLemmas.set(lemma, entry);
+    //   }
+    // }
+    // debug(dedupedMapOfRepeatedLemmas)
+    // const repeatsByID = new Map();
+    // dedupedMapOfRepeatedLemmas.forEach(el => repeatsByID.set(el[C.ID],el));
+    // debug(repeatsByID)
+    // dedupedMapOfRepeatedLemmas.clear();
+    // for (const [id, entry] of new Map(...V.repeats.entries()).sort()) {
+    // const sortedRepeats = new Map(Array.from(V.repeats).sort())
+    // for (const [id, entry] of V.repeats.entries()) {
+    for (const el of [...V.repeats].sort()) {
+      const [word, id] = el.split(":");
+      const entry = getDbEntry(id);
+      // const word = entry[C.LEMMA];
       const level_arr = entry[C.LEVEL];
-      if (
-        V.wordStats[key] > 1 &&
-        !LOOKUP.repeatableWords.includes(word) &&
-        !LOOKUP.symbols.includes(word)
-      ) {
+      const isRepeated = V.wordStats[id] > 1;
+      const isRepeatable = !LOOKUP.repeatableWords.includes(word);
+      const isWord = !LOOKUP.symbols.includes(word);
+      // debug(word, id, V.wordStats[id], LOOKUP.repeatableWords.includes(word), LOOKUP.symbols.includes(word))
+      if (isRepeated && isRepeatable && isWord) {
         countReps++;
         let anchors = "";
-        for (let repetition = 1; repetition <= V.wordStats[key]; repetition++) {
+        for (let repetition = 1; repetition <= V.wordStats[id]; repetition++) {
           let display = repetition;
           let displayClass = 'class="anchors" ';
           if (repetition === 1) {
             display = highlightAwlWord(level_arr, word);
             displayClass = `class="level-${getLevelPrefix(level_arr[0])}" `;
           }
-          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${key}_${repetition}'); return false;">${display}</a>`;
+          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${repetition}'); return false;">${display}</a>`;
         }
-        listOfRepeats += `<p data-entry="${key}" class='duplicate all_${key} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
+        listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
       }
     }
     let repeatsHeader;
@@ -1512,6 +1589,8 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
+  HTM.finalLegend.innerHTML += `<div class='instructions'><ul><li><span class='multi-diff'>double underline</span> = multiple levels</li>${awlHelp}<li>superscript<sup>n</sup> = number of repetitions</li></ul></div>`;
 }
 
 function dbLookup(word) {
@@ -1532,11 +1611,14 @@ function findBaseForm(word, subs) {
   let localMatches = [];
   const candidates = new Set();
   const toSuffix = -(subs["_suffix"].length);
-  for (const key in subs) {
-    const i = -(key.length);
+  for (const derivedForm in subs) {
+    const i = -(derivedForm.length);
     const suffix = subs[word.slice(i)];
     if (suffix != undefined) {
-      candidates.add(word.slice(0, i) + suffix);
+      const candidate = word.slice(0,i) + suffix;
+      debug(word, candidate, derivedForm)
+      // candidates.add(word.slice(0, i) + suffix);
+      candidates.add(candidate);
     }
   }
   candidates.add(word.slice(0, toSuffix));
