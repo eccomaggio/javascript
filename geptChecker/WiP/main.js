@@ -927,6 +927,7 @@ function pushLookups(textArr) {
       for (const id of matches) {
         // ## do not check compounds (already checked)
         if (!id) continue;
+        // if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
         if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
         const match = getDbEntry(id);
         // ## don't count contractions as separate words
@@ -980,7 +981,7 @@ function lookupWord([word, rawWord]) {
     word = rawWord;
   }
   let matches = dbLookup(word);
-  if (!matches) matches = lookupDerivations([word, rawWord], matches);
+  if (!matches.length) matches = lookupDerivations([word, rawWord], matches);
   return matches;
 }
 
@@ -1482,8 +1483,7 @@ function findBaseForm(word, subs) {
     const suffix = subs[word.slice(i)];
     if (suffix != undefined) {
       const candidate = word.slice(0,i) + suffix;
-      debug(word, candidate, derivedForm)
-      // candidates.add(word.slice(0, i) + suffix);
+      // debug(word, candidate, derivedForm)
       candidates.add(candidate);
     }
   }

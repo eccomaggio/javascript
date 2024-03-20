@@ -68,7 +68,6 @@ pov_lookup = {
     "pron": "r",
     "int": "t",
     "inf": "f",
-    # '--': 'title',
     "--": "n",  # titles are listed as 'noun' in main GEPT wordlist
 }
 
@@ -309,7 +308,7 @@ def create_awl_list(awl_json, awl_tsv):
     return awl_list
 
 
-def add_gept_level(awl_list, gept_list):
+def consolidate_with_gept(awl_list, gept_list):
     """
     Add GEPT level to AWL entry (if word in GEPT list)
     """
@@ -344,7 +343,7 @@ def add_gept_level(awl_list, gept_list):
     return (awl_list, gept_list)
 
 
-def get_homonyms(list):
+def internal_check_homonyms(list):
     lemmas = {}
     for el in list:
         lemmas[el[LEMMA]] = 0
@@ -427,6 +426,7 @@ def create_additions_list(pos_corrections_filename, additions_filename):
 
 def minimize_pos(pos):
     if pos:
+        # print(">>>>>", pos)
         pos = pos.replace(".", "")
         pos = re.sub("[()/,]", " ", pos)
         pos = re.sub("\s{2,}", " ", pos).strip()
@@ -448,6 +448,12 @@ def save_list(list, out_filename, top="", tail=""):
             out_file.write(tail)
 
 
+def write_list_as_tsv(list, out_filename):
+    with open(os.path.join(os.getcwd(), out_filename), "w") as out_file:
+        tsv_writer = csv.writer(out_file, delimiter="\t", lineterminator="\n")
+        tsv_writer.writerows(list)
+
+
 # print(f"There are {count} AWL words in the GEPT wordlist")
 
 # print(gept_line)
@@ -460,7 +466,7 @@ if __name__ == "__main__":
     awl_tsv = "AWLallwords.tsv"
     awl_full_json = "AWLlist.full.json"
     awl_gept_json = "AWLlist.gept.json"
-    gept_json = "dbGEPT.json"
+    gept_json = "../dbGEPT.json"
     pos_corrections_filename = "awl_pos_corrections.json"
     awl_additions_filename = "awl_additions.json"
     new_gept_json = "dbGEPT.new.json"
@@ -468,7 +474,7 @@ if __name__ == "__main__":
     new_gept_javascript = "dbGEPT.new.js"
     new_awl_javascript = "dbAWL.new.js"
 
-    kids_json = "dbKids.json"
+    kids_json = "../dbKids.json"
     new_kids_javascript = "dbKids.new.js"
 
     #### Load the two wordlists (if awl wordlist json does not exist, create it)
@@ -481,13 +487,13 @@ if __name__ == "__main__":
 
     #### Add in mutual references between the two lists
     # awl_list = add_gept_level(awl_list,gept_list)
-    awl_list, gept_json = add_gept_level(awl_list, gept_list)
+    awl_list, gept_json = consolidate_with_gept(awl_list, gept_list)
     # save_list(awl_list, awl_full_json)
     # gept_list = deal_with_duplicates(gept_list, awl_list)
 
     #### Check for internal consistency (expand this) & generate stats
     # print("shared words:",len(shared_words))
-    # homonyms_in_gept = get_homonyms(gept_list)
+    # internal_check_homonyms = get_homonyms(gept_list)
     # print("homonyms in gept:", len(homonyms_in_gept))
 
     #### Make additions list if necessary
@@ -511,9 +517,9 @@ if __name__ == "__main__":
 
     #### Turn POS list into short format
     # print("!!!!!",minimize_pos("adj./adv./prep./noun"))
-    gept_list = [
-        [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in gept_list
-    ]
+    # gept_list = [
+    #     [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in gept_list
+    # ]
     awl_list = [
         [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in awl_list
     ]
@@ -533,9 +539,9 @@ if __name__ == "__main__":
     save_list(awl_list, new_awl_javascript, "function makeAWLdb() {\n return", "\n;}")
 
     kids_list = get_list_from_json(kids_json)
-    kids_list = [
-        [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in kids_list
-    ]
+    # kids_list = [
+    #     [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in kids_list
+    # ]
     save_list(
         kids_list, new_kids_javascript, "function makeKIDSdb() {\n return", "\n;}"
     )
