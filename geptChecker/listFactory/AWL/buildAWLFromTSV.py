@@ -431,7 +431,8 @@ def minimize_pos(pos):
         pos = re.sub("[()/,]", " ", pos)
         pos = re.sub("\s{2,}", " ", pos).strip()
         # return " ".join([pov_lookup[item] for item in pos.split(" ")])
-        return "".join([pov_lookup[item] for item in pos.split(" ")])
+        return "".join([pov_lookup[item] if pov_lookup.get(item) else item for item in pos.split(" ")])
+        # return "".join([pov_lookup[item] for item in pos.split(" ")])
 
 
 def get_list_from_json(json_filename):
@@ -517,9 +518,9 @@ if __name__ == "__main__":
 
     #### Turn POS list into short format
     # print("!!!!!",minimize_pos("adj./adv./prep./noun"))
-    # gept_list = [
-    #     [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in gept_list
-    # ]
+    gept_list = [
+        [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in gept_list
+    ]
     awl_list = [
         [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in awl_list
     ]
@@ -539,9 +540,9 @@ if __name__ == "__main__":
     save_list(awl_list, new_awl_javascript, "function makeAWLdb() {\n return", "\n;}")
 
     kids_list = get_list_from_json(kids_json)
-    # kids_list = [
-    #     [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in kids_list
-    # ]
+    kids_list = [
+        [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in kids_list
+    ]
     save_list(
         kids_list, new_kids_javascript, "function makeKIDSdb() {\n return", "\n;}"
     )
