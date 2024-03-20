@@ -181,6 +181,10 @@ POS = 1
 LEVEL = 2
 NOTES = 3
 
+GEPT_LEVEL = 0
+AWL_LEVEL = 1
+STATUS = 2
+
 SEP = '"'
 NOTES_SEP = "|"
 # ALPHA = "[a-zA-Z]"
@@ -189,14 +193,15 @@ shared_words = {}
 
 def create_awl_from_tsv(tsv_filename):
     awl_list = []
-    headword_corrections = {
-        "utilise": "utilize",
-        "maximise": "maximize",
-        "minimise": "minimize",
-        "licence": "license",
-        "labour": "labor",
-        "criteria": "criterion",
-    }
+    ## Not required due to newly Americanized wordlist
+    # headword_corrections = {
+    #     "utilise": "utilize",
+    #     "maximise": "maximize",
+    #     "minimise": "minimize",
+    #     "licence": "license",
+    #     "labour": "labor",
+    #     "criteria": "criterion",
+    # }
     # with open(os.path.join(os.getcwd(),tsv_filename), "r") as tsv_file, open(os.path.join(os.getcwd(),"out.json"),"w") as out_file:
     with open(os.path.join(os.getcwd(), tsv_filename), "r") as tsv_file:
         tsv_reader = csv.reader(tsv_file, delimiter="\t")
@@ -205,10 +210,10 @@ def create_awl_from_tsv(tsv_filename):
                 headword = row[0]
                 level = int(row[1])
                 entries = [headword]
-                try:
-                    headword = headword_corrections[headword]
-                except KeyError:
-                    pass
+                # try:
+                #     headword = headword_corrections[headword]
+                # except KeyError:
+                #     pass
                 try:
                     entries += row[2].split(",")
                 except IndexError:
@@ -304,7 +309,7 @@ def create_awl_list(awl_json, awl_tsv):
     awl_list = create_awl_from_tsv(awl_tsv)
     save_list(awl_list, awl_json)
     # pprint(AWL_list)
-    print(f"AWL contains {len(awl_list)} entries")
+    # print(f"AWL contains {len(awl_list)} entries")
     return awl_list
 
 
@@ -358,7 +363,7 @@ def internal_check_homonyms(list):
 
 def add_pos_corrections(list, pos_corrections_filename):
     """
-    AWL list & corrected list should same number of entries.
+    AWL list & corrected list should have the same number of entries. NOT TRUE (?problem)
     The corrected list is automatically compiled but manually corrected.
     This routine implements the manual corrections
     """
@@ -369,31 +374,26 @@ def add_pos_corrections(list, pos_corrections_filename):
     # print("compare master with corrections:",len(awl_list), len(awl_pos_corrections))
     # print("before:", list[6])
 
-    """ to debug: for some reason, the automated process drops
-{'conceptualisation', 'derivation', 'derivations', 'conceptualise', 'undefined', 'derive'}
-from the corrections list
-as the following 4 lines of test show:
-  """
-    # awl_set = set([el[0] for el in list])
-    # corr_set = set([el[0] for el in awl_pos_corrections])
-    # print("difference:",awl_set.difference(corr_set))
-    # sys.exit()
+#     """ to debug: for some reason, the automated process drops
+# {'conceptualisation', 'derivation', 'derivations', 'conceptualise', 'undefined', 'derive'}
+# from the corrections list
+# as the following 4 lines of test show:
+#   """
+#     # awl_set = set([el[0] for el in list])
+#     # corr_set = set([el[0] for el in awl_pos_corrections])
+#     # print("difference:",awl_set.difference(corr_set))
+#     # sys.exit()
     list_of_corrected_ids = []
     for i, entry in enumerate(list):
-        tmp = [el for el in awl_pos_corrections if el[LEMMA] == entry[LEMMA]]
+        entry_for_correction = [correction for correction in awl_pos_corrections if correction[LEMMA] == entry[LEMMA]]
         # print("test:",entry, tmp)
-        if not len(tmp):
+        if not len(entry_for_correction):
             print(entry)
             continue
-        # corrected_entry = awl_pos_corrections[i]
-        corrected_entry = tmp[0]
-        # if corrected_entry[LEMMA].find("estimat") != -1:
-        #   print("compare: id=", i, entry[:2], corrected_entry, entry[POS] != corrected_entry[POS])
+        corrected_entry = entry_for_correction[0]
         if entry[POS] != corrected_entry[POS]:
             list_of_corrected_ids += [i]
             entry[POS] = corrected_entry[POS]
-    # print("after:", list[6])
-    # sys.exit()
     return (list, list_of_corrected_ids)
 
 
@@ -409,6 +409,7 @@ def create_additions_list(pos_corrections_filename, additions_filename):
     2) words which have UK spelling -ise, but do not consistently include US -ize spelling)
 
     """
+    ## Now superceded as AWL list has been cleaned up & Americanized
     corrections = get_list_from_json(pos_corrections_filename)
     additions = []
     if os.path.exists(awl_additions_filename):
@@ -469,7 +470,7 @@ if __name__ == "__main__":
     awl_gept_json = "AWLlist.gept.json"
     gept_json = "../dbGEPT.json"
     pos_corrections_filename = "awl_pos_corrections.json"
-    awl_additions_filename = "awl_additions.json"
+    # awl_additions_filename = "awl_additions.json"
     new_gept_json = "dbGEPT.new.json"
     awl_for_gept_json = "dbAWL.new.json"
     new_gept_javascript = "dbGEPT.new.js"
@@ -498,22 +499,24 @@ if __name__ == "__main__":
     # print("homonyms in gept:", len(homonyms_in_gept))
 
     #### Make additions list if necessary
+    ## Now unnecessary as AWL list has been cleaned up & Americanized
     # make it so that it just loads the file if additions.json already exists.
-    infinitives_to_add = create_additions_list(
-        pos_corrections_filename, awl_additions_filename
-    )
+    # infinitives_to_add = create_additions_list(
+    #     pos_corrections_filename, awl_additions_filename
+    # )
 
     awl_raw_count = len(awl_list)
-    print(f"AWL list total: {awl_raw_count}; Corrected entries:")
+    print(f"AWL list total: {awl_raw_count}")
+    # print(f"AWL list total: {awl_raw_count}; Corrected entries:")
     # for i in corrected_ids:
     #   print(f"@{awl_list[i]}")
     awl_list = [
         entry for entry in awl_list if Pos.DEL.value not in entry[POS].split(" ")
     ]
-    awl_list = awl_list + infinitives_to_add
+    # awl_list = awl_list + infinitives_to_add
     awl_final_count = len(awl_list)
     print(
-        f"Total AWL list entries after thinning: {awl_final_count} ({awl_final_count - awl_raw_count} entries removed from total of {awl_final_count + awl_raw_count})"
+        f"Total AWL list entries after thinning (removing inflections, etc.): {awl_final_count} ({awl_final_count - awl_raw_count} entries removed from total of {awl_final_count + awl_raw_count})"
     )
 
     #### Turn POS list into short format
@@ -546,3 +549,16 @@ if __name__ == "__main__":
     save_list(
         kids_list, new_kids_javascript, "function makeKIDSdb() {\n return", "\n;}"
     )
+
+    # write_list_as_tsv(awl_list, "awl.tsv")
+    awl_entries_in_GEPT = [entry for entry in gept_list if entry[LEVEL][STATUS] == Pos.AWL_AND_GEPT.value]
+    full_awl_list = awl_list + awl_entries_in_GEPT
+    print("Total of GEPT list entries:", len(gept_list))
+    print("Total of AWL list entries not in GEPT:", len(awl_list))
+    print("Total of all AWL list entries:", len(full_awl_list))
+    # print(awl_entries_in_GEPT)
+    write_list_as_tsv(full_awl_list, "awl_full.tsv")
+    write_list_as_tsv(gept_list, "gept.tsv")
+    write_list_as_tsv(kids_list, "kids.tsv")
+
+
