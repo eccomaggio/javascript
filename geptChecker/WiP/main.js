@@ -981,10 +981,100 @@ function lookupWord([word, rawWord]) {
     word = rawWord;
   }
   let matches = dbLookup(word);
-  if (!matches.length) matches = lookupDerivations([word, rawWord], matches);
+  // ## EXECUTIVE DECISION: look up possible derivations even if word is found
+  // ## (to avoid, e.g. traveling being marked as int)
+  // if (!matches.length) matches = lookupDerivations([word, rawWord], matches);
+  matches = lookupDerivations([word, rawWord], matches);
+  // if (!matches.length) matches = checkForSpellingVariants([word, rawWord], matches);
+  checkForSpellingVariants([word, rawWord], matches);
   return matches;
 }
 
+function checkForSpellingVariants([word, rawWord], matches) {
+  // debug(word)
+  let matchID = checkVariantWords(word);
+  if (!matchID.length) matchID = checkVariantSuffixes(word);
+  if (!matchID.length) matchID = checkVariantLetters(word);
+  if (matchID.length) debug("Hurrah!", word, matchID)
+  else debug("Boooooooooo! not found:", word)
+  // debug(dbLookup(matchID))
+  return matchID;
+}
+
+function checkVariantWords(word) {
+  let match = "";
+  for (key of Object.keys(LOOKUP.variantWords)) {
+    const truncated = word.slice(0, key.length)
+    // debug(key, truncated)
+    if (key === truncated) {
+      match = LOOKUP.variantWords[truncated];
+      break;
+    }
+  }
+  const result = dbLookup(match);
+  debug(result)
+  return result;
+}
+
+function checkVariantSuffixes(word) {
+  let match;
+  if (word.endsWith("wards")) {
+    match = word.slice(0, -1);
+  }
+  else {
+    if (word.endsWith("s")) word = word.slice(0, -1);
+    else if (word.endsWith("d")) word = word.slice(0, -1);
+    else if (word.endsWith("ing")) word = word.slice(0, -3);
+    if (word.endsWith("e")) word = word.slice(0, -1);
+    for (key of Object.keys(LOOKUP.variantSuffixes)) {
+      const len = key.length;
+      const root = word.slice(0, -len);
+      const suffix = word.slice(-len);
+      if (key === suffix) {
+        match = root + LOOKUP.variantSuffixes[suffix];
+        break;
+      }
+    }
+  }
+  const result = dbLookup(match);
+  debug(result)
+  return result;
+}
+
+function checkVariantLetters(word) {
+  let match = [];
+  for (const [letters, replacement] of LOOKUP.variantLetters) {
+    match = replaceLetters(word, letters, replacement);
+    if (match) {
+      debug(match)
+      break;
+    }
+  }
+  return match;
+}
+
+function replaceLetters(word, letters, replacement) {
+  const re = new RegExp(letters, "gi")
+  let found;
+  let indices = [];
+  while ((found = re.exec(word)) !== null) {
+    indices.push(found.index);
+  }
+  let match = [];
+  for (const pos of indices) {
+    const before = word.slice(0, pos);
+    const after = word.slice(pos + letters.length)
+    match = dbLookup(before + replacement + after);
+    if (match.length) {
+      debug("hello!",match)
+      break;
+    }
+  }
+  return match;
+  // const result = dbLookup(match);
+  // // debug(found)
+  // return found;
+}
 
 function lookupDerivations([word, rawWord], matches = []) {
   /*
@@ -1462,7 +1552,8 @@ function displayDbNameInTab2(msg) {
 
 function dbLookup(word) {
   // ## returns empty array or array of matched IDs [4254, 4255]
-  if (typeof word !== "string") throw new Error("Search term must be a string.")
+  // if (typeof word !== "string") throw new Error("Search term must be a string.")
+  if (typeof word !== "string") return [];
   if (!word) return [];
   word = word.toLowerCase();
   const searchResults = V.currentDb.db
@@ -1482,7 +1573,7 @@ function findBaseForm(word, subs) {
     const i = -(derivedForm.length);
     const suffix = subs[word.slice(i)];
     if (suffix != undefined) {
-      const candidate = word.slice(0,i) + suffix;
+      const candidate = word.slice(0, i) + suffix;
       // debug(word, candidate, derivedForm)
       candidates.add(candidate);
     }
