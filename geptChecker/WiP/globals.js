@@ -934,11 +934,12 @@ const LOOKUP = {
   ],
 
   variantWords: {
+    // n.b. these are stripped of trailing -e to allow match with -ing / -ed
     aeroplan: "airplane",
     chequ: "check",
     chequebook: "checkbook",
     donut: "doughnut",
-    // draught: "draft",
+    // draught: "draft", // on list
     gaol: "jail",
     plough: "plow",
     sceptical: "skeptical",
@@ -1008,7 +1009,7 @@ const LOOKUP = {
     ogu: "og",
     ogu: "og",
     eabl: "able",
-    wards: "ward",
+    ward: "ward",
   },
 
   variantLetters: [

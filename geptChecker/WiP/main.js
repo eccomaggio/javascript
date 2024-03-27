@@ -921,13 +921,14 @@ function pushLookups(textArr) {
     const matchedIDs = [];
     if (word === EOL.text) {
       processedTextArr.push([word]);
-    } else {
+    }
+    else {
+      if (!word) continue;
       matches = lookupWord(wordArr);
       if (word) wordCount++;
       for (const id of matches) {
         // ## do not check compounds (already checked)
         if (!id) continue;
-        // if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
         if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
         const match = getDbEntry(id);
         // ## don't count contractions as separate words
@@ -966,13 +967,21 @@ function markOfflist(word, type) {
     }
   }
   if (isUnique) {
-    offlistID = -(V.offlistIndex);
-    // offlistEntry = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
-    offlistEntry = [offlistID, word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
-    V.offlistDb.push(offlistEntry);
-    V.offlistIndex++
+    offlistEntry = [word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
+    offlistID = addNewEntryToOfflistDb(offlistEntry);
+    // offlistID = -(V.offlistIndex);
+    // // offlistEntry = [-(V.offlistIndex), word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
+    // offlistEntry = [offlistID, word, type, [LOOKUP.offlist_subs.indexOf(type) + LOOKUP.level_headings.length], ""];
+    // V.offlistDb.push(offlistEntry);
+    // V.offlistIndex++
   }
-  // return offlistEntry[0];
+  return [offlistID];
+}
+
+function addNewEntryToOfflistDb(entry) {
+  const offlistID = -(V.offlistIndex);
+  V.offlistDb.push([offlistID, ...entry]);
+  V.offlistIndex++;
   return [offlistID];
 }
 
@@ -980,25 +989,40 @@ function lookupWord([word, rawWord]) {
   if (LOOKUP.symbols.includes(rawWord)) {
     word = rawWord;
   }
-  let matches = dbLookup(word);
+  let matches = lookupDB(word);
   // ## EXECUTIVE DECISION: look up possible derivations even if word is found
   // ## (to avoid, e.g. traveling being marked as int)
-  // if (!matches.length) matches = lookupDerivations([word, rawWord], matches);
   matches = lookupDerivations([word, rawWord], matches);
-  // if (!matches.length) matches = checkForSpellingVariants([word, rawWord], matches);
-  checkForSpellingVariants([word, rawWord], matches);
+  // ## matches[0] = [id] if matched; [[-1]] if no match so far
+  const offlistEntry = getEntryFromOfflistDb(parseInt(matches[0]));
+  // debug(matches[0] && getEntryFromOfflistDb(parseInt(matches[0])).includes("offlist"))
+  const isOfflist = getEntryFromOfflistDb(parseInt(matches[0])).includes("offlist");
+  if (isOfflist) {
+    const offlistID = parseInt(matches[0]);
+    lookupSpellingVariants(word, offlistID);
+    // ## don't add these to matches; add to V.offlistDb
+  }
+  debug(word, matches, (offlistEntry) ? offlistEntry : "not a variant")
   return matches;
 }
 
-function checkForSpellingVariants([word, rawWord], matches) {
-  // debug(word)
-  let matchID = checkVariantWords(word);
-  if (!matchID.length) matchID = checkVariantSuffixes(word);
-  if (!matchID.length) matchID = checkVariantLetters(word);
-  if (matchID.length) debug("Hurrah!", word, matchID)
-  else debug("Boooooooooo! not found:", word)
-  // debug(dbLookup(matchID))
-  return matchID;
+function getEntryFromOfflistDb(id) {
+  if (typeof id === "object") id = id[0];
+  if (id < 0) id = -id;
+  const entry = (V.offlistDb[id]) ? V.offlistDb[id] : [];
+  return entry;
+}
+
+function lookupSpellingVariants(word, offlistID) {
+  let matchIDarr = checkVariantWords(word);
+  // debug(word, matchIDarr, matchIDarr.length)
+  if (!matchIDarr.length) matchIDarr = checkVariantSuffixes(word);
+  if (!matchIDarr.length) matchIDarr = checkVariantLetters(word);
+  if (matchIDarr.length) {
+    const offlistEntry = [word, "variant", [matchIDarr], ""];
+    V.offlistDb[-offlistID] = offlistEntry;
+  }
+  return matchIDarr;
 }
 
 function checkVariantWords(word) {
@@ -1008,49 +1032,65 @@ function checkVariantWords(word) {
     // debug(key, truncated)
     if (key === truncated) {
       match = LOOKUP.variantWords[truncated];
+      // debug()
       break;
     }
   }
-  const result = dbLookup(match);
-  debug(result)
-  return result;
+  const matchIDarr = lookupDB(match);
+  // debug(matchIDarr)
+  return matchIDarr;
 }
 
 function checkVariantSuffixes(word) {
   let match;
-  if (word.endsWith("wards")) {
-    match = word.slice(0, -1);
-  }
-  else {
-    if (word.endsWith("s")) word = word.slice(0, -1);
-    else if (word.endsWith("d")) word = word.slice(0, -1);
-    else if (word.endsWith("ing")) word = word.slice(0, -3);
-    if (word.endsWith("e")) word = word.slice(0, -1);
-    for (key of Object.keys(LOOKUP.variantSuffixes)) {
-      const len = key.length;
-      const root = word.slice(0, -len);
-      const suffix = word.slice(-len);
-      if (key === suffix) {
-        match = root + LOOKUP.variantSuffixes[suffix];
-        break;
-      }
-    }
-  }
-  const result = dbLookup(match);
-  debug(result)
-  return result;
-}
-
-function checkVariantLetters(word) {
-  let match = [];
-  for (const [letters, replacement] of LOOKUP.variantLetters) {
-    match = replaceLetters(word, letters, replacement);
-    if (match) {
-      debug(match)
+  if (word.endsWith("s")) word = word.slice(0, -1);
+  else if (word.endsWith("d")) word = word.slice(0, -1);
+  else if (word.endsWith("ing")) word = word.slice(0, -3);
+  if (word.endsWith("e")) word = word.slice(0, -1);
+  for (key of Object.keys(LOOKUP.variantSuffixes)) {
+    const len = key.length;
+    const root = word.slice(0, -len);
+    const suffix = word.slice(-len);
+    if (key === suffix) {
+      match = root + LOOKUP.variantSuffixes[suffix];
+      debug("success", match)
       break;
     }
   }
-  return match;
+  if (match){
+    const matchIDarr = lookupDB(match);
+    return matchIDarr
+    // // debug("matchIDarr", ...matchIDarr)
+    // const offlistEntry = [match, "variant", [matchIDarr], ""];
+    // // debug("offlistEntry", ...offlistEntry)
+    // const offlistID = addNewEntryToOfflistDb(offlistEntry);
+    // // debug("offlistID", ...offlistID)
+    // return offlistID;
+  }
+  else return [];
+}
+
+// function addVariantToID(id, variant) {
+//   // ## the variant is added as a decimal .1-.9; it can be supplied as 1 or 0.1
+//   variant = parseFloat(variant);
+//   if (variant >= 1.0) {
+//     variant = variant / 10;
+//   }
+//   const parsedID = parseInt(id) + variant;
+//   // debug(id, parsedID, variant)
+//   return parsedID;
+// }
+
+function checkVariantLetters(word) {
+  let matchIDarr = [];
+  for (const [letters, replacement] of LOOKUP.variantLetters) {
+    matchIDarr = replaceLetters(word, letters, replacement);
+    if (matchIDarr) {
+      // debug()
+      break;
+    }
+  }
+  return matchIDarr;
 }
 
 function replaceLetters(word, letters, replacement) {
@@ -1060,20 +1100,17 @@ function replaceLetters(word, letters, replacement) {
   while ((found = re.exec(word)) !== null) {
     indices.push(found.index);
   }
-  let match = [];
+  let matchIDarr = [];
   for (const pos of indices) {
     const before = word.slice(0, pos);
     const after = word.slice(pos + letters.length)
-    match = dbLookup(before + replacement + after);
-    if (match.length) {
-      debug("hello!",match)
+    matchIDarr = lookupDB(before + replacement + after);
+    if (matchIDarr.length) {
+      // debug()
       break;
     }
   }
-  return match;
-  // const result = dbLookup(match);
-  // // debug(found)
-  // return found;
+  return matchIDarr;
 }
 
 function lookupDerivations([word, rawWord], matches = []) {
@@ -1167,28 +1204,28 @@ function checkNames(word) {
 
 function checkArticle(word) {
   if (word === "an") {
-    return dbLookup("a");
+    return lookupDB("a");
   }
 }
 
 function checkIrregularNegatives(word) {
   const lookup = LOOKUP.irregNegVerb[word];
   if (lookup) {
-    return winnowPoS(dbLookup(lookup), ["x", "v"]);
+    return winnowPoS(lookupDB(lookup), ["x", "v"]);
   }
 }
 
 function checkIrregularVerbs(word) {
   const lookup = LOOKUP.irregVerb[word];
   if (lookup) {
-    return winnowPoS(dbLookup(lookup), ["x", "v"]);
+    return winnowPoS(lookupDB(lookup), ["x", "v"]);
   }
 }
 
 function checkIrregularPlurals(word) {
   const lookup = LOOKUP.irregPlural[word];
   if (lookup) {
-    return winnowPoS(dbLookup(lookup), ["n"]);
+    return winnowPoS(lookupDB(lookup), ["n"]);
   }
 }
 
@@ -1198,7 +1235,7 @@ function checkForeignPlurals(word) {
     const root = word.slice(0, -plural.length);
     const ending = word.slice(-plural.length);
     if (ending === plural) {
-      const lookup = dbLookup(root + singular);
+      const lookup = lookupDB(root + singular);
       if (lookup.length) {
         return winnowPoS(lookup, ["n"]);
       }
@@ -1262,10 +1299,14 @@ function winnowPoS(roughMatches, posArr) {
 function getDbEntry(id) {
   // ## a negative id signifies an offlist word
   if (id === undefined) return;
-  id = parseInt(id);
-  const dB = (id >= 0) ? V.currentDb.db : V.offlistDb;
-  id = Math.abs(id);
-  return dB[id];
+  // id = parseInt(id);
+  parsedId = parseInt(id);
+  // let [parsedId, variant] = id.toString().split(".");
+  // parsedId = parseInt(parsedId);
+  const dB = (parsedId >= 0) ? V.currentDb.db : V.offlistDb;
+  parsedId = Math.abs(parsedId);
+  // debug(id, parsedId, variant, dB[parsedId]);
+  return dB[parsedId];
 }
 
 function buildMarkupAsHTML(textArr) {
@@ -1550,7 +1591,7 @@ function displayDbNameInTab2(msg) {
   HTM.finalLegend.innerHTML += `<div class='instructions'><ul><li><span class='multi-diff'>double underline</span> = multiple levels</li>${awlHelp}<li>superscript<sup>n</sup> = number of repetitions</li></ul></div>`;
 }
 
-function dbLookup(word) {
+function lookupDB(word) {
   // ## returns empty array or array of matched IDs [4254, 4255]
   // if (typeof word !== "string") throw new Error("Search term must be a string.")
   if (typeof word !== "string") return [];
@@ -1559,6 +1600,7 @@ function dbLookup(word) {
   const searchResults = V.currentDb.db
     .filter(el => el[C.LEMMA].toLowerCase() === word)
     .map(el => el[C.ID]);
+  debug(searchResults)
   return searchResults;
 }
 
@@ -1580,7 +1622,7 @@ function findBaseForm(word, subs) {
   }
   candidates.add(word.slice(0, toSuffix));
   for (const candidate of candidates) {
-    const tmp_match = dbLookup(candidate);
+    const tmp_match = lookupDB(candidate);
     if (tmp_match.length) localMatches.push(...tmp_match);
   }
   return localMatches;
