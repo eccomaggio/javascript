@@ -628,6 +628,7 @@ function displayEntryInfo_2col(ref) {
 
 function expandPos(entry) {
   const pos_str = entry[C.POS];
+  // debug(entry, pos_str)
   if (entry[C.ID] < 0) return pos_str;
   const pos = (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
   return pos;
@@ -917,6 +918,7 @@ function pushLookups(textArr) {
   // ## capture EOL and insert line breaks
   for (const wordArr of textArr) {
     let [word, rawWord, preMatchArr] = wordArr;
+    // debug(preMatchArr)
     // const word = wordArr[0];
     const matchedIDs = [];
     if (word === EOL.text) {
@@ -930,9 +932,10 @@ function pushLookups(textArr) {
         // ## do not check compounds (already checked)
         if (!id) continue;
         if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
-        const match = getDbEntry(id);
+        const matchedEntry = getDbEntry(id);
         // ## don't count contractions as separate words
-        if (["contraction"].includes(match[C.POS])) { wordCount-- };
+        // if (["contraction"].includes(matchedEntry[C.POS])) { wordCount-- };
+        if (matchedEntry[C.POS] === "contraction") wordCount--;
         if (!V.currentDb.compounds[word]) pushMatch(matchedIDs, id);
       }
       // ## filter out matched compounds without spaces
@@ -975,35 +978,37 @@ function markOfflist(word, type) {
     // V.offlistDb.push(offlistEntry);
     // V.offlistIndex++
   }
-  return [offlistID];
+  // return [offlistID];
+  return offlistID;
 }
 
 function addNewEntryToOfflistDb(entry) {
   const offlistID = -(V.offlistIndex);
   V.offlistDb.push([offlistID, ...entry]);
   V.offlistIndex++;
-  return [offlistID];
+  // return [offlistID];
+  return offlistID;
 }
 
 function lookupWord([word, rawWord]) {
   if (LOOKUP.symbols.includes(rawWord)) {
     word = rawWord;
   }
-  let matches = lookupDB(word);
+  let matchedIDarr = lookupDB(word);
+  // debug("A", matchedIDarr)
   // ## EXECUTIVE DECISION: look up possible derivations even if word is found
   // ## (to avoid, e.g. traveling being marked as int)
-  matches = lookupDerivations([word, rawWord], matches);
+  matchedIDarr = lookupDerivations([word, rawWord], matchedIDarr);
   // ## matches[0] = [id] if matched; [[-1]] if no match so far
-  const offlistEntry = getEntryFromOfflistDb(parseInt(matches[0]));
-  // debug(matches[0] && getEntryFromOfflistDb(parseInt(matches[0])).includes("offlist"))
-  const isOfflist = getEntryFromOfflistDb(parseInt(matches[0])).includes("offlist");
+  const offlistEntry = getEntryFromOfflistDb(parseInt(matchedIDarr[0]));
+  const isOfflist = getEntryFromOfflistDb(parseInt(matchedIDarr[0])).includes("offlist");
   if (isOfflist) {
-    const offlistID = parseInt(matches[0]);
+    const offlistID = parseInt(matchedIDarr[0]);
     lookupSpellingVariants(word, offlistID);
     // ## don't add these to matches; add to V.offlistDb
   }
-  debug(word, matches, (offlistEntry) ? offlistEntry : "not a variant")
-  return matches;
+  debug(word, matchedIDarr, (offlistEntry.length) ? offlistEntry : "not a variant")
+  return matchedIDarr;
 }
 
 function getEntryFromOfflistDb(id) {
@@ -1019,7 +1024,7 @@ function lookupSpellingVariants(word, offlistID) {
   if (!matchIDarr.length) matchIDarr = checkVariantSuffixes(word);
   if (!matchIDarr.length) matchIDarr = checkVariantLetters(word);
   if (matchIDarr.length) {
-    const offlistEntry = [word, "variant", [matchIDarr], ""];
+    const offlistEntry = [offlistID, word, "variant", matchIDarr, ""];
     V.offlistDb[-offlistID] = offlistEntry;
   }
   return matchIDarr;
@@ -1053,19 +1058,13 @@ function checkVariantSuffixes(word) {
     const suffix = word.slice(-len);
     if (key === suffix) {
       match = root + LOOKUP.variantSuffixes[suffix];
-      debug("success", match)
+      // debug("success", match)
       break;
     }
   }
   if (match){
     const matchIDarr = lookupDB(match);
     return matchIDarr
-    // // debug("matchIDarr", ...matchIDarr)
-    // const offlistEntry = [match, "variant", [matchIDarr], ""];
-    // // debug("offlistEntry", ...offlistEntry)
-    // const offlistID = addNewEntryToOfflistDb(offlistEntry);
-    // // debug("offlistID", ...offlistID)
-    // return offlistID;
   }
   else return [];
 }
@@ -1299,10 +1298,7 @@ function winnowPoS(roughMatches, posArr) {
 function getDbEntry(id) {
   // ## a negative id signifies an offlist word
   if (id === undefined) return;
-  // id = parseInt(id);
   parsedId = parseInt(id);
-  // let [parsedId, variant] = id.toString().split(".");
-  // parsedId = parseInt(parsedId);
   const dB = (parsedId >= 0) ? V.currentDb.db : V.offlistDb;
   parsedId = Math.abs(parsedId);
   // debug(id, parsedId, variant, dB[parsedId]);
@@ -1462,9 +1458,11 @@ function escapeHTMLentities(text) {
     .replace(/>/g, "&gt;");
 }
 
-function getLevelPrefix(level_num) {
-  let level = V.level_subs[level_num];
-  if (V.isKids && level_num < V.OFFLIST) level = "k";
+function getLevelPrefix(levelNum) {
+  let level = V.level_subs[levelNum];
+  if (V.isKids && levelNum < V.OFFLIST) level = "k";
+  if (!level) level = "o";
+  // debug(levelNum, level)
   return level[0];
 }
 
@@ -1594,13 +1592,13 @@ function displayDbNameInTab2(msg) {
 function lookupDB(word) {
   // ## returns empty array or array of matched IDs [4254, 4255]
   // if (typeof word !== "string") throw new Error("Search term must be a string.")
-  if (typeof word !== "string") return [];
-  if (!word) return [];
+  if (typeof word !== "string" || !word) return [];
+  // if (!word) return [];
   word = word.toLowerCase();
   const searchResults = V.currentDb.db
     .filter(el => el[C.LEMMA].toLowerCase() === word)
     .map(el => el[C.ID]);
-  debug(searchResults)
+  // debug(word,searchResults)
   return searchResults;
 }
 
