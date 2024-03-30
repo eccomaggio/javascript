@@ -1007,7 +1007,7 @@ function lookupWord([word, rawWord]) {
     lookupSpellingVariants(word, offlistID);
     // ## don't add these to matches; add to V.offlistDb
   }
-  debug(word, matchedIDarr, (offlistEntry.length) ? offlistEntry : "not a variant")
+  // debug(word, matchedIDarr, (offlistEntry.length) ? offlistEntry : "not a variant")
   return matchedIDarr;
 }
 
@@ -1299,7 +1299,8 @@ function getDbEntry(id) {
   // ## a negative id signifies an offlist word
   if (id === undefined) return;
   parsedId = parseInt(id);
-  const dB = (parsedId >= 0) ? V.currentDb.db : V.offlistDb;
+  const isOfflist = parsedId < 0;
+  const dB = (isOfflist) ? V.offlistDb : V.currentDb.db;
   parsedId = Math.abs(parsedId);
   // debug(id, parsedId, variant, dB[parsedId]);
   return dB[parsedId];
@@ -1336,9 +1337,14 @@ function buildMarkupAsHTML(textArr) {
     // ## duplicateCount = running total; totalRepeats = total
     let matchCount = 0;
     let listOfMatches = [];
-    for (const [id, duplicateCount] of matches) {
-      // debug(word, id, matchCount)
-      const match = getDbEntry(id);
+    for (let [id, duplicateCount] of matches) {
+      let match = getDbEntry(id);
+      // debug(word, match)
+      // if (match[C.ID] < 0) {
+      //   match = getDbEntry(match[C.ID]);
+      //   id = match[C.LEVEL][0];
+      // }
+      // debug(word, id, matchCount, match)
       // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
       listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
       matchCount++;
@@ -1356,25 +1362,42 @@ function buildMarkupAsHTML(textArr) {
 
 function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   const [[targetLemma, targetID, targetLevel], levelsAreIdentical, isMultipleMatch] = getSortedMatchesInfo(listOfMatches);
-  // debug(targetLemma, listOfMatches, [targetLemma, targetID, targetLevel], levelsAreIdentical)
+  let variantEntry;
+  let isVariant;
+  let variantClass = "";
+  if (targetID < 0) {
+    isVariant = getDbEntry(targetID)[C.POS] === "variant";
+    // debug("??", getDbEntry(targetID), isVariant)
+    if (isVariant) variantEntry = getDbEntry(targetLevel);
+    // targetLevel = variantEntry[C.LEVEL];
+  }
+  debug(targetLemma, listOfMatches, [targetLemma, targetID, targetLevel], levelsAreIdentical,variantEntry)
   const match = getDbEntry(targetID);
   V.repeats.add(targetLemma + ":" + targetID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-  const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+  // TODO: change levelArr to match
+  const levelToShow = (isVariant) ? variantEntry[C.LEVEL] : match[C.LEVEL];
+  const [levelArr, levelNum, levelClass] = getLevelDetails(levelToShow);
+  // const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
   // const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(targetID, listOfMatches.length, ignoreRepeats);
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(targetID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
-  const listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
-  groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch);
+  let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
+  // ## This assumes (safely) that variants will have only one match
+  if (isVariant) {
+    listOfLinks += `:${variantEntry[C.ID]}`;
+    variantClass = " variant";
+  }
+  groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
   // if (isMultipleMatch) debug(targetLemma, targetID, anchor)
   return groupedWord;
 }
 
-function createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch) {
+function createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass) {
   let showAsMultiple = "";
   if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
-  let displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  let displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
 function getSortedMatchesInfo(matches) {
@@ -1585,8 +1608,11 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  const repeatAlert = "<span class='multi-diff'>double underline</span> = multiple levels";
+  const repeatCount = "superscript<sup>n</sup> = number of repetitions";
+  const variantAlert = "<span class='variant'>wavy underline</span> = form to avoid";
   const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
-  HTM.finalLegend.innerHTML += `<div class='instructions'><ul><li><span class='multi-diff'>double underline</span> = multiple levels</li>${awlHelp}<li>superscript<sup>n</sup> = number of repetitions</li></ul></div>`;
+  HTM.finalLegend.innerHTML += `<div class='instructions'><ul><li>${repeatAlert}</li><li>${variantAlert}</li>${awlHelp}<li>${repeatCount}</li></ul></div>`;
 }
 
 function lookupDB(word) {

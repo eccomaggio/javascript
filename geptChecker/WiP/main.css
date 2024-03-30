@@ -405,6 +405,10 @@
       text-decoration: underline double;
     }
 
+    .variant {
+      text-decoration: underline wavy;
+    }
+
     /* .multi-same {
       text-decoration: underline dotted;
     } */
