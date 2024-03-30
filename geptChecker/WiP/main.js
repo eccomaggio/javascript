@@ -531,7 +531,7 @@ function hoverEffects(e) {
   // ## references to parent elements are to reach embedded elements
   const el = e.target;
   if (typeof el.classList === 'undefined') return;
-  // ## 1) show information text
+  // ## 1) show information text for elements with a 'data-entry' attribute
   if (el.dataset.entry || el.parentElement.dataset.entry) {
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
     HTM.finalInfoDiv.innerHTML = (V.isInPlaceEditing) ? displayEntryInfo(ref) : displayEntryInfo_2col(ref);
@@ -559,42 +559,61 @@ function hoverEffects(e) {
 }
 
 function displayEntryInfo(refs) {
-  // debug(refs, refs.split(" "))
   /*
-GET LEVEL FROM ID
-getLevelDetails(levelArr)
+  GET LEVEL FROM ID
+  getLevelDetails(levelArr)
   */
   html = "";
   for (ref of refs.split(" ")) {
-    const [id, normalizedWord] = ref.split(":");
-    const entry = getDbEntry(id);
-    // debug(entry)
+    const [id, normalizedWord, variantId] = ref.split(":");
+    // debug(refs, ref, variantId)
+    const isOfflist = (variantId) ? true : false;
+    const entry = (isOfflist) ? getDbEntry(variantId) : getDbEntry(id);
+    // debug(entry, isOfflist)
     const [levelArr, levelNum, levelClass] = getLevelDetails(entry[C.LEVEL]);
-    // const levelClass = "dummy"
-    // console.log("display entry info>",ref, id, normalizedWord,entry)
-    let lemma = "";
-    if (entry[C.POS] !== "unknown") {
-      lemma = (normalizedWord && normalizedWord !== entry[C.LEMMA]) ? `${normalizedWord} (${entry[C.LEMMA]})` : entry[C.LEMMA];
-      lemma = `<strong>${lemma}</strong>: `;
-    }
-    let level;
-    // ## If word is offlist, use its classification (digit/name, etc.) as level
-    if (id < 0) {
-      level = entry[C.POS];
-    } else {
-      let level_arr = entry[C.LEVEL];
-      level = V.level_subs[level_arr[0]];
-      if (getAwlSublist(level_arr) >= 0) {
-        level += `; ${V.level_subs[level_arr[1]]}`;
-      }
-    }
-    level = `<em>${level}</em>`;
+    const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist);
+    const level = buildDisplayLevel(entry, id, levelArr, isOfflist);
     const pos = `[${expandPos(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
     // const html = `${level}<span>${lemma}${pos}${notes}${awl_notes}</span>`;
     html += `<div class="word-detail ${levelClass}">${level}<br><span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
   }
   return html;
+}
+
+function buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist) {
+  let lemma = "";
+  if (entry[C.POS] !== "unknown") {
+    // lemma = (normalizedWord && normalizedWord !== entry[C.LEMMA]) ? `${normalizedWord} (${entry[C.LEMMA]})` : entry[C.LEMMA];
+    if (normalizedWord && normalizedWord !== entry[C.LEMMA]) {
+      if (isOfflist) {
+        lemma = `<em>** Use</em> <strong>${entry[C.LEMMA]}</strong> <em>instead of</em><br>${normalizedWord} `;
+      }
+      else {
+        lemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${entry[C.LEMMA]})`;
+      }
+    } else {
+      // lemma = entry[C.LEMMA];
+      lemma = `<strong>${entry[C.LEMMA]}</strong>: `;
+    }
+  }
+  return lemma;
+}
+
+function buildDisplayLevel(entry, id, level_arr, isOfflist) {
+  let level;
+  // ## If word is offlist, use its classification (digit/name, etc.) as level
+  if (!isOfflist && id < 0) {
+    level = entry[C.POS];
+  } else {
+    // let level_arr = entry[C.LEVEL];
+    level = V.level_subs[level_arr[0]];
+    if (getAwlSublist(level_arr) >= 0) {
+      level += `; ${V.level_subs[level_arr[1]]}`;
+    }
+  }
+  level = `<em>${level}</em>`;
+  return level;
 }
 
 function displayEntryInfo_2col(ref) {
@@ -1608,11 +1627,12 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  const levelAlert = "<span class='level-e'>elem (A2)</span>, <span class='level-i'> int (B1)</span>, <span class='level-h'>hi-int (B2)</span> & <span class='level-o'>off-list</span>";
   const repeatAlert = "<span class='multi-diff'>double underline</span> = multiple levels";
   const repeatCount = "superscript<sup>n</sup> = number of repetitions";
   const variantAlert = "<span class='variant'>wavy underline</span> = form to avoid";
   const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
-  HTM.finalLegend.innerHTML += `<div class='instructions'><ul><li>${repeatAlert}</li><li>${variantAlert}</li>${awlHelp}<li>${repeatCount}</li></ul></div>`;
+  HTM.finalLegend.innerHTML += `<div class='instructions'><ul><li>${levelAlert}</li>${awlHelp}<li>${repeatAlert}</li><li>${variantAlert}</li><li>${repeatCount}</li></ul></div>`;
 }
 
 function lookupDB(word) {

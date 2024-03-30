@@ -230,21 +230,9 @@
     }
 
     #t2_final_info {
-      /* background-color: var(--light);
-      border-radius: 5px;
-      box-shadow: 5px 5px 5px grey; */
-      /* padding: 6px; */
-      /* min-height: 40px;
-      max-height: 90px; */
-      /* min-height: 40px;
-      max-height: 120px; */
       width: 90%;
-      /* flex-shrink: 1; */
       display: flex;
       flex-direction: column;
-      /* align-items: center;
-      justify-content: center;
-      text-align: center; */
       padding-left: 5px;
       z-index: 2;
     }
@@ -321,12 +309,12 @@
     .level-o {
       color: var(--offlist);
       font-style: italic;
-      font-weight: bold;
+      /* font-weight: bold; */
     }
 
     .level-h {
       color: var(--high);
-      font-weight: bold;
+      /* font-weight: bold; */
     }
 
     .level-i {
@@ -354,6 +342,7 @@
     .word-detail {
       /* color: white; */
       background-color: var(--light);
+      font-weight: normal;
       border-radius: 5px;
       box-shadow: 5px 5px 5px grey;
       padding: 3px;
@@ -402,11 +391,11 @@
 
 
     .multi-diff {
-      text-decoration: underline double;
+      text-decoration: darkgray underline double;
     }
 
     .variant {
-      text-decoration: underline wavy;
+      text-decoration: indianred underline wavy;
     }
 
     /* .multi-same {
