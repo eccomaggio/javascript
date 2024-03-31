@@ -328,9 +328,21 @@ function submitWordSearchForm(e) {
     resultsArr = executeFormDataLookup(data);
     resultsCount = resultsArr.length;
     if (resultsCount) {
+      // debug(resultsArr)
       HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
     } else {
-      HTMLstringToDisplay = markStringAsError("No matches found for this term.");
+      const term = data.term[0];
+      let resultsAsIdArr = checkVariantWords(term);
+      // debug(term, resultsAsIdArr)
+      if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantSuffixes(term);
+      if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantLetters(term);
+      if (resultsAsIdArr.length) {
+        resultsArr = getDbEntry(resultsAsIdArr);
+        HTMLstringToDisplay = formatResultsAsHTML([resultsArr]);
+      }
+      else HTMLstringToDisplay = markStringAsError("No matches found for this term.");
+      // debug(term, resultsAsIdArr, getDbEntry(resultsAsIdArr))
+      // HTMLstringToDisplay = markStringAsError("No matches found for this term.");
     }
   }
   // debug(resultsCount, resultsArr)
@@ -416,7 +428,7 @@ function refineSearch(find) {
   let results = V.currentDb.db.filter(el => el[C.LEMMA].search(find.term) != -1);
   results = results.concat(getDerivedForms(find.term).map(el => getDbEntry(el)));
   if (find.level.length) {
-    results = results.filter(el => find.level.indexOf(el[C.LEVEL][0]) > -1);
+    results = results.filter(el => find.level.indexOf(el[C.LEVEL][C.GEPT_ONLY]) > -1);
   }
   if (find.pos.length) {
     results = results.filter(el => el[C.POS]).filter(el => el[C.POS].search(find.pos) != -1);
@@ -432,14 +444,15 @@ function refineSearch(find) {
     100 = choose only words in AWL list
     200 = choose only words in GEPT list
     */
-    if (find.awl == 200) {
-      results = results.filter(el => el[C.LEVEL][2] >= 2);
+    if (find.awl == C.FIND_GEPT_ONLY) {
+      // results = results.filter(el => el[C.LEVEL][2] >= 2);
+      results = results.filter(el => el[C.LEVEL][C.STATUS] >= C.GEPT_ONLY);
     }
-    else if (find.awl == 100) {
-      results = results.filter(el => el[C.LEVEL][1] > -1);
+    else if (find.awl == C.FIND_AWL_ONLY) {
+      results = results.filter(el => el[C.LEVEL][C.AWL_LEVEL] > -1);
     }
     else {
-      results = results.filter(el => find.awl.indexOf(el[C.LEVEL][1]) > -1);
+      results = results.filter(el => find.awl.indexOf(el[C.LEVEL][C.AWL_LEVEL]) > -1);
     }
   }
   results = results.filter(result => result[C.ID] > 0);
@@ -1053,7 +1066,7 @@ function checkVariantWords(word) {
   let match = "";
   for (key of Object.keys(LOOKUP.variantWords)) {
     const truncated = word.slice(0, key.length)
-    // debug(key, truncated)
+    // debug(key, truncated, key === truncated)
     if (key === truncated) {
       match = LOOKUP.variantWords[truncated];
       // debug()
@@ -1102,8 +1115,9 @@ function checkVariantSuffixes(word) {
 function checkVariantLetters(word) {
   let matchIDarr = [];
   for (const [letters, replacement] of LOOKUP.variantLetters) {
+    // debug(word, letters,replacement)
     matchIDarr = replaceLetters(word, letters, replacement);
-    if (matchIDarr) {
+    if (matchIDarr.length) {
       // debug()
       break;
     }
@@ -1112,6 +1126,7 @@ function checkVariantLetters(word) {
 }
 
 function replaceLetters(word, letters, replacement) {
+  // debug(word, letters, replacement)
   const re = new RegExp(letters, "gi")
   let found;
   let indices = [];
@@ -1122,9 +1137,10 @@ function replaceLetters(word, letters, replacement) {
   for (const pos of indices) {
     const before = word.slice(0, pos);
     const after = word.slice(pos + letters.length)
+    // debug(word, before + replacement + after)
     matchIDarr = lookupDB(before + replacement + after);
     if (matchIDarr.length) {
-      // debug()
+      // debug(matchIDarr)
       break;
     }
   }
