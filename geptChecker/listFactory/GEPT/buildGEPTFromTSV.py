@@ -1,5 +1,5 @@
 """
-This takes in a csv file which consists of 4 cols:
+This takes in a csv file which consists of 6 cols:
 1) lemma
 2) part of speech
 3) Chinese gloss
@@ -26,25 +26,13 @@ And will change it into this:
       GEPT_ONLY = 2
       AWL_AND_GEPT = 3
 
-This script refactors it as a GEPTwordlistTool style list:
-lemma, PoS space-sep string, [GEPT level number], notes
+lemma > lemma
+pos > pos
+gloss > notes
+notes > notes
+GEPT level > level[0]
+AWL level > level[1]  (+ AWL_INDEX)
 
-A note is made of the AWL-sublist number
-whether it is a headword
-
-Several time-saving guesses are made (which will need to be edited for a final list):
-UK spelling
-Part of speech
-
-The file should be called AWLallwords.tsv
-
-
-TO DO:
-run it against the GEPT word list & add in:
-1) is the word in the GEPT list
-2) if so, what is its GEPT level
-
-output file as a .json file (so it can be used by javascript)
 """
 
 import csv
@@ -201,42 +189,64 @@ class Pos(Enum):
 
 
 class C(Enum):
-  LEMMA = 0
-  POS = 1
-  LEVEL = 2
-  NOTES = 3
+    LEMMA = 0
+    POS = 1
+    LEVEL = 2
+    NOTES = 3
+
 
 SEP = '"'
 NOTES_SEP = "|"
 
 
-def get_full_awl_list():
-  file = "../AWL/AWLallwords.tsv"
-  with open(file, mode='r') as f:
-    reader = csv.reader(f, delimiter='\t')
-    word_list = {}
-    for row in reader:
-      if len(row) < 1:
-        continue
-      # print(row, len(row))
-      level = row[1]
-      # words = row[2].split(",") if len(row) == 3 else []
-      words = [word.strip() for word in row[2].split(",")] if len(row) == 3 else []
-      word_list[row[0]] = [level, words]
-  # pprint(awl_list)
-  return word_list
+# def get_full_awl_list():
+#   file = "../AWL/AWLallwords.tsv"
+#   with open(file, mode='r') as f:
+#     reader = csv.reader(f, delimiter='\t')
+#     word_list = {}
+#     for row in reader:
+#       if len(row) < 1:
+#         continue
+#       # print(row, len(row))
+#       level = row[1]
+#       # words = row[2].split(",") if len(row) == 3 else []
+#       words = [word.strip() for word in row[2].split(",")] if len(row) == 3 else []
+#       word_list[row[0]] = [level, words]
+#   # pprint(awl_list)
+#   return word_list
+
+def save_list_as_json(list, out_filename, top="", tail=""):
+    with open(os.path.join(os.getcwd(), out_filename), "w") as out_file:
+        if top:
+            out_file.write(top)
+        json.dump(list, out_file, indent=None)
+        if tail:
+            out_file.write(tail)
 
 
-def get_csv_list(file, sep='\t'):
-  with open(file, mode='r') as f:
-    reader = csv.reader(f,delimiter=sep)
-    tmp = {}
-    # line_number = 1
-    for uid, row in enumerate(reader):
-        tmp[uid] = row
-        # line_number += 1
-    # pprint(reader)
-  return tmp
+def return_separated_file_as_dict(file, sep="\t"):
+    with open(file, mode="r") as f:
+        reader = csv.reader(f, delimiter=sep)
+        tmp = {}
+        for uid, row in enumerate(reader):
+            tmp[uid] = row
+    return tmp
+
+
+def return_separated_file_as_list(file, sep="\t"):
+    with open(file, mode="r") as f:
+        reader = csv.reader(f, delimiter=sep)
+        tmp = []
+        for row in reader:
+            if row:
+                tmp.append(row)
+    return tmp
+
+
+def return_list_from_json_file(filename):
+    with open(filename, "r") as file:
+        data = json.load(file)
+    return data
 
 
 def minimize_pos(pos):
@@ -247,14 +257,61 @@ def minimize_pos(pos):
         # return " ".join([pov_lookup[item] for item in pos.split(" ")])
         return "".join([pov_lookup[item] for item in pos.split(" ")])
 
+def normalize_cols(list):
+    ur_lemma = 0
+    ur_pos = 1
+    ur_gloss = 2
+    ur_notes = 3
+    ur_gept = 4
+    ur_awl = 5
+
+    levels = {
+        "e": 0,
+        "i": 1,
+        "h": 2
+    }
+
+    normalized = []
+    for e in list:
+
+      awl_level = -1
+      if e[ur_awl]:
+        awl_level = int(e[ur_awl].strip()[1:]) + AWL_INDEX
+      normalized_entry = [
+          e[ur_lemma],
+          e[ur_pos],
+          [
+            levels[e[ur_gept][0].lower()],
+            awl_level,
+            Pos.GEPT_ONLY.value
+          ],
+          # e[ur_gloss] + "; " + e[ur_notes] + "|"
+          e[ur_gloss] + "; " + e[ur_notes]
+        ]
+      normalized.append(normalized_entry)
+    return normalized
+
+
+# def main_OLD():
+#     # awl_list = get_full_AWL_list()
+#     gept_list = return_separated_file_as_list("./GEPTwordlist(updated2024).tsv")
+#     for id, entry in gept_list.items():
+#        print(id, entry)
+#     print(gept_list[0])
+
 
 def main():
-    # awl_list = get_full_AWL_list()
-    gept_list = get_csv_list("./GEPTwordlist(updated2024).tsv")
-    for id, entry in gept_list.items():
-       print(id, entry)
-    print(gept_list[0])
+    raw_gept = return_separated_file_as_list("GEPTwordlist(updated2024).tsv")
+    raw_gept.pop(0) ## Remove header line
+    gept_list = normalize_cols(raw_gept)
+    assert len(gept_list) == 8393  ## according to the spreadsheet (minus headers line)
+    save_list_as_json(gept_list, "dbGEPT.json")
+    # pprint(gept_list)
+    print(f"updated raw_gept contains {len(raw_gept)} entries")
+    print(f"updated gept_list contains {len(gept_list)} entries")
 
 
-if __name__ == '__main__':
-  main()
+
+
+if __name__ == "__main__":
+    main()

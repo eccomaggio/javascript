@@ -326,15 +326,18 @@ function submitWordSearchForm(e) {
     HTMLstringToDisplay = markStringAsError(errorMsg);
   } else {
     resultsArr = executeFormDataLookup(data);
+    const checkSpelling = checkVariantWords(data.term[0]);
+    if (checkSpelling) resultsArr.push(getDbEntry(checkSpelling));
     resultsCount = resultsArr.length;
-    if (resultsCount) {
-      // debug(resultsArr)
+    if (resultsCount && resultsArr[0] ) {
+      debug(checkSpelling, resultsArr, resultsCount, getDbEntry(checkSpelling))
       HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
     } else {
       const term = data.term[0];
-      let resultsAsIdArr = checkVariantWords(term);
+      // let resultsAsIdArr = checkVariantWords(term);
       // debug(term, resultsAsIdArr)
-      if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantSuffixes(term);
+      // if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantSuffixes(term);
+      resultsAsIdArr = checkVariantSuffixes(term);
       if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantLetters(term);
       if (resultsAsIdArr.length) {
         resultsArr = getDbEntry(resultsAsIdArr);
@@ -421,6 +424,7 @@ function executeFormDataLookup(data) {
     pos: data.pos.join("|")
   };
   const resultsArr = refineSearch(searchTerms);
+  // if (!resultsArr) resultsArr = [];
   return resultsArr;
 }
 
@@ -1062,19 +1066,41 @@ function lookupSpellingVariants(word, offlistID) {
   return matchIDarr;
 }
 
+// function checkVariantWords(word) {
+//   let match = "";
+//   for (let key of Object.keys(LOOKUP.variantWords)) {
+//     const truncated = word.slice(0, key.length)
+//     debug(key, key.slice(0,word.length), truncated, key.slice(0,word.length) === truncated)
+//     // if (key === truncated) {
+//     if (key.slice(0,word.length) === truncated) {
+//       // match = LOOKUP.variantWords[truncated];
+//       match = LOOKUP.variantWords[key];
+//       debug(match)
+//       break;
+//     }
+//   }
+//   const matchIDarr = lookupDB(match);
+//   // debug(matchIDarr)
+//   return matchIDarr;
+// }
+
 function checkVariantWords(word) {
   let match = "";
-  for (key of Object.keys(LOOKUP.variantWords)) {
+  let matchIDarr = []
+  for (let key of Object.keys(LOOKUP.variantWords)) {
     const truncated = word.slice(0, key.length)
-    // debug(key, truncated, key === truncated)
-    if (key === truncated) {
-      match = LOOKUP.variantWords[truncated];
-      // debug()
+    debug(key, key.slice(0,word.length), truncated, key.slice(0,word.length) === truncated)
+    // if (key === truncated) {
+    if (key.slice(0,word.length) === truncated) {
+      // match = LOOKUP.variantWords[truncated];
+      match = LOOKUP.variantWords[key];
+      // debug(match)
+      matchIDarr = lookupDB(match)
       break;
     }
   }
-  const matchIDarr = lookupDB(match);
-  // debug(matchIDarr)
+  // const matchIDarr = lookupDB(match);
+  debug(matchIDarr)
   return matchIDarr;
 }
 
@@ -1186,15 +1212,18 @@ function lookupDerivations([word, rawWord], matches = []) {
     checkRegAdv,
   ]) {
     const result = guess(word);
+    // debug("!!>>",result)
     if (result) {
-      matches.push(...result);
+      // matches.push(...result);
+      matches.push(result);
       break;
     }
   }
   // ## -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   const result = checkFinalS(word);
   if (result) {
-    matches.push(...result);
+    // matches.push(...result);
+    matches.push(result);
   }
   if (!matches.length) {
     matches.push(markOfflist(word, "offlist"));
@@ -1238,28 +1267,28 @@ function checkNames(word) {
 
 function checkArticle(word) {
   if (word === "an") {
-    return lookupDB("a");
+    return lookupDB("a")[0];
   }
 }
 
 function checkIrregularNegatives(word) {
   const lookup = LOOKUP.irregNegVerb[word];
   if (lookup) {
-    return winnowPoS(lookupDB(lookup), ["x", "v"]);
+    return winnowPoS(lookupDB(lookup), ["x", "v"])[0];
   }
 }
 
 function checkIrregularVerbs(word) {
   const lookup = LOOKUP.irregVerb[word];
   if (lookup) {
-    return winnowPoS(lookupDB(lookup), ["x", "v"]);
+    return winnowPoS(lookupDB(lookup), ["x", "v"])[0];
   }
 }
 
 function checkIrregularPlurals(word) {
   const lookup = LOOKUP.irregPlural[word];
   if (lookup) {
-    return winnowPoS(lookupDB(lookup), ["n"]);
+    return winnowPoS(lookupDB(lookup), ["n"])[0];
   }
 }
 
@@ -1271,52 +1300,59 @@ function checkForeignPlurals(word) {
     if (ending === plural) {
       const lookup = lookupDB(root + singular);
       if (lookup.length) {
-        return winnowPoS(lookup, ["n"]);
+        return winnowPoS(lookup, ["n"])[0];
       }
     }
   }
+  return;
 }
 
 function checkVing(word) {
   if (word.endsWith("ing")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.g_subs), ["v"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.g_subs), ["v"])[0];
   }
+  return;
 }
 
 function checkVpp(word) {
   if (word.endsWith("ed")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.d_subs), ["v"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.d_subs), ["v"])[0];
   }
+  return;
 }
 
 function checkSuperlatives(word) {
   if (word.endsWith("st")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.est_subs), ["j"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.est_subs), ["j"])[0];
   }
+  return;
 }
 
 function checkComparatives(word) {
   if (word.endsWith("r")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.er_subs), ["j"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.er_subs), ["j"])[0];
   }
+  return;
 }
 
 function checkFinalS(word) {
   if (word.endsWith("s")) {
     // ## pronouns ("r") included to allow 'others'
-    return winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"])[0];
   }
+  return;
 }
 
 function checkRegAdv(word) {
   if (word.endsWith("ly")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.y_subs), ["j"]);
+    return winnowPoS(findBaseForm(word, LOOKUP.y_subs), ["j"])[0];
   }
+  return;
 }
 
 function winnowPoS(roughMatches, posArr) {
   /*
-  Returns possible derivations as array, or empty array
+  Returns possible IDs of derivations as array, or empty array
   */
   let localMatches = [];
   for (const id of roughMatches) {
@@ -1333,12 +1369,14 @@ function winnowPoS(roughMatches, posArr) {
 function getDbEntry(id) {
   // ## a negative id signifies an offlist word
   if (id === undefined) return;
-  parsedId = parseInt(id);
+  let parsedId = parseInt(id);
   const isOfflist = parsedId < 0;
   const dB = (isOfflist) ? V.offlistDb : V.currentDb.db;
   parsedId = Math.abs(parsedId);
+  let result = dB[parsedId]
   // debug(id, parsedId, variant, dB[parsedId]);
   return dB[parsedId];
+  // return (result) ? result : [];
 }
 
 function buildMarkupAsHTML(textArr) {
