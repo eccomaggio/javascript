@@ -376,7 +376,7 @@ potential	noun adj	[1, 39, 3]	潛在的、可能的；潛力、可能性; ; |pot
 potentially	adv	[1, 39, 1]	|potential
 previous	adj	[1, 39, 3]	先前的; ; |previous
 previously	adv	[1, 39, 1]	|previous
-primary	adj	[1, 39, 3]	(美國推舉黨內候選人的)初選; ; 初級的、初等的; ; |primary
+primary	adj	[1, 39, 3]	首要的、主要的、基本的; ; (美國推舉黨內候選人的)初選; ; 初級的、初等的; ; |primary
 primarily	adv	[2, 39, 3]	主要地; ; |primary
 purchase	verb noun	[0, 39, 3]	購買; ; |purchase
 purchaser	noun	[1, 39, 1]	|purchase
@@ -727,7 +727,7 @@ option	noun	[1, 41, 3]	選擇; ; |option
 optional	adj	[2, 41, 3]	可選擇的、選修的; ; |option
 output	noun verb	[1, 41, 3]	產量、輸出; ; |output
 overall	adj	[1, 41, 3]	工作褲/服; ; 全面的；全部、大致上; ; |overall
-parallel	adj noun 	[1, 41, 1]	|parallel
+parallel	adj noun 	[1, 41, 3]	平行的、同時發生的；相似之處；與…同時發生、與…相似; ; |parallel
 unparalleled	adj	[1, 41, 1]	|parallel
 parameter	noun	[2, 41, 3]	決定因素、規範; ; |parameter
 phase	noun verb	[2, 41, 3]	階段；分階段進行; ; |phase
@@ -738,13 +738,13 @@ predictably	adv	[1, 41, 1]	|predict
 prediction	noun	[1, 41, 3]	預言、預測; ; |predict
 unpredictability	noun	[1, 41, 1]	|predict
 unpredictable	adj	[1, 41, 1]	|predict
-principal	adj	[1, 41, 3]	最重要的、主要的; ; |principal
+principal	adj	[0, 41, 3]	校長、首長; ; 最重要的、主要的; ; |principal
 principally	adv	[1, 41, 1]	|principal
 prior	adj	[2, 41, 3]	先前的；小修道院男院長; ; |prior
 professional	adj	[1, 41, 3]	職業的、專業的；專家; ; |professional
 professionalism	noun	[1, 41, 1]	|professional
 professionally	adv	[1, 41, 1]	|professional
-project	noun verb	[2, 41, 3]	計畫、估計、投射、展現; ; |project
+project	noun verb	[0, 41, 3]	方案、計畫、(學生)研究; ; 計畫、估計、投射、展現; ; |project
 projection	noun	[2, 41, 3]	預測、投射; ; |project
 promote	verb	[1, 41, 3]	促進、推動; ; |promote
 promoter	noun	[1, 41, 1]	|promote
@@ -1359,7 +1359,7 @@ predominant	adj	[2, 45, 3]	顯著的、盛行的、主導的; ; |predominant
 predominance	noun	[2, 45, 1]	|predominant
 predominantly	adv	[2, 45, 3]	主要地、多數情況下; ; |predominant
 predominate	verb	[2, 45, 1]	|predominant
-prospect	noun verb	[2, 45, 3]	探礦、勘探; ; |prospect
+prospect	noun verb	[1, 45, 3]	可能性、前景; ; 探礦、勘探; ; |prospect
 prospective	adj	[2, 45, 3]	可能的、潛在的; ; |prospect
 radical	adj noun	[1, 45, 3]	徹底的、激進的；激進份子; ; |radical
 radically	adv	[2, 45, 1]	|radical

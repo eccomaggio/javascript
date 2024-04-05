@@ -18,7 +18,6 @@ function insertCursorPlaceholder(el, index) {
   // let plainText = removeTagContentFromElement(el);
   let plainText = newlinesToPlaintext(removeTags(el)).innerText;
   const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
-  // debug(flatText, updatedText)
   return updatedText;
 }
 

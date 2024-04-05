@@ -607,6 +607,14 @@
       content: '\0000a0\0000a0';
     }
 
+    .in-list-header {
+      list-style-type: none;
+      font-weight: bold;
+      /* color: var(--medium); */
+      /* text-decoration: underline; */
+      font-style: italic;
+    }
+
 
     /* ## PAGE COMMON ELEMENTS #################################### */
 

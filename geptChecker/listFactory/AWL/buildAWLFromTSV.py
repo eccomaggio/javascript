@@ -461,13 +461,14 @@ def write_list_as_tsv(list, out_filename):
 
 if __name__ == "__main__":
     # files = os.listdir('.')
-    awl_tsv_urfile = "AWLallwords.tsv"          ## original awl wordlist, by heading
+    # awl_tsv_urfile = "AWLallwords.tsv"
+    awl_tsv_urfile = "AWL_base_file.tsv"          ## original awl wordlist, by heading
     awl_raw_json_file = "AWL_raw.json"          ## rough expansion of this into wordlist format
     awl_full_json_file = "AWLlist.full.json"    ## fully processed awl, with shared entries
     # awl_gept_json_file = "AWLlist.gept.json"
     # gept_json_file = "../dbGEPT.json"
     gept_json_file = "../GEPT/dbGEPT.json"      ## original GEPT wordlist
-    pos_corrections_file = "awl_pos_corrections.json"
+    # pos_corrections_file = "awl_pos_corrections.json"
     pos_corrections_dict_file = "awl_pos_corrections_dict.json"
     # awl_additions_filename = "awl_additions.json"
     new_gept_json_file = "dbGEPT.new.json"      ## contains AWL correlations
@@ -490,7 +491,7 @@ if __name__ == "__main__":
     #### Make (automated) manual corrections
     #### Manually adjust corrections list to implement corrections. "DEL" = delete this entry
     #### Remove items marked to be deleted
-    awl_corrected = add_pos_corrections(awl_raw, pos_corrections_file)
+    awl_corrected = add_pos_corrections(awl_raw, pos_corrections_dict_file)
     print(f"\tawl_corrected has {len(awl_corrected)} entries.")
 
     awl_consolidated, gept_json_file, tmp_shared_1 = consolidate_with_gept(awl_corrected, gept_list)
@@ -501,6 +502,7 @@ if __name__ == "__main__":
 
     awl_truncated, tmp_shared_2 = remove_shared_entries_from_awl(awl_slim)
     print(f"\tawl_truncated has {len(awl_truncated)} entries, with {len(tmp_shared_2)} shared with GEPT")
+    print(f"Discrepancy between shared entries ({len(tmp_shared_1)} and {len(tmp_shared_2)}) arises from multiple entries for lemmas with different meanings in GEPT vs single lemma entries for AWL.")
 
     # disparity = set(tmp_shared_1) ^ (tmp_shared_2)
     # disparity = [e for e in tmp_shared_2 if (e not in tmp_shared_1)]

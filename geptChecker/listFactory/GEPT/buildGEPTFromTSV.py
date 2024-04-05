@@ -273,20 +273,19 @@ def normalize_cols(list):
 
     normalized = []
     for e in list:
-
       awl_level = -1
       if e[ur_awl]:
         awl_level = int(e[ur_awl].strip()[1:]) + AWL_INDEX
       normalized_entry = [
-          e[ur_lemma],
-          e[ur_pos],
+          e[ur_lemma].strip(),
+          e[ur_pos].strip(),
           [
             levels[e[ur_gept][0].lower()],
             awl_level,
             Pos.GEPT_ONLY.value
           ],
           # e[ur_gloss] + "; " + e[ur_notes] + "|"
-          e[ur_gloss] + "; " + e[ur_notes]
+          e[ur_gloss].strip() + "; " + e[ur_notes].strip()
         ]
       normalized.append(normalized_entry)
     return normalized
@@ -304,13 +303,14 @@ def main():
     raw_gept = return_separated_file_as_list("GEPTwordlist(updated2024).tsv")
     raw_gept.pop(0) ## Remove header line
     gept_list = normalize_cols(raw_gept)
-    assert len(gept_list) == 8393  ## according to the spreadsheet (minus headers line)
+    gept_list.insert(0,
+        ["", "", [0, -1, 2], "dummy entry: 0 easily confused with undefined|"],
+    )
+    assert len(gept_list) == 8393 + 1  ## according to the spreadsheet (minus headers line)
     save_list_as_json(gept_list, "dbGEPT.json")
     # pprint(gept_list)
     print(f"updated raw_gept contains {len(raw_gept)} entries")
     print(f"updated gept_list contains {len(gept_list)} entries")
-
-
 
 
 if __name__ == "__main__":

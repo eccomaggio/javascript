@@ -1,3 +1,4 @@
+		[0, -1, 2]	dummy entry: 0 easily confused with undefined|
 a	art.	[0, -1, 2]	一(個); 後接母音開頭之字時為 an
 A.M.	adv.	[0, -1, 2]	上午; = a.m.= AM
 abandon	verb	[1, 45, 3]	拋棄、捨棄、中止; ; |abandon
@@ -943,7 +944,7 @@ brisk	adj.	[2, -1, 2]	輕快的、生氣勃勃的;
 Britain	noun	[0, -1, 2]	英國; 
 brittle	adj.	[2, -1, 2]	易碎的、脆弱的; 
 broad	adj.	[0, -1, 2]	寬廣的、廣泛的; 
-broadcast	noun/verb	[0, -1, 2]	廣播(節目)；廣播 ; 
+broadcast	noun/verb	[0, -1, 2]	廣播(節目)；廣播; 
 broadcaster	noun	[2, -1, 2]	廣播員、廣播電台或電視公司; 
 broaden	verb	[2, -1, 2]	變寬、增長(經驗或知識); 
 brochure	noun	[2, -1, 2]	小冊子、資料或廣告手冊; 
@@ -1094,7 +1095,7 @@ card	noun	[0, -1, 2]	卡片、紙牌、賀卡;
 cardboard	noun	[2, -1, 2]	硬紙板; 
 cardinal	noun	[2, -1, 2]	樞機主教；基數；紅衣鳳頭鳥(見於北美，雄鳥為鮮紅色); 
 cardinal	adj.	[2, -1, 2]	極重要的、基本的; 
-care	noun/verb	[0, -1, 2]	照顧、擔憂、謹慎；照顧、關心、在意 ; 
+care	noun/verb	[0, -1, 2]	照顧、擔憂、謹慎；照顧、關心、在意; 
 career	noun	[0, -1, 2]	職業、生涯; 
 carefree	adj.	[2, -1, 2]	無憂無慮的; 
 careful	adj.	[0, -1, 2]	小心的、仔細的; 
@@ -1117,7 +1118,7 @@ cart	noun/verb	[1, -1, 2]	手推車、馬車；運送、搬運;
 cartel	noun	[2, -1, 2]	同業聯盟; 
 carton	noun	[2, -1, 2]	硬紙盒、塑膠盒; 
 cartoon	noun	[0, -1, 2]	卡通; 
-carve	verb	[1, -1, 2]	雕刻;  
+carve	verb	[1, -1, 2]	雕刻; 
 case	noun	[0, -1, 2]	箱、盒、容器；案件、案例; 
 cash	noun/verb	[0, -1, 2]	現金；兌現; 
 cashier	verb	[2, -1, 2]	撤銷...的軍職、免除...的軍籍; 
@@ -1857,7 +1858,7 @@ crop	verb	[1, -1, 2]	剪裁、剪短;
 cross	verb	[0, -1, 2]	穿越、交叉; 
 cross	noun	[0, -1, 2]	十字架、十字形; 
 cross-country	noun/adj./adv.	[2, -1, 2]	越野賽；越野的；橫越全國地; 
-crossing	noun	[2, -1, 2]	交叉口、十字路口、橫渡; = pedestrian crossing, zebra crossing, crosswalk 
+crossing	noun	[2, -1, 2]	交叉口、十字路口、橫渡; = pedestrian crossing, zebra crossing, crosswalk
 crossroad	noun	[1, -1, 2]	交叉路口、十字路口; 
 crouch	verb/noun	[2, -1, 2]	蹲(下)、俯蹲(姿勢); 
 crow	noun	[1, -1, 2]	烏鴉; 
@@ -2400,7 +2401,7 @@ drugstore	noun	[0, -1, 2]	藥局;
 drum	noun	[0, -1, 2]	鼓; 
 drunk	adj./noun	[1, -1, 2]	酒醉的；醉漢; 
 dry	adj./verb	[0, -1, 2]	乾的；弄乾; 
-dryer	noun	[0, -1, 2]	烘乾機、吹風機 ; 
+dryer	noun	[0, -1, 2]	烘乾機、吹風機; 
 dual	adj.	[2, -1, 2]	兩的、雙重的; 
 dub	verb	[2, -1, 2]	把…稱為、起綽號；配音; 
 dubious	adj.	[2, -1, 2]	懷疑的、可疑的、未定的; 
@@ -2888,7 +2889,7 @@ feast	noun/verb	[1, -1, 2]	盛宴;
 feat	noun	[2, -1, 2]	功績、英勇事蹟; 
 feather	noun	[1, -1, 2]	羽毛; 
 feature	noun/verb	[1, 39, 3]	特色；以…為特色; ; |feature
-February	noun	[0, -1, 2]	二月; = Feb. 
+February	noun	[0, -1, 2]	二月; = Feb.
 federal	adj.	[1, 43, 3]	聯邦政府的; ; |federal
 federation	noun	[2, 43, 3]	聯邦政府(制度)聯盟; ; |federal
 fee	noun	[0, 43, 3]	費用; ; |fee
@@ -3256,7 +3257,7 @@ given	adj.	[2, -1, 2]	規定的、特定的;
 given	prep.	[2, -1, 2]	考慮到、鑒於; 
 glacier	noun	[2, -1, 2]	冰河; 
 glad	adj.	[0, -1, 2]	高興的; 
-glamor	noun	[2, -1, 2]	魅力; = glamour (British English) 
+glamor	noun	[2, -1, 2]	魅力; = glamour (British English)
 glamorous	adj.	[2, -1, 2]	富有魅力的、迷人的; 
 glance	verb/noun	[1, -1, 2]	瞥一眼、瀏覽; 
 gland	noun	[2, -1, 2]	腺; 
@@ -3695,7 +3696,7 @@ humid	adj.	[0, -1, 2]	潮濕的;
 humidity	noun	[1, -1, 2]	溼度、潮濕; 
 humiliate	verb	[2, -1, 2]	羞辱、使難堪; 
 humiliation	noun	[2, -1, 2]	恥辱; 
-humor	noun	[0, -1, 2]	幽默; = humour (British English)  
+humor	noun	[0, -1, 2]	幽默; = humour (British English)
 humorous	adj.	[0, -1, 2]	幽默的; 
 hunch	noun	[2, -1, 2]	預感、直覺; 
 hunch	verb	[2, -1, 2]	使弓起、聳肩; 
@@ -4195,7 +4196,7 @@ large-scale	adj.	[2, -1, 2]	大規模的、大範圍的;
 laser	noun	[1, -1, 2]	雷射; 
 lash	noun/verb	[2, -1, 2]	睫毛、鞭打；鞭打、猛擊、怒斥; 
 last	verb	[1, -1, 2]	持續; 
-last 	adj./pron./noun	[0, -1, 2]	最後的、剛過的; 
+last	adj./pron./noun	[0, -1, 2]	最後的、剛過的; 
 lasting	adj.	[2, -1, 2]	持久的; 
 late	adj./adv.	[0, -1, 2]	遲的; 
 lately	adv.	[1, -1, 2]	最近; 
@@ -4224,7 +4225,7 @@ layout	noun	[2, -1, 2]	佈局、佈置、安排;
 lazy	adj.	[0, -1, 2]	懶惰的; 
 LCD	noun	[2, -1, 2]	液晶顯示器; = liquid crystal display
 lead	noun	[1, -1, 2]	鉛; 
-lead 	verb/noun	[0, -1, 2]	領導；領先; 
+lead	verb/noun	[0, -1, 2]	領導；領先; 
 leader	noun	[0, -1, 2]	領導者; 
 leadership	noun	[0, -1, 2]	領導(能力); 
 lead-in	noun	[2, -1, 2]	(主題、故事的)介紹、開場白; 
@@ -4299,8 +4300,8 @@ library	noun	[0, -1, 2]	圖書館;
 license	verb/noun	[1, 42, 3]	發許可證；執照; = licence (British English); |license; |license
 lick	verb/noun	[0, -1, 2]	舔; 
 lid	noun	[0, -1, 2]	蓋子；眼瞼; 
-lie 	verb	[0, -1, 2]	躺下、橫臥、擺放; 
-lie 	noun/verb	[0, -1, 2]	謊言；說謊; 
+lie	verb	[0, -1, 2]	躺下、橫臥、擺放; 
+lie	noun/verb	[0, -1, 2]	謊言；說謊; 
 lieutenant	noun	[2, -1, 2]	中尉、上尉; 
 life	noun	[0, -1, 2]	生命、生活; 
 lifeboat	noun	[2, -1, 2]	救生船; 
@@ -4310,8 +4311,8 @@ lifestyle	noun	[1, -1, 2]	生活方式;
 lifetime	noun	[1, -1, 2]	一生; 
 lift	verb	[0, -1, 2]	舉起; 
 lift	noun	[0, -1, 2]	舉、順道搭載; 
-light 	noun/verb/adj.	[0, -1, 2]	光、燈；點燃、照亮；明亮的; 
-light 	adj./adv.	[0, -1, 2]	輕(便)、明亮、(顏色)淺、少量; 
+light	noun/verb/adj.	[0, -1, 2]	光、燈；點燃、照亮；明亮的; 
+light	adj./adv.	[0, -1, 2]	輕(便)、明亮、(顏色)淺、少量; 
 lighten	verb	[1, -1, 2]	變亮、照亮；減輕; 
 lighthouse	noun	[1, -1, 2]	燈塔; 
 lighting	noun	[2, -1, 2]	照明設備、光線、燈光; 
@@ -4357,7 +4358,7 @@ literature	noun	[1, -1, 2]	文學;
 litter	noun/verb	[1, -1, 2]	垃圾；亂扔、使凌亂; 
 little	adj./pron./adv.	[0, -1, 2]	小的；少; 
 live	adj.	[1, -1, 2]	實況的、現場演出的、活的; 
-live 	verb	[0, -1, 2]	活; 
+live	verb	[0, -1, 2]	活; 
 live-in	adj.	[2, -1, 2]	住在工作場所的、未婚同居者; 
 lively	adj.	[1, -1, 2]	精力充沛的; 
 liver	noun	[1, -1, 2]	肝臟; 
@@ -4394,7 +4395,7 @@ loneliness	noun	[1, -1, 2]	寂寞;
 lonely	adj.	[0, -1, 2]	寂寞的; 
 lonesome	adj.	[2, -1, 2]	孤獨的、寂寞的、人煙稀少的; 
 long	verb	[1, -1, 2]	渴望、期盼; 
-long 	adj./adv.	[0, -1, 2]	長的、久的；長久地; 
+long	adj./adv.	[0, -1, 2]	長的、久的；長久地; 
 longevity	noun	[2, -1, 2]	長壽、持久; 
 longitude	noun	[2, -1, 2]	經度; 
 long-standing	adj.	[1, -1, 2]	存在已久的、悠久的; 
@@ -4554,7 +4555,7 @@ match	verb	[0, -1, 2]	相配;
 mate	noun/verb	[1, -1, 2]	夥伴、伴侶；交配; 
 material	noun	[0, -1, 2]	物質、材料; 
 materialism	noun	[2, -1, 2]	物質主義、唯物主義; 
-math 	noun	[0, -1, 2]	數學、算術; = mathematics
+math	noun	[0, -1, 2]	數學、算術; = mathematics
 mathematical	adj.	[1, -1, 2]	數學的; 
 matter	noun	[0, -1, 2]	問題；物質; 
 matter	verb	[0, -1, 2]	有關係; 
@@ -4562,7 +4563,7 @@ mattress	noun	[2, -1, 2]	床墊;
 mature	adj.	[1, 46, 3]	成熟的; ; |mature
 maturity	noun	[1, 46, 3]	成熟、完善; ; |mature
 maximum	adj./noun/adv.	[0, 40, 3]	最大值（的/地）; ; |maximize
-may	aux.	[0, -1, 2]	可能;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+may	aux.	[0, -1, 2]	可能; 
 May	noun	[0, -1, 2]	五月; 
 maybe	adv.	[0, -1, 2]	或許; 
 mayonnaise	noun	[2, -1, 2]	蛋黃醬、美乃滋; 
@@ -4571,7 +4572,7 @@ me	pron.	[0, -1, 2]	我;
 meadow	noun	[1, -1, 2]	（牧）草地; 
 meal	noun	[0, -1, 2]	一餐、餐點; 
 mean	adj.	[1, -1, 2]	吝嗇的、卑鄙的; 
-mean 	verb	[0, -1, 2]	意思是、意指、意圖; 
+mean	verb	[0, -1, 2]	意思是、意指、意圖; 
 meaning	noun	[0, -1, 2]	意義; 
 meaningful	adj.	[1, -1, 2]	有意義的; 
 means	noun	[0, -1, 2]	手段; 
@@ -4597,7 +4598,7 @@ meditate	verb	[2, -1, 2]	冥想、暗自策劃;
 meditation	noun	[2, -1, 2]	冥想、沉思; 
 medium	adj.	[0, 46, 3]	中間的、中等的; ; |medium
 medium	noun	[0, 46, 3]	媒介、方法、媒體; ; 中間的、中等的; ; |medium
-meet	verb	[0, -1, 2]	遇見;  
+meet	verb	[0, -1, 2]	遇見; 
 meeting	noun	[0, -1, 2]	會議; 
 melancholy	noun/adj.	[2, -1, 2]	憂鬱；傷悲、（令人）悲哀的; 
 mellow	adj./verb	[2, -1, 2]	（色彩或聲音）柔和豐富的；成熟; 
@@ -4636,7 +4637,7 @@ metal	noun	[0, -1, 2]	金屬;
 metallic	adj.	[2, -1, 2]	金屬般的; 
 metaphor	noun	[2, -1, 2]	暗喻、隱喻; 
 meter	verb	[1, -1, 2]	用儀表測量; 
-meter 	noun	[0, -1, 2]	公尺; = metre (British English)= m
+meter	noun	[0, -1, 2]	公尺; = metre (British English)= m
 method	noun	[0, 38, 3]	方法; ; |method
 metric	adj.	[2, -1, 2]	公制的; 
 metro	noun	[1, -1, 2]	地鐵; = Metro
@@ -4650,7 +4651,7 @@ middle-aged	adj.	[1, -1, 2]	中年的、煩人的、過時的;
 midnight	noun/adj.	[0, -1, 2]	午夜; 
 midst	noun/prep.	[2, -1, 2]	中部、中間; 
 might	noun	[1, -1, 2]	力量; 
-might 	aux.	[0, -1, 2]	可能、或許; 
+might	aux.	[0, -1, 2]	可能、或許; 
 mighty	adj.	[1, -1, 2]	強而有力的; 
 migrant	noun	[2, 43, 3]	(為工作)移居者、移民; ; |migrate
 migrate	verb	[2, 43, 3]	移居、遷移; ; |migrate
@@ -5095,7 +5096,7 @@ only	adv./adj./conj.	[0, -1, 2]	僅、只；唯一的;
 onto	prep.	[1, -1, 2]	到…之上; 
 opaque	adj.	[2, -1, 2]	不透明的、難懂、模糊; 
 open	verb/adj.	[0, -1, 2]	打開；開著的; 
-opener	noun	[1, -1, 2]	開罐器；開場白 ; 
+opener	noun	[1, -1, 2]	開罐器；開場白; 
 opening	noun	[1, -1, 2]	缺口、開幕; 
 opening	adj.	[1, -1, 2]	開始的; 
 openly	adv.	[2, -1, 2]	公開地、毫不隱瞞地; 
@@ -5190,7 +5191,7 @@ outside	prep./adv./adj./noun	[0, -1, 2]	在外地；外面(的);
 outsider	noun	[2, -1, 2]	局外人、非成員; 
 outskirts	noun	[2, -1, 2]	邊緣地帶、市郊; 
 outstanding	adj.	[1, -1, 2]	優秀的; 
-outward 	adj./adv.	[1, -1, 2]	外面的；外面地; 
+outward	adj./adv.	[1, -1, 2]	外面的；外面地; 
 oval	adj./noun	[1, -1, 2]	橢圓形(的)、卵形(的); 
 oven	noun	[0, -1, 2]	烤箱; 
 over	prep./adv./adj.	[0, -1, 2]	在…上面；越過；過去的; 
@@ -5201,7 +5202,7 @@ overcome	verb	[1, -1, 2]	克服;
 overdo	verb	[2, -1, 2]	做得過分、濫用、烹煮時間過長; 
 overeat	verb	[2, -1, 2]	吃的過量; 
 overflow	verb/noun	[1, -1, 2]	溢出、充滿；容納不下的人(或物)、溢出; 
-overhead 	adj./adv.	[1, -1, 2]	在頭頂上(的)； 在空中(的); 
+overhead	adj./adv.	[1, -1, 2]	在頭頂上(的)； 在空中(的); 
 overhear	verb	[2, -1, 2]	偶然聽到; 
 overlap	verb/noun	[2, 46, 3]	重疊；重疊部分; ; |overlap
 overlook	verb	[1, -1, 2]	忽略、眺望; 
@@ -5273,7 +5274,7 @@ parade	noun/verb	[1, -1, 2]	遊行;
 paradise	noun	[1, -1, 2]	天堂、樂園; 
 paradox	noun	[2, -1, 2]	矛盾的人(或事物)、悖論; 
 paragraph	noun	[1, 45, 3]	段落; ; |paragraph
-parallel 	adj./noun/verb	[1, -1, 2]	平行的、同時發生的；相似之處；與…同時發生、與…相似; 
+parallel	adj./noun/verb	[1, 41, 3]	平行的、同時發生的；相似之處；與…同時發生、與…相似; ; |parallel
 paralysis	noun	[2, -1, 2]	麻痺、癱瘓; 
 paralyze	verb	[2, -1, 2]	使麻痹、使癱瘓; = paralyse (British English)
 parameter	noun	[2, 41, 3]	決定因素、規範; ; |parameter
@@ -5281,16 +5282,16 @@ parcel	noun/verb	[1, -1, 2]	包裹；打包;
 pardon	noun/verb	[0, -1, 2]	原諒; 
 parent	noun	[0, -1, 2]	父母親; 
 parish	noun	[2, -1, 2]	教區、(英國)鄉村的行政小區; 
-park 	noun	[0, -1, 2]	公園 ; 
-park 	verb	[0, -1, 2]	停(車); 
+park	noun	[0, -1, 2]	公園; 
+park	verb	[0, -1, 2]	停(車); 
 parking lot	noun	[0, -1, 2]	停車場; 
 parliament	noun	[1, -1, 2]	議會; 
 parliamentary	adj.	[2, -1, 2]	議會的、國會的; 
 parlor	noun	[2, -1, 2]	(私人住房的)起居室、客廳; = parlour
-parrot	noun	[0, -1, 2]	鸚鵡 ; 
+parrot	noun	[0, -1, 2]	鸚鵡; 
 parsley	noun	[2, -1, 2]	歐芹、荷蘭芹; 
 part	verb	[1, -1, 2]	離開、分別; 
-part 	noun	[0, -1, 2]	部分; 
+part	noun	[0, -1, 2]	部分; 
 partial	adj.	[1, -1, 2]	部分的、偏袒的; 
 participant	noun	[1, 39, 3]	參與者、參加者; ; |participate
 participate	verb	[1, 39, 3]	參與、參加; ; |participate
@@ -5307,14 +5308,14 @@ part-time	adj./adv.	[1, -1, 2]	部分時間的、兼職的、兼職;
 party	noun	[0, -1, 2]	宴會; 
 pass	verb/noun	[0, -1, 2]	經過；通行證; 
 passage	noun	[1, -1, 2]	通道、段落; 
-passenger	noun	[0, -1, 2]	乘客 ; 
+passenger	noun	[0, -1, 2]	乘客; 
 passing	adj./noun	[2, -1, 2]	暫時的、瞬間的；(時間)流逝; 
 passion	noun	[1, -1, 2]	熱情; 
 passionate	adj.	[2, -1, 2]	情感強烈的、具有強烈信念的; 
 passive	adj.	[1, 46, 3]	被動的、消極的; ; |passive
 passport	noun	[1, -1, 2]	護照; 
 password	noun	[2, -1, 2]	暗號、口令、密碼; 
-past 	noun/adj./prep./adv.	[0, -1, 2]	過去、經過、（時間）晚於、結束; 
+past	noun/adj./prep./adv.	[0, -1, 2]	過去、經過、（時間）晚於、結束; 
 pasta	noun	[1, -1, 2]	義大利麵食; 
 paste	noun/verb	[0, -1, 2]	漿糊；黏貼; 
 pastime	noun	[2, -1, 2]	消遣、娛樂; 
@@ -5326,8 +5327,8 @@ patent	noun/verb/adj.	[2, -1, 2]	專利證書；獲得專利權；專利的;
 path	noun	[0, -1, 2]	小徑; 
 pathetic	adj.	[2, -1, 2]	可悲的、不成功的; 
 patience	noun	[1, -1, 2]	耐心; 
-patient 	adj.	[0, -1, 2]	有耐心的; 
-patient 	noun	[0, -1, 2]	病人; 
+patient	adj.	[0, -1, 2]	有耐心的; 
+patient	noun	[0, -1, 2]	病人; 
 patriot	noun	[2, -1, 2]	愛國者; 
 patriotic	adj.	[1, -1, 2]	愛國的; 
 patrol	verb/noun	[2, -1, 2]	巡邏；巡邏兵; 
@@ -5386,7 +5387,7 @@ perception	noun	[2, 39, 3]	感知、洞察力; ; |perceive
 perch	verb/noun	[2, -1, 2]	棲息、坐在…(的邊緣)；(鳥)棲息地; 
 perennial	adj./noun	[2, -1, 2]	長久的、持續的；多年生植物; 
 perfect	verb	[2, -1, 2]	使完善、使完美; 
-perfect 	adj.	[0, -1, 2]	完美的; 
+perfect	adj.	[0, -1, 2]	完美的; 
 perfection	noun	[1, -1, 2]	完美; 
 perform	verb	[1, -1, 2]	表演、表現; 
 performance	noun	[1, -1, 2]	表演、表現; 
@@ -5483,7 +5484,7 @@ pinch	verb/noun	[2, -1, 2]	捏、擰；一撮;
 pine	noun	[1, -1, 2]	松樹、松木; 
 pine	verb	[1, -1, 2]	渴望；憔悴; 
 pineapple	noun	[0, -1, 2]	鳳梨; 
-pink 	adj./noun	[0, -1, 2]	粉紅色的；粉紅色; 
+pink	adj./noun	[0, -1, 2]	粉紅色的；粉紅色; 
 pint	noun	[1, -1, 2]	品脫; 
 pioneer	noun/verb	[1, -1, 2]	先鋒、先驅；倡導、作先鋒; 
 pious	adj.	[2, -1, 2]	虔誠的、虔敬的、偽善的; 
@@ -5500,13 +5501,13 @@ pizza	noun	[0, -1, 2]	披薩;
 place	noun	[0, -1, 2]	廣場、地方、位置; 
 place	verb	[0, -1, 2]	放置; 
 plague	noun/verb	[2, -1, 2]	瘟疫、災害；不斷困擾、折磨; 
-plain 	noun	[0, -1, 2]	平原; 
-plain 	adj./adv.	[0, -1, 2]	樸素的、簡單的；完全地、簡直; 
+plain	noun	[0, -1, 2]	平原; 
+plain	adj./adv.	[0, -1, 2]	樸素的、簡單的；完全地、簡直; 
 plan	noun/verb	[0, -1, 2]	計畫、方案、平面圖；計劃、打算; 
 plane	noun	[0, -1, 2]	飛機; 
 planet	noun	[0, -1, 2]	行星; 
-plant 	verb	[0, -1, 2]	種植; 
-plant 	noun	[0, -1, 2]	植物; 
+plant	verb	[0, -1, 2]	種植; 
+plant	noun	[0, -1, 2]	植物; 
 plantation	noun	[2, -1, 2]	種植園、林場; 
 plaster	noun/verb	[2, -1, 2]	水泥、石膏；用水泥抹牆、貼滿、塗滿; 
 plastic	noun/adj.	[1, -1, 2]	塑膠；塑膠(製)的; 
@@ -5514,8 +5515,8 @@ plate	noun	[0, -1, 2]	盤子;
 plateau	noun	[2, -1, 2]	高原、(發展增長後的)穩定期; 
 platform	noun	[0, -1, 2]	月台; 
 plausible	adj.	[2, -1, 2]	有道理的、可信的、巧言令色的; 
-play 	verb	[0, -1, 2]	玩、打(球)、演奏; 
-play 	noun	[0, -1, 2]	比賽、遊戲、戲劇; 
+play	verb	[0, -1, 2]	玩、打(球)、演奏; 
+play	noun	[0, -1, 2]	比賽、遊戲、戲劇; 
 player	noun	[0, -1, 2]	運動員、演奏者、玩遊戲的人、播放器; 
 playful	adj.	[2, -1, 2]	有趣的、愛玩的、鬧著玩的; 
 playground	noun	[0, -1, 2]	操場、遊樂場; 
@@ -5523,8 +5524,8 @@ playwright	noun	[2, -1, 2]	劇作家;
 plea	noun	[2, -1, 2]	懇求、申訴; 
 plead	verb	[2, -1, 2]	乞求、(在法庭)辯護、解釋; 
 pleasant	adj.	[0, -1, 2]	宜人的; 
-please 	verb	[0, -1, 2]	使高興、取悅; 
-please 	adv.	[0, -1, 2]	請; 
+please	verb	[0, -1, 2]	使高興、取悅; 
+please	adv.	[0, -1, 2]	請; 
 pleased	adj.	[0, -1, 2]	喜歡的、滿意的; 
 pleasure	noun	[0, -1, 2]	樂趣; 
 pledge	noun/verb	[2, -1, 2]	保證、諾言；正式承諾; 
@@ -5548,8 +5549,8 @@ poem	noun	[0, -1, 2]	詩;
 poet	noun	[1, -1, 2]	詩人; 
 poetic	adj.	[2, -1, 2]	詩歌的、像詩ㄧ般的; 
 poetry	noun	[1, -1, 2]	詩作、詩集; 
-point 	verb	[0, -1, 2]	指向、瞄準; 
-point 	noun	[0, -1, 2]	點、觀點、要點、(特定)時刻; 
+point	verb	[0, -1, 2]	指向、瞄準; 
+point	noun	[0, -1, 2]	點、觀點、要點、(特定)時刻; 
 pointed	adj.	[2, -1, 2]	尖的、尖銳的、明確的; 
 poised	adj.	[2, -1, 2]	準備好(做某事)、泰然自若的; 
 poison	noun/verb	[0, -1, 2]	毒、毒藥；使中毒、使(水、空氣等)受污染; 
@@ -5602,7 +5603,7 @@ possession	noun	[1, -1, 2]	擁有、所有物、財產;
 possibility	noun	[1, -1, 2]	可能性; 
 possible	adj.	[0, -1, 2]	可能的; 
 post	noun	[1, -1, 2]	職位、郵件；杆/柱; 
-post 	noun/verb	[0, -1, 2]	郵件、貼文；郵寄、發佈; = mail (American English) 郵件,包裹,郵寄
+post	noun/verb	[0, -1, 2]	郵件、貼文；郵寄、發佈; = mail (American English) 郵件,包裹,郵寄
 post office	noun	[0, -1, 2]	郵局; 
 postage	noun	[1, -1, 2]	郵資; 
 postal	adj.	[1, -1, 2]	郵政的; 
@@ -5620,7 +5621,7 @@ potter	noun	[2, -1, 2]	陶工;
 pottery	noun	[1, -1, 2]	陶器; 
 poultry	noun	[1, -1, 2]	家禽; 
 pound	verb	[1, -1, 2]	猛擊、(心)怦怦跳、猛烈敲擊; 
-pound 	noun	[0, -1, 2]	磅、英鎊; 
+pound	noun	[0, -1, 2]	磅、英鎊; 
 pour	verb	[1, -1, 2]	倒(出)、湧現; 
 poverty	noun	[1, -1, 2]	貧窮; 
 powder	noun/verb	[0, -1, 2]	粉末；灑粉末; 
@@ -5669,14 +5670,14 @@ premise	noun	[2, -1, 2]	(法律用語)房屋、土地；經營場地;
 premium	noun	[2, -1, 2]	保險費; 
 premium	adj.	[2, -1, 2]	稀少、優質的; 
 preparation	noun	[1, -1, 2]	準備; 
-prepare	verb	[0, -1, 2]	準備 ; 
+prepare	verb	[0, -1, 2]	準備; 
 preposition	noun	[2, -1, 2]	介係詞; 
 prescribe	verb	[2, -1, 2]	给…開處方、規定、命令; 
 prescription	noun	[2, -1, 2]	處方、醫生開的藥; 
 presence	noun	[1, -1, 2]	出席、出現; 
 present	verb	[2, -1, 2]	贈送、頒發; 
-present 	adj.	[0, -1, 2]	出席的、現在的; 
-present 	noun	[0, -1, 2]	禮物；現在; 
+present	adj.	[0, -1, 2]	出席的、現在的; 
+present	noun	[0, -1, 2]	禮物；現在; 
 presentation	noun	[1, -1, 2]	授予、報告、演講; 
 presently	adv.	[1, -1, 2]	此刻、現在; 
 preservation	noun	[2, -1, 2]	保存、保護; 
@@ -5686,8 +5687,8 @@ presidency	noun	[2, -1, 2]	主席、總統的職位(任期);
 president	noun	[0, -1, 2]	總統; 
 president-elect	noun	[2, -1, 2]	候任總統; 
 presidential	adj.	[1, -1, 2]	總統(制)的; 
-press 	noun	[0, -1, 2]	新聞界、印刷出版業; 
-press 	verb	[0, -1, 2]	按、壓、催迫; 
+press	noun	[0, -1, 2]	新聞界、印刷出版業; 
+press	verb	[0, -1, 2]	按、壓、催迫; 
 pressure	noun/verb	[1, -1, 2]	壓力；對…施壓; 
 prestige	noun/adj.	[2, -1, 2]	聲望；受尊重的、令人敬仰的; 
 prestigious	adj.	[2, -1, 2]	有威望的; 
@@ -5695,8 +5696,8 @@ presumably	adv.	[2, 43, 3]	很可能、大概; ; |presume
 presume	verb	[2, 43, 3]	假設、推定; ; |presume
 pretend	verb	[1, -1, 2]	假裝、扮作; 
 pretext	noun	[2, -1, 2]	藉口、託辭; 
-pretty 	adj.	[0, -1, 2]	漂亮的; 
-pretty 	adv.	[0, -1, 2]	相當、頗; 
+pretty	adj.	[0, -1, 2]	漂亮的; 
+pretty	adv.	[0, -1, 2]	相當、頗; 
 prevail	verb	[2, -1, 2]	普遍存在、流行、戰勝; 
 prevailing	adj.	[2, -1, 2]	普遍的、盛行的; 
 prevalent	adj.	[2, -1, 2]	普遍的、流行的; 
@@ -5714,7 +5715,7 @@ priest	noun	[0, -1, 2]	教士、牧師;
 primarily	adv.	[2, 39, 3]	主要地; ; |primary
 primary	adj.	[0, 39, 3]	初級的、初等的; ; |primary
 primary	noun	[1, 39, 3]	(美國推舉黨內候選人的)初選; ; 初級的、初等的; ; |primary
-primary 	adj.	[1, -1, 2]	首要的、主要的、基本的; 
+primary	adj.	[1, 39, 3]	首要的、主要的、基本的; ; (美國推舉黨內候選人的)初選; ; 初級的、初等的; ; |primary
 prime	adj.	[1, 42, 3]	原始的、首位的; ; |prime
 prime	noun	[1, 42, 3]	全盛時期; ; 原始的、首位的; ; |prime
 prime	verb	[1, 42, 3]	使準備好; ; 全盛時期; ; 原始的、首位的; ; |prime
@@ -5722,7 +5723,7 @@ primitive	adj.	[1, -1, 2]	原始的;
 prince	noun	[0, -1, 2]	王子; 
 princess	noun	[0, -1, 2]	公主; 
 principal	adj.	[1, 41, 3]	最重要的、主要的; ; |principal
-principal 	noun	[0, -1, 2]	校長、首長; 
+principal	noun	[0, 41, 3]	校長、首長; ; 最重要的、主要的; ; |principal
 principle	noun	[0, 38, 3]	原則; ; |principle
 print	verb/noun	[0, -1, 2]	印刷、用印刷體寫；印刷字體、印刷品; 
 printer	noun	[0, -1, 2]	印表機; 
@@ -5751,7 +5752,7 @@ procession	noun	[2, -1, 2]	(人或車)行列、一隊人;
 processor	noun	[2, -1, 2]	加工機、處理器; 
 proclaim	verb	[2, -1, 2]	宣佈、聲明; 
 produce	noun	[2, -1, 2]	(尤指)農產品; 
-produce 	verb	[0, -1, 2]	製造、生產; 
+produce	verb	[0, -1, 2]	製造、生產; 
 producer	noun	[1, -1, 2]	生產者、製造商; 
 product	noun	[0, -1, 2]	產品; 
 production	noun	[0, -1, 2]	生產; 
@@ -5772,7 +5773,7 @@ progressive	adj./noun	[1, -1, 2]	進步的、逐漸的；改革派;
 prohibit	verb	[1, 44, 3]	(以法令)禁止; ; |prohibit
 prohibition	noun	[2, 44, 3]	(尤指通過法律的)禁止、禁令; ; |prohibit
 project	verb	[2, 41, 3]	計畫、估計、投射、展現; ; |project
-project 	noun	[0, -1, 2]	方案、計畫、(學生)研究; 
+project	noun	[0, 41, 3]	方案、計畫、(學生)研究; ; 計畫、估計、投射、展現; ; |project
 projection	noun	[2, 41, 3]	預測、投射; ; |project
 proliferate	verb	[2, -1, 2]	迅速繁殖、猛增; 
 prolong	verb	[2, -1, 2]	延長; 
@@ -5809,7 +5810,7 @@ prosecute	verb	[2, -1, 2]	起訴、控告;
 prosecution	noun	[2, -1, 2]	(被)刑事起訴、原告律師; 
 prosecutor	noun	[2, -1, 2]	檢察官、控方律師; 
 prospect	verb	[2, 45, 3]	探礦、勘探; ; |prospect
-prospect 	noun	[1, -1, 2]	可能性、前景; 
+prospect	noun	[1, 45, 3]	可能性、前景; ; 探礦、勘探; ; |prospect
 prospective	adj.	[2, 45, 3]	可能的、潛在的; ; |prospect
 prosper	verb	[1, -1, 2]	繁榮; 
 prosperity	noun	[1, -1, 2]	繁榮; 
@@ -5921,8 +5922,8 @@ quota	noun	[2, -1, 2]	定額、配額;
 quotation	noun	[2, 44, 3]	引文、語錄；報價、行情; ; |quote
 quote	verb/noun	[1, 44, 3]	引用、引述；引語; ; |quote
 rabbit	noun	[0, -1, 2]	兔子; 
-race 	verb/noun	[0, -1, 2]	賽跑、參加比賽；競爭; 
-race 	noun	[0, -1, 2]	種族; 
+race	verb/noun	[0, -1, 2]	賽跑、參加比賽；競爭; 
+race	noun	[0, -1, 2]	種族; 
 racial	adj.	[1, -1, 2]	種族的; 
 racing	noun	[2, -1, 2]	賽馬、速度比賽; 
 racism	noun	[2, -1, 2]	種族歧視、種族主義; 
@@ -6075,7 +6076,7 @@ refugee	noun	[1, -1, 2]	難民、流亡者;
 refund	noun/verb	[2, -1, 2]	退款; 
 refusal	noun	[1, -1, 2]	拒絕; 
 refuse	noun	[1, -1, 2]	垃圾、廢棄物; 
-refuse 	verb	[0, -1, 2]	拒絕; 
+refuse	verb	[0, -1, 2]	拒絕; 
 refute	verb	[2, -1, 2]	駁斥、否認; 
 regain	verb	[2, -1, 2]	重新獲得、返回; 
 regard	verb/noun	[0, -1, 2]	認為；尊敬、關心; 
@@ -6227,7 +6228,7 @@ response	noun	[1, 38, 3]	回應、答覆; ; |respond
 responsibility	noun	[1, -1, 2]	責任; 
 responsible	adj.	[0, -1, 2]	負責的、掌管…; 
 rest	verb/noun	[0, -1, 2]	剩下；剩餘部分、其餘; 
-rest 	noun	[0, -1, 2]	休息; 
+rest	noun	[0, -1, 2]	休息; 
 restaurant	noun	[0, -1, 2]	餐館; 
 restless	adj.	[1, -1, 2]	煩躁的; 
 restore	verb	[1, 45, 3]	恢復、復原; ; |restore
@@ -6296,16 +6297,16 @@ ridicule	noun/verb	[2, -1, 2]	揶揄(的話)；嘲笑、奚落;
 ridiculous	adj.	[1, -1, 2]	荒謬的、可笑的; 
 rifle	noun/verb	[1, -1, 2]	來福槍；匆忙翻找; 
 rig	verb/noun	[2, -1, 2]	(以不正當手段)操縱、裝配；裝備、鑽井設備; 
-right 	adj./adv.	[0, -1, 2]	右邊的、正確的；向右、正確地、立刻; 
-right 	noun	[0, -1, 2]	右方；權利; 
+right	adj./adv.	[0, -1, 2]	右邊的、正確的；向右、正確地、立刻; 
+right	noun	[0, -1, 2]	右方；權利; 
 right-hand	adj.	[0, -1, 2]	右手的、右側的、供右手用的; 
 right-wing	adj./noun	[2, -1, 2]	右翼的、右派的；右派; 名詞為right wing
 rigid	adj.	[2, 46, 3]	死板的、僵硬的、堅硬的; ; |rigid
 rigor	noun	[2, -1, 2]	嚴酷、艱苦、嚴謹; = rigour
 rigorous	adj.	[2, -1, 2]	嚴格的、嚴密的、嚴酷的; 
 rim	noun	[2, -1, 2]	(圓形物的)邊緣; 
-ring 	verb	[0, -1, 2]	打電話、按門鈴、(鈴聲)響起; 
-ring 	noun	[0, -1, 2]	戒指、環；鈴聲; 
+ring	verb	[0, -1, 2]	打電話、按門鈴、(鈴聲)響起; 
+ring	noun	[0, -1, 2]	戒指、環；鈴聲; 
 riot	noun/verb	[2, -1, 2]	暴亂、騷動；掀起暴動; 
 riotous	adj.	[2, -1, 2]	暴亂的、狂歡的; 
 rip	verb/noun	[2, -1, 2]	撕裂、扯開；裂縫、破綻; 
@@ -6331,8 +6332,8 @@ robe	noun	[1, -1, 2]	睡袍、禮袍;
 robin	noun	[2, -1, 2]	知更鳥; 
 robot	noun	[0, -1, 2]	機器人; 
 robust	adj.	[2, -1, 2]	強健的、信心十足的; 
-rock 	noun	[0, -1, 2]	石頭、岩石、搖滾樂; 
-rock 	verb	[0, -1, 2]	搖晃、震動、跳舞(搖滾樂); 
+rock	noun	[0, -1, 2]	石頭、岩石、搖滾樂; 
+rock	verb	[0, -1, 2]	搖晃、震動、跳舞(搖滾樂); 
 rocket	noun/verb	[1, -1, 2]	火箭；快速增長; 
 rocky	adj.	[2, -1, 2]	岩石的；困難的; 
 rod	noun	[1, -1, 2]	竿、棒; 
@@ -6365,8 +6366,8 @@ rouse	verb	[2, -1, 2]	喚醒、鼓舞;
 route	noun/verb	[1, 46, 3]	路線；按路線發送; ; |route
 routine	noun/adj.	[1, -1, 2]	常規；例行公事的; 
 row	noun/verb	[2, -1, 2]	吵架、口角；爭吵、吵鬧; 
-row 	noun	[0, -1, 2]	排、行、列; 
-row 	verb	[0, -1, 2]	划(船); 
+row	noun	[0, -1, 2]	排、行、列; 
+row	verb	[0, -1, 2]	划(船); 
 royal	adj.	[0, -1, 2]	皇家的; 
 royalty	noun	[2, -1, 2]	王室成員；版稅; 
 rub	verb	[0, -1, 2]	摩擦、揉; 
@@ -6404,8 +6405,8 @@ sad	adj.	[0, -1, 2]	悲傷的;
 sadden	verb	[1, -1, 2]	使難過; 
 saddle	noun/verb	[2, -1, 2]	馬鞍；肩負重任; 
 safari	noun	[2, -1, 2]	(在非洲)遊獵、長途旅行; 
-safe 	adj.	[0, -1, 2]	安全的; 
-safe 	noun	[0, -1, 2]	保險箱、保險櫃; 
+safe	adj.	[0, -1, 2]	安全的; 
+safe	noun	[0, -1, 2]	保險箱、保險櫃; 
 safeguard	verb/noun	[2, -1, 2]	保衛；安全措施; 
 safety	noun	[0, -1, 2]	安全; 
 sail	verb/noun	[0, -1, 2]	航行; 
@@ -6510,14 +6511,14 @@ seam	noun	[2, -1, 2]	接縫、礦層;
 search	noun/verb	[0, -1, 2]	搜尋; 
 seaside	noun	[1, -1, 2]	海邊; 
 season	verb	[1, -1, 2]	調味; 
-season 	noun	[0, -1, 2]	季節; 
+season	noun	[0, -1, 2]	季節; 
 seasonable	adj.	[2, -1, 2]	應時的、合時令的; 
 seasonal	adj.	[2, -1, 2]	季節性的; 
 seasoned	adj.	[2, -1, 2]	經驗老道的、調好味的; 
 seasoning	noun	[2, -1, 2]	調味料; 
 seat	noun/verb	[0, -1, 2]	座位；使就座; 
-second 	noun	[0, -1, 2]	第二位；秒; 
-second 	adj./adv.	[0, -1, 2]	第二的；居第二位; 
+second	noun	[0, -1, 2]	第二位；秒; 
+second	adj./adv.	[0, -1, 2]	第二的；居第二位; 
 secondary	adj.	[1, -1, 2]	次要的; 
 second-hand	adj./adv.	[1, -1, 2]	舊的、二手的；二手地、間接地; 
 secrecy	noun	[2, -1, 2]	秘密、保密; 
@@ -6589,9 +6590,9 @@ serviceman	noun	[2, -1, 2]	軍人;
 servicewoman	noun	[2, -1, 2]	女軍人、女兵; 
 serving	noun	[2, -1, 2]	(一份)食物; 
 session	noun	[1, -1, 2]	一節(課程)、會議、開庭; 
-set 	verb	[0, -1, 2]	放、裝設; 
-set 	adj.	[0, -1, 2]	準備好的; 
-set 	noun	[0, -1, 2]	一套(組、副); 
+set	verb	[0, -1, 2]	放、裝設; 
+set	adj.	[0, -1, 2]	準備好的; 
+set	noun	[0, -1, 2]	一套(組、副); 
 setback	noun	[2, -1, 2]	阻礙、障礙; 
 setting	noun	[2, -1, 2]	情節背景；(儀器)調節; 
 settle	verb	[1, -1, 2]	解決、決定、安頓; 
@@ -6660,8 +6661,8 @@ shock	noun/verb	[0, -1, 2]	震驚；使驚訝;
 shoe	noun	[0, -1, 2]	鞋; 
 shoot	verb/noun	[0, -1, 2]	發射、投籃；發射、射擊; 
 shooting	noun	[2, -1, 2]	槍擊、(電影)拍攝; 
-shop 	noun	[0, -1, 2]	店舖; = store 商店
-shop 	verb	[0, -1, 2]	買、購物; 
+shop	noun	[0, -1, 2]	店舖; = store 商店
+shop	verb	[0, -1, 2]	買、購物; 
 shopkeeper	noun	[1, -1, 2]	商店老闆; 
 shoplift	verb	[2, -1, 2]	在商店順手牽羊; 
 shore	noun	[0, -1, 2]	岸; 
@@ -6709,8 +6710,8 @@ siege	noun	[2, -1, 2]	圍城、封鎖;
 sigh	verb/noun	[1, -1, 2]	嘆息; 
 sight	noun	[0, -1, 2]	視力、視線; 
 sightseeing	noun	[1, -1, 2]	觀光、遊覽; 
-sign 	verb	[0, -1, 2]	簽名、簽約; 
-sign 	noun	[0, -1, 2]	徵兆、標示; 
+sign	verb	[0, -1, 2]	簽名、簽約; 
+sign	noun	[0, -1, 2]	徵兆、標示; 
 signal	noun/verb	[1, -1, 2]	信號；發信號; 
 signal	adj	[1, -1, 2]	顯著的、非凡的; 
 signature	noun	[1, -1, 2]	簽名; 
@@ -6744,8 +6745,8 @@ singer	noun	[0, -1, 2]	歌手;
 single	adj./noun	[0, -1, 2]	單一的、單身的；未婚者、單曲(唱片); 
 singular	adj.	[1, -1, 2]	單數的; 
 sinister	adj.	[2, -1, 2]	邪惡的、不祥的; 
-sink 	noun	[0, -1, 2]	水槽; 
-sink 	verb	[0, -1, 2]	下沉; 
+sink	noun	[0, -1, 2]	水槽; 
+sink	verb	[0, -1, 2]	下沉; 
 sip	verb/noun	[1, -1, 2]	啜飲；一小口; 
 sir	noun	[0, -1, 2]	先生; 
 sister	noun	[0, -1, 2]	姐妹; 
@@ -6775,7 +6776,7 @@ skip	verb	[1, -1, 2]	蹦蹦跳跳；略過;
 skip	noun	[1, -1, 2]	跳、蹦；省略; 
 skipper	noun/verb	[2, -1, 2]	(小船)船長、(運動隊)隊長；當隊長; 
 skirt	verb	[2, -1, 2]	環繞…的四週、避開(話題); 
-skirt 	noun	[0, -1, 2]	裙子; 
+skirt	noun	[0, -1, 2]	裙子; 
 skull	noun	[2, -1, 2]	頭蓋骨、腦筋; 
 sky	noun	[0, -1, 2]	天空; 
 skyscraper	noun	[1, -1, 2]	摩天大樓; 
@@ -6855,8 +6856,8 @@ snort	noun/verb	[2, -1, 2]	鼻息聲、哼聲；從鼻中噴氣作聲;
 snow	noun/verb	[0, -1, 2]	雪；下雪; 
 snowman	noun	[1, -1, 2]	雪人; 
 snowy	adj.	[0, -1, 2]	多雪的; 
-so 	adv.	[0, -1, 2]	如此; 
-so 	conj.	[0, -1, 2]	所以; 
+so	adv.	[0, -1, 2]	如此; 
+so	conj.	[0, -1, 2]	所以; 
 soak	verb/noun	[2, -1, 2]	浸泡、使濕透；浸泡; 
 soap	noun/verb	[0, -1, 2]	肥皂；抹肥皂; 
 soar	verb	[2, -1, 2]	急升、高飛; 
@@ -6921,7 +6922,7 @@ sort	noun	[0, -1, 2]	種類;
 sort	verb	[0, -1, 2]	分類; 
 soul	noun	[0, -1, 2]	靈魂; 
 sound	adj.	[1, -1, 2]	健康的、狀況良好的; 
-sound 	noun/verb	[0, -1, 2]	聲音；聽起來; 
+sound	noun/verb	[0, -1, 2]	聲音；聽起來; 
 soundtrack	noun	[2, -1, 2]	(電影)配樂、原聲帶; 
 soup	noun	[0, -1, 2]	湯; 
 sour	adj.	[0, -1, 2]	酸的; 
@@ -6971,7 +6972,7 @@ speculation	noun	[2, -1, 2]	推測、投機買賣;
 speech	noun	[0, -1, 2]	演說; 
 speed	noun/verb	[0, -1, 2]	速度；加速; 
 spell	noun	[1, -1, 2]	咒語; 
-spell 	verb	[0, -1, 2]	拼字; 
+spell	verb	[0, -1, 2]	拼字; 
 spelling	noun	[0, -1, 2]	拼寫; 
 spend	verb	[0, -1, 2]	度過; 
 sperm	noun	[2, -1, 2]	精子、精液; 
@@ -7016,7 +7017,7 @@ sprawl	verb/noun	[2, -1, 2]	(伸開四肢)躺臥、蔓延；隨意擴展;
 spray	noun/verb	[1, -1, 2]	水花、噴霧；噴灑; 
 spread	verb/noun	[0, -1, 2]	延伸；散布; 
 spring	verb	[2, -1, 2]	跳躍起、反彈、湧出; 
-spring 	noun	[0, -1, 2]	春天、泉水; 
+spring	noun	[0, -1, 2]	春天、泉水; 
 sprinkle	verb/noun	[1, -1, 2]	撒上; 
 sprint	noun/verb	[2, -1, 2]	短跑；全速衝刺; 
 spur	verb/noun	[2, -1, 2]	激勵鼓舞；馬刺、靴刺; 
@@ -7068,8 +7069,8 @@ startle	verb	[2, -1, 2]	使驚嚇;
 starvation	noun	[1, -1, 2]	飢餓、餓死; 
 starve	verb	[1, -1, 2]	捱餓、餓死; 
 state	noun	[1, -1, 2]	州、國家；狀態; 
-state 	adj.	[1, -1, 2]	國家的、州的; 
-state 	verb	[1, -1, 2]	陳述、說明、宣布; 
+state	adj.	[1, -1, 2]	國家的、州的; 
+state	verb	[1, -1, 2]	陳述、說明、宣布; 
 statement	noun	[1, -1, 2]	說法、聲明; 
 statesman	noun	[2, -1, 2]	政治家; 
 stateswoman	noun	[2, -1, 2]	女政治家; 
@@ -7113,12 +7114,12 @@ stern	adj.	[2, -1, 2]	嚴厲的、嚴峻的;
 stew	verb/noun	[2, -1, 2]	燉、思考、擔憂；燉菜; 
 steward	noun	[2, -1, 2]	(飛機輪船等)服務員、統籌人; = stewardess = attendant
 stick	verb	[0, -1, 2]	插入、黏貼; 
-stick 	noun	[0, -1, 2]	枝條、木棍、拐杖; 
+stick	noun	[0, -1, 2]	枝條、木棍、拐杖; 
 sticky	adj.	[1, -1, 2]	黏的; 
 stiff	adj./adv.	[1, -1, 2]	硬的、僵硬的；硬地、僵硬地; 
 still	adj.	[1, -1, 2]	靜止的、不動的; 
 still	noun	[2, -1, 2]	(電影)劇照；(釀酒用的)蒸餾器; 
-still 	adv.	[0, -1, 2]	仍然、更加; 
+still	adv.	[0, -1, 2]	仍然、更加; 
 stimulate	verb	[1, -1, 2]	刺激、激發; 
 stimulating	adj.	[2, -1, 2]	有啟發性的、能激發靈感的; 
 stimulation	noun	[2, -1, 2]	刺激、促進; 
@@ -7139,12 +7140,12 @@ stool	noun	[1, -1, 2]	凳子;
 stoop	verb/noun	[2, -1, 2]	俯身、彎腰；駝背; 
 stop	verb/noun	[0, -1, 2]	停止、阻止；短暫停留、(尤指公車)站; 
 storage	noun	[2, -1, 2]	儲藏(空間)、保管; 
-store 	noun	[0, -1, 2]	商店; 
-store 	verb	[0, -1, 2]	貯藏; 
+store	noun	[0, -1, 2]	商店; 
+store	verb	[0, -1, 2]	貯藏; 
 storey	noun	[1, -1, 2]	樓層; = story (American English)
 storm	noun	[0, -1, 2]	暴風雨; 
 stormy	adj.	[0, -1, 2]	暴風雨的; 
-story 	noun	[0, -1, 2]	故事；樓層; 樓層= floor
+story	noun	[0, -1, 2]	故事；樓層; 樓層= floor
 storyteller	noun	[1, -1, 2]	說故事者; 
 stout	adj.	[2, -1, 2]	粗壯結實的、勇敢的、頑強的; 
 stove	noun	[0, -1, 2]	爐子; 
@@ -7174,7 +7175,7 @@ stress	noun	[0, 41, 3]	壓力; ; 強調、著重; ; |stress
 stretch	verb/noun	[1, -1, 2]	拉長、伸展；一段; 
 strict	adj.	[1, -1, 2]	嚴格的; 
 stride	verb/noun	[2, -1, 2]	大步走；大步、進步; 
-strike 	verb/noun	[0, -1, 2]	打、擊、罷工；打擊、罷工; 
+strike	verb/noun	[0, -1, 2]	打、擊、罷工；打擊、罷工; 
 striker	noun	[2, -1, 2]	罷工者、(足球)前鋒; 
 striking	adj.	[2, -1, 2]	醒目的、顯著的、標致的; 
 string	noun/verb	[1, -1, 2]	細繩、線；懸掛、串在一起; 
@@ -7212,7 +7213,7 @@ stylistic	adj.	[2, -1, 2]	風格上的、文體上的;
 sub	noun	[2, -1, 2]	替補隊員、代理人、會費; 
 sub	verb	[2, -1, 2]	臨時代替他人做...; 
 subject	adj./verb	[1, -1, 2]	易受...的、隸屬的、取決於；使順從、使遭受; 
-subject 	noun	[0, -1, 2]	主題、科目、主詞 ; 
+subject	noun	[0, -1, 2]	主題、科目、主詞; 
 subjective	adj.	[2, -1, 2]	主觀的、主語的; 
 submarine	noun/adj.	[1, -1, 2]	潛水艇；海底的; 
 submerge	verb	[2, -1, 2]	潛入水中、淹沒、掩蓋(情感); 
@@ -7254,8 +7255,8 @@ sugar	noun	[0, -1, 2]	糖;
 suggest	verb	[0, -1, 2]	建議; 
 suggestion	noun	[1, -1, 2]	建議; 
 suicide	noun	[1, -1, 2]	自殺; 
-suit 	noun	[0, -1, 2]	西裝; 
-suit 	verb	[0, -1, 2]	適合、相配; 
+suit	noun	[0, -1, 2]	西裝; 
+suit	verb	[0, -1, 2]	適合、相配; 
 suitable	adj.	[1, -1, 2]	適宜的; 
 suitcase	noun	[1, -1, 2]	手提箱; 
 suite	noun	[2, -1, 2]	套房、一套傢具、組曲; 
@@ -7319,7 +7320,7 @@ surveillance	noun	[2, -1, 2]	監視、看守、監督;
 survey	noun/verb	[1, 39, 3]	(民意)調查；查看、審視; ; |survey
 survival	noun	[1, 44, 3]	生存、存活; ; |survive
 survive	verb	[0, 44, 3]	存活; ; |survive
-survivor	noun 	[1, 44, 3]	倖存者、生還者; ; |survive
+survivor	noun	[1, 44, 3]	倖存者、生還者; ; |survive
 susceptible	adj.	[2, -1, 2]	敏感的、容許…的; 
 suspect	verb/noun/adj.	[1, -1, 2]	懷疑；嫌疑犯；可疑的; 
 suspend	verb	[1, 46, 3]	懸掛、中止、暫時取消; ; |suspend
@@ -7330,7 +7331,7 @@ suspicious	adj.	[1, -1, 2]	(令人)懷疑的;
 sustain	verb	[2, 42, 3]	維持、遭受; ; |sustain
 sustainable	adj.	[2, 42, 3]	可持續的；能長期保持的; ; |sustain
 swallow	verb/noun	[1, -1, 2]	吞嚥、吞沒；一口的量; 
-swallow 	noun	[0, -1, 2]	燕子; 
+swallow	noun	[0, -1, 2]	燕子; 
 swamp	noun	[2, -1, 2]	淹沒、應接不暇; 
 swamp	verb	[2, -1, 2]	沼澤; 
 swan	noun	[0, -1, 2]	天鵝; 
@@ -7401,7 +7402,7 @@ Tainan	noun	[0, -1, 2]	台南;
 Taiwan	noun	[0, -1, 2]	臺灣; 
 Taiwanese	adj./noun	[0, -1, 2]	臺灣(人)的；臺灣人; 
 take	verb	[0, -1, 2]	搭、帶、做; 
-takeaway	noun	[2, -1, 2]	外賣餐館;  = carryout, takeout
+takeaway	noun	[2, -1, 2]	外賣餐館; = carryout, takeout
 takeover	noun	[2, -1, 2]	收購、接管; 
 tale	noun	[1, -1, 2]	故事; 
 talent	noun	[0, -1, 2]	才能、天份; 
@@ -7445,8 +7446,8 @@ team	noun	[0, 46, 3]	小組; ; |team
 teammate	noun	[2, -1, 2]	隊友; 
 teamwork	noun	[2, -1, 2]	聯合作業、協調合作; 
 teapot	noun	[0, -1, 2]	茶壺; 
-tear 	noun	[0, -1, 2]	眼淚; 
-tear 	verb	[0, -1, 2]	撕破; 
+tear	noun	[0, -1, 2]	眼淚; 
+tear	verb	[0, -1, 2]	撕破; 
 tease	verb/noun	[1, -1, 2]	取笑、逗弄; 
 teaspoon	noun	[2, -1, 2]	茶匙; 
 technical	adj.	[1, 40, 3]	技術的、專門的; ; |technical
@@ -7602,8 +7603,8 @@ ticket	noun	[0, -1, 2]	票、罰單;
 tickle	verb	[1, -1, 2]	搔癢、發癢; 
 tide	noun	[1, -1, 2]	潮汐、趨勢; 
 tidy	adj./verb	[0, -1, 2]	整齊的；整理; 
-tie 	noun	[0, -1, 2]	領帶、平手; 
-tie 	verb	[0, -1, 2]	捆、繫; 
+tie	noun	[0, -1, 2]	領帶、平手; 
+tie	verb	[0, -1, 2]	捆、繫; 
 tiger	noun	[0, -1, 2]	老虎; 
 tight	adj./adv.	[1, -1, 2]	緊的；緊地; 
 tighten	verb	[1, -1, 2]	使變緊、加強; 
@@ -7631,11 +7632,11 @@ tire	verb	[1, -1, 2]	使疲勞;
 tiresome	adj.	[1, -1, 2]	令人厭煩的; 
 tissue	noun	[1, -1, 2]	面紙、(動植物)組織; 
 title	noun	[0, -1, 2]	標題; 
-to 	prep./inf.	[0, -1, 2]	到; 
+to	prep./inf.	[0, -1, 2]	到; 
 toad	noun	[2, -1, 2]	蟾蜍、討厭的人; 
 toady	noun/verb	[2, -1, 2]	馬屁精；拍馬屁; 
-toast 	noun	[0, -1, 2]	吐司；敬酒; 
-toast 	verb	[0, -1, 2]	烤吐司、烤；乾杯; 
+toast	noun	[0, -1, 2]	吐司；敬酒; 
+toast	verb	[0, -1, 2]	烤吐司、烤；乾杯; 
 tobacco	noun	[1, -1, 2]	煙草; 
 today	adv./noun	[0, -1, 2]	今天; 
 toddle	verb	[2, -1, 2]	(幼兒)蹣跚行走、溜躂; 
@@ -7710,12 +7711,12 @@ trader	noun	[1, -1, 2]	商人、證券交易人;
 tradition	noun	[0, 39, 3]	傳統; ; |tradition
 traditional	adj.	[0, 39, 3]	傳統的; ; |tradition
 traffic	noun	[0, -1, 2]	交通; 
-tragedy	noun 	[1, -1, 2]	悲劇; 
+tragedy	noun	[1, -1, 2]	悲劇; 
 tragic	adj.	[1, -1, 2]	悲劇的、悲慘的; 
 trail	noun/verb	[1, -1, 2]	蹤跡、小道；拖曳; 
 trailer	noun	[2, -1, 2]	拖車；電影預告片; 
-train 	noun	[0, -1, 2]	火車; 
-train 	verb	[0, -1, 2]	訓練; 
+train	noun	[0, -1, 2]	火車; 
+train	verb	[0, -1, 2]	訓練; 
 trainee	noun	[2, -1, 2]	實習生; 
 training	noun	[1, -1, 2]	訓練; 
 trait	noun	[2, -1, 2]	(個性)特徵; 
@@ -7754,7 +7755,7 @@ transportation	noun	[1, 43, 3]	運輸; ; |transport
 trap	verb/noun	[0, -1, 2]	設陷阱；陷阱; 
 trash	noun/verb	[0, -1, 2]	垃圾；丟棄、損壞; 
 trauma	noun	[2, -1, 2]	精神創傷、外傷; 
-traumatic 	adj.	[2, -1, 2]	痛苦難忘的、造成精神創傷的; 
+traumatic	adj.	[2, -1, 2]	痛苦難忘的、造成精神創傷的; 
 travel	verb/noun	[0, -1, 2]	旅行; 
 traveler	noun	[1, -1, 2]	旅行者; = traveller (British English)
 traveling	adj.	[1, -1, 2]	旅行的、巡迴的; = travelling (British English)
@@ -7853,8 +7854,8 @@ twinkle	verb/noun	[1, -1, 2]	閃爍；閃亮;
 twist	verb/noun	[1, -1, 2]	彎曲、扭轉、轉彎; 
 two	number/pron./noun/adj.	[0, -1, 2]	二; 
 two-thirds	noun/pron./adj./adv.	[2, -1, 2]	三分之二; = two thirds
-type 	verb	[0, -1, 2]	打字; 
-type 	noun	[0, -1, 2]	類型; 
+type	verb	[0, -1, 2]	打字; 
+type	noun	[0, -1, 2]	類型; 
 typewriter	noun	[1, -1, 2]	打字機; 
 typhoon	noun	[0, -1, 2]	颱風; 
 typical	adj.	[1, -1, 2]	典型的; 
@@ -7945,7 +7946,7 @@ uprising	noun	[2, -1, 2]	起義、暴動;
 upset	adj./noun/verb	[1, -1, 2]	苦惱的；混亂；擾亂、惹惱; 
 upstairs	adv./adj./noun	[0, -1, 2]	在樓上；樓上的；樓上; 
 up-to-date	adj.	[2, -1, 2]	最新(式)的、現代的、尖端的; = up to date
-upward 	adj.	[1, -1, 2]	向上的; 
+upward	adj.	[1, -1, 2]	向上的; 
 uranium	noun	[2, -1, 2]	鈾; 
 urban	adj.	[1, -1, 2]	都市的、城鎮的; 
 urge	verb/noun	[1, -1, 2]	敦促、強烈主張；衝動; 
@@ -7953,11 +7954,11 @@ urgency	noun	[2, -1, 2]	迫切(的樣子)、急迫、緊急(性);
 urgent	adj.	[1, -1, 2]	緊急的; 
 urine	noun	[2, -1, 2]	尿、小便; 
 us	pron.	[0, -1, 2]	我們; 
-USA	noun	[0, -1, 2]	美國; = United States (of America) 
+USA	noun	[0, -1, 2]	美國; = United States (of America)
 usage	noun	[1, -1, 2]	使用、用法; 
 use	verb/noun	[0, -1, 2]	使用; 
-used 	adj.	[0, -1, 2]	二手的、習慣的; 
-used 	verb	[0, -1, 2]	過去慣常; 
+used	adj.	[0, -1, 2]	二手的、習慣的; 
+used	verb	[0, -1, 2]	過去慣常; 
 useful	adj.	[0, -1, 2]	有用的; 
 useless	adj.	[1, -1, 2]	無用的; 
 user	noun	[0, -1, 2]	使用者; 
@@ -8025,8 +8026,8 @@ verse	noun	[1, -1, 2]	韻文、詩節;
 version	noun	[1, 42, 3]	版本、說法; ; |version
 versus	prep.	[2, -1, 2]	對抗、…與…對比; = vs.
 vertical	adj./noun	[2, -1, 2]	垂直的；縱軸; 
-very 	adv.	[0, -1, 2]	非常、很; 
-very 	adj.	[0, -1, 2]	(加強語氣)正是、完全的; 
+very	adv.	[0, -1, 2]	非常、很; 
+very	adj.	[0, -1, 2]	(加強語氣)正是、完全的; 
 vessel	noun	[1, -1, 2]	船艦; 
 vest	noun	[0, -1, 2]	背心; 
 veteran	noun	[2, -1, 2]	老手、老兵、退伍軍人; 
@@ -8151,8 +8152,8 @@ wary	adj.	[2, -1, 2]	小心的、謹慎的;
 wash	verb	[0, -1, 2]	洗; 
 washing	noun	[1, -1, 2]	洗(或待洗)的衣物; 
 waste	noun/verb	[0, -1, 2]	浪費; 
-watch 	noun	[0, -1, 2]	錶; 
-watch 	verb	[0, -1, 2]	看、注意; 
+watch	noun	[0, -1, 2]	錶; 
+watch	verb	[0, -1, 2]	看、注意; 
 watchman	noun	[1, -1, 2]	巡夜者、夜間警衛; 
 water	noun/verb	[0, -1, 2]	水；澆水; 
 waterfall	noun	[0, -1, 2]	瀑布; 
@@ -8164,7 +8165,7 @@ wave	noun	[0, -1, 2]	(海)浪;
 wave	verb	[0, -1, 2]	揮、招(手); 
 wax	noun/verb	[1, -1, 2]	蠟；上蠟; 
 way	adv.	[1, -1, 2]	(加強語氣)太; 
-way 	noun	[0, -1, 2]	道路、路程；方法; 
+way	noun	[0, -1, 2]	道路、路程；方法; 
 way-out	adj.	[2, -1, 2]	非傳統的、前衛的; 
 we	pron.	[0, -1, 2]	我們; 
 weak	adj.	[0, -1, 2]	虛弱的; 
@@ -8199,7 +8200,7 @@ welcome	adj.	[0, -1, 2]	受歡迎的;
 weld	verb/noun	[2, -1, 2]	使緊密結合、焊接；焊接點; 
 welfare	noun/adj.	[1, 42, 3]	幸福、福利；福利的; ; |welfare
 well	noun	[1, -1, 2]	井; 
-well 	adv./adj.	[0, -1, 2]	很好地；健康的; 
+well	adv./adj.	[0, -1, 2]	很好地；健康的; 
 well-being	noun	[2, -1, 2]	健康、安樂; 
 well-known	adj.	[1, -1, 2]	有名的; 
 west	noun/adv./adj.	[0, -1, 2]	西方；向西方；西方的、向西方的; 
@@ -8223,9 +8224,9 @@ whereby	adv.	[2, 47, 3]	憑此、藉以; ; |whereby
 wherever	adv./conj.	[1, -1, 2]	任何地方、各處；究竟在哪裡; 
 whether	conj.	[0, -1, 2]	是否; 
 which	pron./conj./adj.	[0, -1, 2]	哪一個; 
-whichever	determiner/pron. 	[1, -1, 2]	無論哪個、任何一個; 
-while 	conj.	[0, -1, 2]	當...時候、然而; 
-while 	noun	[0, -1, 2]	一會兒、一段時間; 
+whichever	determiner/pron.	[1, -1, 2]	無論哪個、任何一個; 
+while	conj.	[0, -1, 2]	當...時候、然而; 
+while	noun	[0, -1, 2]	一會兒、一段時間; 
 whilst	conj.	[2, -1, 2]	當…的時候; 
 whine	noun/verb	[2, -1, 2]	啜泣聲、牢騷；啜泣、發牢騷; 
 whip	noun/verb	[1, -1, 2]	鞭子；鞭打、攪打(蛋、奶油); 
@@ -8257,11 +8258,11 @@ wilderness	noun	[1, -1, 2]	荒野;
 wildlife	noun	[1, -1, 2]	野生動物; 
 wildly	adv.	[1, -1, 2]	瘋狂地、失控地; 
 will	noun	[1, -1, 2]	意志、心願、遺囑; 
-will 	aux.	[0, -1, 2]	將(要)、能、願意; 
+will	aux.	[0, -1, 2]	將(要)、能、願意; 
 willing	adj.	[0, -1, 2]	願意的; 
 willow	noun	[1, -1, 2]	柳(樹); 
 win	verb/noun	[0, -1, 2]	贏；勝利; 
-wind 	noun	[0, -1, 2]	風; 
+wind	noun	[0, -1, 2]	風; 
 window	noun	[0, -1, 2]	窗戶; 
 windshield	noun	[2, -1, 2]	擋風玻璃; 
 windy	adj.	[0, -1, 2]	多風的; 

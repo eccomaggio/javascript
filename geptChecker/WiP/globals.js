@@ -132,6 +132,7 @@ let V = {
   isInMark: false,
   isTextEdit: false,
   cursorIncrement: 0,
+  isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
   // # key: [index in textArr, index in normalized word]
   // cursorPosInTextArr: [0, 0], //[word, char]
 }
@@ -177,9 +178,6 @@ const LOOKUP = {
 
   // ## These correlate with the numbers in the dBs
   level_headings: [
-    // "elementary",
-    // "intermediate",
-    // "high-intermediate",
     "elem (A2)",
     "int (B1)",
     "hi-int (B2)",
@@ -1009,15 +1007,15 @@ const LOOKUP = {
   },
 
   variantSuffixes: {
-    enc: "ense",
+    enc: "ense",    // licence
     // e: "",
-    r: "er",
-    is: "ize",
-    lys: "lyze",
-    ogu: "og",
-    ogu: "og",
-    eabl: "able",
-    ward: "ward",
+    r: "er",        // centre
+    is: "ize",      // organise
+    is: "ice",      // practise
+    lys: "lyze",    // analyse
+    ogu: "og",      // dialogue
+    eabl: "able",   // likeable
+    ward: "ward",   //  downwards
   },
 
   variantLetters: [
