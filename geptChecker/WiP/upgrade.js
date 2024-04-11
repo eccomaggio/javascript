@@ -193,7 +193,7 @@ function normalizeTextForClipboard(e) {
   //
   // navigator.clipboard
   //   .writeText(normalizedText)
-  //   .then(() => {
+  //   .then(() => 
   //     console.log("successfully copied");
   //   })
   //   .catch(() => {

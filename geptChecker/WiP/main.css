@@ -60,36 +60,6 @@
 
     /* ## TABS ############################################ */
 
-    /* tab-tag, .tab { */
-    tab-tag {
-      border: 1px solid lightgray;
-      border-radius: 5px 5px 0 0;
-      border-bottom: 0;
-      padding: 8px 6px 6px 6px;
-    }
-
-    /* tab-tools, .tab-tools { */
-    tab-tools {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-    }
-
-    .tab-on {
-      color: black;
-      background: white;
-      font-weight: bold;
-      border-bottom: 1px solid white;
-      margin-bottom: -1px;
-      z-index: 1;
-    }
-
-    .tab-off {
-      background: var(--light);
-      font-weight: normal;
-    }
-
-
     /* tab-group, #tab-group { */
     tab-group {
       /* height: 100vh;
@@ -109,6 +79,46 @@
       display: flex;
       flex-direction: row;
       justify-content: flex-start;
+    }
+
+    /* tab-tag, .tab { */
+    tab-tag {
+      border: 1px solid lightgray;
+      border-radius: 5px 5px 0 0;
+      border-bottom: 0;
+      padding: 8px 6px 6px 6px;
+    }
+
+    .tab-refresh {
+      font-weight: normal;
+      color: var(--medium);
+      font-size: x-large;
+      line-height: 60%;
+    }
+
+    /* tab-tools, .tab-tools { */
+    tab-tools {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+    }
+
+    tab-spacer {
+      width: 5vw;
+    }
+
+    .tab-on {
+      color: black;
+      background: white;
+      font-weight: bold;
+      border-bottom: 1px solid white;
+      margin-bottom: -1px;
+      z-index: 1;
+    }
+
+    .tab-off {
+      background: var(--light);
+      font-weight: normal;
     }
 
     /* tab-body, #tab-body { */
@@ -631,9 +641,13 @@
       align-items: center;
     }
 
-    .spacer {
-      width: 5vw;
+    .noBold {
+      font-weight: normal;
     }
+
+    /* .spacer {
+      width: 5vw;
+    } */
 
     #selectGEPT {
       color: #3f7fbf;

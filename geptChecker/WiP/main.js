@@ -434,13 +434,16 @@ function executeFormDataLookup(data) {
 }
 
 function refineSearch(find) {
-  let results = V.currentDb.db.filter(el => el[C.LEMMA].search(find.term) != -1);
+  // let results = V.currentDb.db.filter(el => el[C.LEMMA].search(find.term) != -1);
+  let results = V.currentDb.db.filter(el => getLemma(el).search(find.term) != -1);
   results = results.concat(getDerivedForms(find.term).map(el => lookupDbEntry(el)));
   if (find.level.length) {
-    results = results.filter(el => find.level.indexOf(el[C.LEVEL][C.GEPT_ONLY]) > -1);
+    // results = results.filter(el => find.level.indexOf(el[C.LEVEL][C.GEPT_ONLY]) > -1);
+    results = results.filter(el => find.level.indexOf(getLevel(el)[C.GEPT_ONLY]) > -1);
   }
   if (find.pos.length) {
-    results = results.filter(el => el[C.POS]).filter(el => el[C.POS].search(find.pos) != -1);
+    // results = results.filter(el => el[C.POS]).filter(el => el[C.POS].search(find.pos) != -1);
+    results = results.filter(el => getPoS(el)).filter(el => getPoS(el).search(find.pos) != -1);
   }
   if (isBESTEP() && find.awl && find.awl.length) {
     /*
@@ -455,16 +458,20 @@ function refineSearch(find) {
     */
     if (find.awl == C.FIND_GEPT_ONLY) {
       // results = results.filter(el => el[C.LEVEL][2] >= 2);
-      results = results.filter(el => el[C.LEVEL][C.STATUS] >= C.GEPT_ONLY);
+      // results = results.filter(el => el[C.LEVEL][C.STATUS] >= C.GEPT_ONLY);
+      results = results.filter(el => getLevel(el)[C.STATUS] >= C.GEPT_ONLY);
     }
     else if (find.awl == C.FIND_AWL_ONLY) {
-      results = results.filter(el => el[C.LEVEL][C.AWL_LEVEL] > -1);
+      // results = results.filter(el => el[C.LEVEL][C.AWL_LEVEL] > -1);
+      results = results.filter(el => getLevel(el)[C.AWL_LEVEL] > -1);
     }
     else {
-      results = results.filter(el => find.awl.indexOf(el[C.LEVEL][C.AWL_LEVEL]) > -1);
+      // results = results.filter(el => find.awl.indexOf(el[C.LEVEL][C.AWL_LEVEL]) > -1);
+      results = results.filter(el => find.awl.indexOf(getLevel(el)[C.AWL_LEVEL]) > -1);
     }
   }
-  results = results.filter(result => result[C.ID] > 0);
+  // results = results.filter(result => result[C.ID] > 0);
+  results = results.filter(result => getId(result) > 0);
   return results;
 }
 
@@ -495,13 +502,16 @@ function formatResultsAsHTML(results) {
   let currentInitial = "";
   let i = 0;
   for (const entry of results.sort(compareByLemma)) {
-    currentInitial = (entry[C.LEMMA]) ? entry[C.LEMMA][0].toLowerCase() : "";
+    // currentInitial = (entry[C.LEMMA]) ? entry[C.LEMMA][0].toLowerCase() : "";
+    currentInitial = (getLemma(entry)) ? getLemma(entry)[0].toLowerCase() : "";
     if (currentInitial !== previousInitial) {
       output += formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", "");
     }
-    const level_arr = entry[C.LEVEL];
+    // const level_arr = entry[C.LEVEL];
+    const level_arr = getLevel(entry);
     const awl_sublist = getAwlSublist(level_arr);
-    const awlWord = highlightAwlWord(level_arr, entry[C.LEMMA]);
+    // const awlWord = highlightAwlWord(level_arr, entry[C.LEMMA]);
+    const awlWord = highlightAwlWord(level_arr, getLemma(entry));
     const lemma = `<strong>${awlWord}</strong>`;
     const pos = `[${expandPos(entry)}]`;
     let level = V.level_subs[level_arr[0]];
@@ -517,12 +527,29 @@ function formatResultsAsHTML(results) {
   return "<table>" + output + "</table>";
 }
 
+function getId(entry){
+  return entry[0];
+}
+
+function getLemma(entry){
+  return entry[1];
+}
+
+function getPoS(entry){
+  return entry[2];
+}
+
+function getLevel(entry){
+  return entry[3];
+}
+
 function getNotes(entry) {
-  let [note, awl_note] = entry[C.NOTE].trim().split(C.NOTE_SEP);
+  let [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
   note = note ? `, ${note}` : "";
   awl_note = (isBESTEP() && awl_note) ? ` <span class="awl-note">(headword: <span class="awl-headword">${awl_note}</span>)</span>` : "";
   return [note, awl_note]
 }
+
 
 function formatResultsAsTablerows(col1, col2, class1, class2, row) {
   class1 = (class1) ? ` class="${class1}"` : "";
@@ -592,7 +619,8 @@ function displayEntryInfo(refs) {
     const isOfflist = (variantId) ? true : false;
     const entry = (isOfflist) ? lookupDbEntry(variantId) : lookupDbEntry(id);
     // debug(entry, isOfflist)
-    const [levelArr, levelNum, levelClass] = getLevelDetails(entry[C.LEVEL]);
+    // const [levelArr, levelNum, levelClass] = getLevelDetails(entry[C.LEVEL]);
+    const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
     const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist);
     const level = buildDisplayLevel(entry, id, levelArr, isOfflist);
     const pos = `[${expandPos(entry)}]`;
@@ -604,29 +632,32 @@ function displayEntryInfo(refs) {
 }
 
 function buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist) {
-  let lemma = "";
-  if (entry[C.POS] !== "unknown") {
+  let displayLemma = "";
+  // if (entry[C.POS] !== "unknown") {
+  if (getPoS(entry) !== "unknown") {
+    const lemma = getLemma(entry);
     // lemma = (normalizedWord && normalizedWord !== entry[C.LEMMA]) ? `${normalizedWord} (${entry[C.LEMMA]})` : entry[C.LEMMA];
-    if (normalizedWord && normalizedWord !== entry[C.LEMMA]) {
+    if (normalizedWord && normalizedWord !== lemma) {
       if (isOfflist) {
-        lemma = `<em>** Use</em> <strong>${entry[C.LEMMA]}</strong> <em>instead of</em><br>${normalizedWord} `;
+        displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>${normalizedWord} `;
       }
       else {
-        lemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${entry[C.LEMMA]})`;
+        displayLemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${lemma})`;
       }
     } else {
       // lemma = entry[C.LEMMA];
-      lemma = `<strong>${entry[C.LEMMA]}</strong>: `;
+      displayLemma = `<strong>${lemma}</strong>: `;
     }
   }
-  return lemma;
+  return displayLemma;
 }
 
 function buildDisplayLevel(entry, id, level_arr, isOfflist) {
   let level;
   // ## If word is offlist, use its classification (digit/name, etc.) as level
   if (!isOfflist && id < 0) {
-    level = entry[C.POS];
+    // level = entry[C.POS];
+    level = getPoS(entry);
   } else {
     // let level_arr = entry[C.LEVEL];
     level = V.level_subs[level_arr[0]];
@@ -643,17 +674,21 @@ function displayEntryInfo_2col(ref) {
   const [id, normalizedWord] = ref.split(":");
   const entry = lookupDbEntry(id);
   // console.log("display entry info>",ref, id, normalizedWord,entry)
-  let lemma = "";
-  if (entry[C.POS] !== "unknown") {
-    lemma = (normalizedWord && normalizedWord !== entry[C.LEMMA]) ? `${normalizedWord} (${entry[C.LEMMA]})` : entry[C.LEMMA];
-    lemma = `<strong>${lemma}</strong>: `;
+  let displayLemma = "";
+  // if (entry[C.POS] !== "unknown") {
+  if (getPoS(entry) !== "unknown") {
+    const lemma = getLemma(entry);
+    displayLemma = (normalizedWord && normalizedWord !== lemma) ? `${normalizedWord} (${lemma})` : lemma;
+    displayLemma = `<strong>${displayLemma}</strong>: `;
   }
   let level;
   // ## If word is offlist, use its classification (digit/name, etc.) as level
   if (id < 0) {
-    level = entry[C.POS];
+    // level = entry[C.POS];
+    level = getPoS(entry);
   } else {
-    let level_arr = entry[C.LEVEL];
+    // let level_arr = entry[C.LEVEL];
+    let level_arr = getLevel(entry);
     level = V.level_subs[level_arr[0]];
     if (getAwlSublist(level_arr) >= 0) {
       level += `; ${V.level_subs[level_arr[1]]}`;
@@ -662,15 +697,17 @@ function displayEntryInfo_2col(ref) {
   level = `<em>${level}</em>`;
   const pos = `[${expandPos(entry)}]`;
   let [notes, awl_notes] = getNotes(entry);
-  const html = `${level}<span>${lemma}${pos}${notes}${awl_notes}</span>`;
+  const html = `${level}<span>${displayLemma}${pos}${notes}${awl_notes}</span>`;
   return html;
 }
 
 
 function expandPos(entry) {
-  const pos_str = entry[C.POS];
+  // const pos_str = entry[C.POS];
+  const pos_str = getPoS(entry);
   // debug(entry, pos_str)
-  if (entry[C.ID] < 0) return pos_str;
+  // if (entry[C.ID] < 0) return pos_str;
+  if (getId(entry) < 0) return pos_str;
   const pos = (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
   return pos;
 }
@@ -985,7 +1022,8 @@ function pushLookups(textArr) {
         // if (V.currentDb?.db[id][C.isCOMPOUND]) continue;
         const matchedEntry = lookupDbEntry(id);
         // INFO: don't include contractions in word count
-        if (matchedEntry[C.POS] === "contraction") wordCount--;
+        // if (matchedEntry[C.POS] === "contraction") wordCount--;
+        if (getPoS(matchedEntry) === "contraction") wordCount--;
         // if (!V.currentDb.compounds[word]) pushMatch(matchedIDs, id);
         if (!V.currentDb.compounds[word]) {
           matchedIDs = pushMatch(matchedIDs, id);
@@ -1003,7 +1041,8 @@ function pushLookups(textArr) {
 function updateWordStats(id) {
   if (!V.wordStats[id]) {
     V.wordStats[id] = 1;
-  } else if (!["contraction", "unknown", "digit"].includes(lookupDbEntry(id)[C.POS])) {
+  // } else if (!["contraction", "unknown", "digit"].includes(lookupDbEntry(id)[C.POS])) {
+  } else if (!["contraction", "unknown", "digit"].includes(getPoS(lookupDbEntry(id)))) {
     V.wordStats[id]++;
   }
   return V.wordStats[id];
@@ -1015,11 +1054,20 @@ function markOfflist(word, type) {
   let offlistEntry = [];
   let offlistID;
   let isUnique = true;
-  for (const i in V.offlistDb) {
-    if (V.offlistDb[i][C.LEMMA] === word) {
+  // for (const i in V.offlistDb) {
+  //   // if (V.offlistDb[i][C.LEMMA] === word) {
+  //   if (getLemma(V.offlistDb[i]) === word) {
+  //     isUnique = false;
+  //     // offlistEntry = V.offlistDb[i];
+  //     offlistID = V.offlistDb[i][0];
+  //     break;
+  //   }
+  // }
+  for (const entry of V.offlistDb) {
+    if (getLemma(entry) === word) {
+      // debug(word, entry)
       isUnique = false;
-      // offlistEntry = V.offlistDb[i];
-      offlistID = V.offlistDb[i][0];
+      offlistID = entry[0];
       break;
     }
   }
@@ -1045,7 +1093,7 @@ function lookupWord([word, rawWord]) {
   // INFO: EXECUTIVE DECISION: look up possible derivations even if word is found (to avoid, e.g. traveling being marked as int)
   // debug("first pass", matchedIDarr)
   matchedIDarr = lookupDerivations([word, rawWord], matchedIDarr);
-  // debug("derivations pass", matchedIDarr)
+  // debug(word,"derivations pass", matchedIDarr)
   // INFO: matches[0] = [id] if matched; [[-1]] if no match so far
   const offlistEntry = getEntryFromOfflistDb(parseInt(matchedIDarr[0]));
   const isOfflist = offlistEntry.includes("offlist");
@@ -1069,9 +1117,11 @@ function getEntryFromOfflistDb(id) {
 
 function lookupSpellingVariants(word, offlistID) {
   let matchIDarr = checkVariantWords(word);
-  // debug(word, matchIDarr, matchIDarr.length)
+  // debug("variant word?", word, matchIDarr, matchIDarr.length)
   if (!matchIDarr.length) matchIDarr = checkVariantSuffixes(word);
+  // debug("variant suffix?", word, matchIDarr, matchIDarr.length)
   if (!matchIDarr.length) matchIDarr = checkVariantLetters(word);
+  // debug("variant letters?", word, matchIDarr, matchIDarr.length)
   if (matchIDarr.length) {
     const offlistEntry = [offlistID, word, "variant", matchIDarr, ""];
     V.offlistDb[-offlistID] = offlistEntry;
@@ -1096,8 +1146,7 @@ function checkVariantWords(word) {
       break;
     }
   }
-  // const matchIDarr = lookupDB(match);
-  // debug(matchIDarr)
+  // debug(word, matchIDarr)
   return matchIDarr;
 }
 
@@ -1137,6 +1186,7 @@ function checkVariantSuffixes(word) {
 
 function checkVariantLetters(word) {
   let matchIDarr = [];
+  if (LOOKUP.notLetterVariant.includes(word)) return matchIDarr;
   for (const [letters, replacement] of LOOKUP.variantLetters) {
     // debug(word, letters,replacement)
     matchIDarr = replaceLetters(word, letters, replacement);
@@ -1355,7 +1405,8 @@ function winnowPoS(roughMatches, posArr) {
   for (const id of roughMatches) {
     const match = lookupDbEntry(id);
     for (const pos of posArr) {
-      if (match && match[C.POS].includes(pos)) {
+      // if (match && match[C.POS].includes(pos)) {
+      if (match && getPoS(match).includes(pos)) {
         localMatches.push(id);
       }
     }
@@ -1396,7 +1447,8 @@ function buildMarkupAsHTML(textArr) {
     let listOfMatches = [];
     for (let [id, duplicateCount] of matches) {
       let match = lookupDbEntry(id);
-      listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
+      // listOfMatches.push([word, id, getLevelNum(match[C.LEVEL])]);
+      listOfMatches.push([word, id, getLevelNum(match)]);
       matchCount++;
       wasEOL = false;
     }
@@ -1417,23 +1469,29 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   let isVariant;
   let variantClass = "";
   if (displayID < 0) {
-    isVariant = lookupDbEntry(displayID)[C.POS] === "variant";
+    // isVariant = lookupDbEntry(displayID)[C.POS] === "variant";
+    isVariant = getPoS(lookupDbEntry(displayID)) === "variant";
     if (isVariant) variantEntry = lookupDbEntry(displayLevel);
   }
   // debug(targetLemma, listOfMatches, [targetLemma, targetID, targetLevel], levelsAreIdentical,variantEntry)
   const match = lookupDbEntry(displayID);
   V.repeats.add(displayLemma + ":" + displayID);
-  const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+  // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+  const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   // TODO: change levelArr to match
-  const levelToShow = (isVariant) ? variantEntry[C.LEVEL] : match[C.LEVEL];
-  const [levelArr, levelNum, levelClass] = getLevelDetails(levelToShow);
+  // const levelToShow = (isVariant) ? variantEntry[C.LEVEL] : match[C.LEVEL];
+  const entryToShow = (isVariant) ? variantEntry : match;
+  // const [levelArr, levelNum, levelClass] = getLevelDetails(levelToShow);
+  // const [levelArr, levelNum, levelClass] = getLevelDetails(levelToShow);
+  const [levelArr, levelNum, levelClass] = getLevelDetails(entryToShow);
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(displayID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
   let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
   // ## This assumes (safely) that variants will have only one match
   if (isVariant) {
-    listOfLinks += `:${variantEntry[C.ID]}`;
+    // listOfLinks += `:${variantEntry[C.ID]}`;
+    listOfLinks += `:${getId(variantEntry)}`;
     variantClass = " variant";
   }
   groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
@@ -1512,14 +1570,26 @@ function getDuplicateDetails(id, ignoreRepeats) {
   return [" " + relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
 }
 
-function getLevelDetails(levelArr) {
+// function getLevelDetails(levelArr) {
+//   // const levelNum = levelArr[0];
+//   // const levelNum = getLevelNum(levelArr);
+//   const levelNum = getLevelNum(levelArr);
+//   const levelClass = "level-" + getLevelPrefix(levelNum);
+//   return [levelArr, levelNum, levelClass];
+// }
+
+function getLevelDetails(entry) {
   // const levelNum = levelArr[0];
-  const levelNum = getLevelNum(levelArr);
-  const levelClass = "level-" + getLevelPrefix(levelNum);
-  return [levelArr, levelNum, levelClass];
+  // const levelNum = getLevelNum(levelArr);
+  const levelNum = getLevelNum(entry);
+  // const levelClass = "level-" + getLevelPrefix(levelNum);
+  const levelClass = "level-" + getLevelPrefix(entry);
+  return [entry, levelNum, levelClass];
 }
 
-function getLevelNum(levelArr) {
+// function getLevelNum(levelArr) {
+function getLevelNum(entry) {
+  const levelArr = getLevel(entry);
   return levelArr[0];
 }
 
@@ -1529,14 +1599,22 @@ function escapeHTMLentities(text) {
     .replace(/>/g, "&gt;");
 }
 
-function getLevelPrefix(levelNum) {
+// function getLevelPrefix(levelNum) {
+//   let level = V.level_subs[levelNum];
+//   if (V.isKids && levelNum < V.OFFLIST) level = "k";
+//   if (!level) level = "o";
+//   // debug(levelNum, level)
+//   return level[0];
+// }
+
+function getLevelPrefix(entry) {
+  levelNum = getLevel(entry)[0];
   let level = V.level_subs[levelNum];
   if (V.isKids && levelNum < V.OFFLIST) level = "k";
   if (!level) level = "o";
   // debug(levelNum, level)
   return level[0];
 }
-
 
 
 function buildMarkupAsHTML_2col(textArr) {
@@ -1559,8 +1637,10 @@ function buildMarkupAsHTML_2col(textArr) {
     let matchCount = 0;
     for (const [id, duplicateCount] of matches) {
       const match = lookupDbEntry(id);
-      const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
-      const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+      // const ignoreRepeats = LOOKUP.repeatableWords.includes(match[C.LEMMA]);
+      const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
+      // const [levelArr, levelNum, levelClass] = getLevelDetails(match[C.LEVEL]);
+      const [levelArr, levelNum, levelClass] = getLevelDetails(match);
       const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(id, duplicateCount, ignoreRepeats);
       rawWord = insertCursorInHTML(matchCount, wordIndex, escapeHTMLentities(rawWord));
       const localWord = highlightAwlWord(levelArr, rawWord);
@@ -1597,7 +1677,8 @@ function buildRepeatList(wordCount) {
       const [word, id] = el.split(":");
       const entry = lookupDbEntry(id);
       // const word = entry[C.LEMMA];
-      const level_arr = entry[C.LEVEL];
+      // const level_arr = entry[C.LEVEL];
+      const level_arr = getLevel(entry);
       const isRepeated = V.wordStats[id] > 1;
       const isRepeatable = !LOOKUP.repeatableWords.includes(word);
       const isWord = !LOOKUP.symbols.includes(word);
@@ -1610,11 +1691,13 @@ function buildRepeatList(wordCount) {
           let displayClass = 'class="anchors" ';
           if (repetition === 1) {
             display = highlightAwlWord(level_arr, word);
-            displayClass = `class="level-${getLevelPrefix(level_arr[0])}" `;
+            // displayClass = `class="level-${getLevelPrefix(level_arr[0])}" `;
+            displayClass = `class="level-${getLevelPrefix(entry)}" `;
           }
           anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${repetition}'); return false;">${display}</a>`;
         }
-        listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
+        // listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(level_arr[0])}'>${anchors}</p>`;
+        listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(entry)}'>${anchors}</p>`;
       }
     }
     let repeatsHeader;
@@ -1629,8 +1712,10 @@ function buildRepeatList(wordCount) {
 }
 
 function compareByLemma(a, b) {
-  const lemmaA = lookupDbEntry(a)[C.LEMMA].toLowerCase();
-  const lemmaB = lookupDbEntry(b)[C.LEMMA].toLowerCase();
+  // const lemmaA = lookupDbEntry(a)[C.LEMMA].toLowerCase();
+  // const lemmaB = lookupDbEntry(b)[C.LEMMA].toLowerCase();
+  const lemmaA = getLemma(lookupDbEntry(a)).toLowerCase();
+  const lemmaB = getLemma(lookupDbEntry(b)).toLowerCase();
   if (lemmaA < lemmaB) {
     return -1;
   }
@@ -1671,8 +1756,10 @@ function lookupDB(word) {
   // if (!word) return [];
   word = word.toLowerCase();
   const searchResults = V.currentDb.db
-    .filter(el => el[C.LEMMA].toLowerCase() === word)
-    .map(el => el[C.ID]);
+    // .filter(el => el[C.LEMMA].toLowerCase() === word)
+    .filter(el => getLemma(el).toLowerCase() === word)
+    .map(el => getId(el));
+    // .map(el => el[C.ID]);
   // debug(word,searchResults)
   return searchResults;
 }
@@ -1938,8 +2025,10 @@ function makeCompoundsDb(dB) {
   */
   let compounds = {};
   for (let entry of dB) {
-    const word = entry[C.LEMMA].trim().toLowerCase();
-    const id = entry[C.ID];
+    // const word = entry[C.LEMMA].trim().toLowerCase();
+    const word = getLemma(entry).trim().toLowerCase();
+    // const id = entry[C.ID];
+    const id = getId(entry);
     const splitWord = word.split(/[-'\s]/g);
     if (splitWord.length > 1) {
       const newCompound = splitWord.join("");
@@ -1985,7 +2074,8 @@ function debug(...params) {
 // ## TABS ############################################
 
 function setTab(tab) {
-  tab = (tab.target) ? tab.target : HTM.tabHead.children[tab];
+  // tab = (tab.target) ? tab.target : HTM.tabHead.children[tab];
+  tab = (tab.currentTarget) ? tab.currentTarget : HTM.tabHead.children[tab];
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {

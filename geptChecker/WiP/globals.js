@@ -68,11 +68,11 @@ const HTM = {
 
 // ## Global constants
 const C = {
-  ID: 0,
-  LEMMA: 1,
-  POS: 2,
-  LEVEL: 3,
-  NOTE: 4,
+  // ID: 0,
+  // LEMMA: 1,
+  // POS: 2,
+  // LEVEL: 3,
+  // NOTE: 4,
   isCOMPOUND: 5,
   GEPT_LEVEL: 0,
   AWL_LEVEL: 1,
@@ -1027,6 +1027,10 @@ const LOOKUP = {
     ["oe", "e"],
     ["ss", "s"],
   ],
+
+  notLetterVariant: [
+    "fourth",
+  ]
 
 }
 
