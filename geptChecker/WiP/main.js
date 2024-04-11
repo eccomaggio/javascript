@@ -64,7 +64,8 @@ function addWordInputListeners() {
 }
 
 function addTabListeners() {
-  for (const el of document.getElementsByClassName("tab")) {
+  // for (const el of document.getElementsByClassName("tab")) {
+  for (const el of document.getElementsByTagName("tab-tag")) {
     el.addEventListener("click", setTab);
   }
 }

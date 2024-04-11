@@ -60,14 +60,16 @@
 
     /* ## TABS ############################################ */
 
-    .tab {
+    /* tab-tag, .tab { */
+    tab-tag {
       border: 1px solid lightgray;
       border-radius: 5px 5px 0 0;
       border-bottom: 0;
       padding: 8px 6px 6px 6px;
     }
 
-    .tab-tools {
+    /* tab-tools, .tab-tools { */
+    tab-tools {
       margin-left: auto;
       display: flex;
       align-items: center;
@@ -88,7 +90,8 @@
     }
 
 
-    #tab-group {
+    /* tab-group, #tab-group { */
+    tab-group {
       /* height: 100vh;
       width: 100vw; */
       font-family: "Lucida Console", "Courier New", monospace;
@@ -100,14 +103,16 @@
       overflow: inherit;
     }
 
-    #tab-head {
+    /* tab-head, #tab-head { */
+    tab-head {
       flex-grow: 0;
       display: flex;
       flex-direction: row;
       justify-content: flex-start;
     }
 
-    #tab-body {
+    /* tab-body, #tab-body { */
+    tab-body {
       flex: 1;
       border: 1px solid lightgray;
       border-radius: 0 10px 0 0;
@@ -116,7 +121,8 @@
       overflow: inherit;
     }
 
-    .tab-content {
+    /* tab-content, .tab-content { */
+    tab-content {
       height: inherit;
       width: inherit;
       background: white;
@@ -392,10 +398,12 @@
 
     .multi-diff {
       text-decoration: darkgray underline double;
+      -webkit-text-decoration: darkgray underline double;
     }
 
     .variant {
       text-decoration: indianred underline wavy;
+      -webkit-text-decoration: indianred underline wavy;
     }
 
     /* .multi-same {

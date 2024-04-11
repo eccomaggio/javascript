@@ -46,8 +46,10 @@ const HTM = {
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
   repeatsList: document.getElementById("t2_repeats_list"),
-  tabHead: document.getElementById("tab-head"),
-  tabBody: document.getElementById("tab-body"),
+  // tabHead: document.getElementById("tab-head"),
+  // tabBody: document.getElementById("tab-body"),
+  tabHead: document.getElementsByTagName("tab-head")[0],
+  tabBody: document.getElementsByTagName("tab-body")[0],
 
   clearButton: document.getElementById("clear_button"),
   resetButton: document.getElementById("reset_button"),
