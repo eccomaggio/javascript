@@ -1452,7 +1452,6 @@ function findBaseForm(word, subs) {
 
 function clearTab2() {
   HTM.workingDiv.innerText = "";
-  HTM.finalTextDiv.innerHTML = "";
   HTM.finalInfoDiv.innerText = "";
   HTM.repeatsList.innerText = "";
   displayDbNameInTab2();
