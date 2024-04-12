@@ -42,15 +42,22 @@ const HTM = {
   resultsText: document.getElementById("t1_results_text"),
   t1_title: document.getElementById("t1_term_legend"),
   workingDiv: document.getElementById("t2_raw_text"),
+  finalTextDiv: document.getElementById("t2_final_text"),
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
   repeatsList: document.getElementById("t2_repeats_list"),
+  // tabHead: document.getElementById("tab-head"),
+  // tabBody: document.getElementById("tab-body"),
   tabHead: document.getElementsByTagName("tab-head")[0],
   tabBody: document.getElementsByTagName("tab-body")[0],
-  // refreshIcon: document.getElementById("refresh-icon"),
+
   clearButton: document.getElementById("clear_button"),
   resetButton: document.getElementById("reset_button"),
+  refreshButton: document.getElementById("refresh_button"),
+  // refreshButtonSpacer: document.getElementById("refresh_button_spacer"),
   settingsMenu: document.getElementById("dropdown"),
+  selectRefresh: document.getElementById("select-refresh"),
+  selectEditMode: document.getElementById("select-edit-mode"),
   backupButton: document.getElementById("backup-btn"),
   backupDialog: document.getElementById("backup-dlg"),
   backupSave: document.getElementById("backup-save"),
@@ -60,7 +67,12 @@ const HTM = {
 };
 
 // ## Global constants
-let C = {
+const C = {
+  // ID: 0,
+  // LEMMA: 1,
+  // POS: 2,
+  // LEVEL: 3,
+  // NOTE: 4,
   isCOMPOUND: 5,
   GEPT_LEVEL: 0,
   AWL_LEVEL: 1,
@@ -71,27 +83,34 @@ let C = {
   FIND_AWL_ONLY: 100,
   FIND_GEPT_ONLY: 200,
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
-  // INFO: removed hyphen & bar (- |)
+  // punctuation: new RegExp('[!"#$%&\'()*+,./:;<=>?@[\]^_`{}~]','g'),
+  // ## removed hyphen & bar (- |)
   NBSP: String.fromCharCode(160),
   backupIDs: ["backup_0", "backup_1"],
   awl_level_offset: 37,
   NOTE_SEP: "|",
-  // INFO: names of local storage variables; default values in finalInit
+  // ## names of local storage variables; default values in finalInit
   SAVE_DB_STATE: "db_state",
   SAVE_ACTIVE_TAB_INDEX: "tab_state",
+  SAVE_REFRESH_STATE_BOOL: "refresh_state",
+  SAVE_EDIT_STATE_BOOL: "edit_state",
+  // ## 0 = GEPT, 1 = BESTep, 2 = GEPTKids
+  DEFAULT_db: 0,
   DEFAULT_tab: 0,
+  DEFAULT_is_autorefresh: false,
+  DEFAULT_is_inplace_edit: true,
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
     starts: ["^", ".*"],
     ends: [".*", "$"]
   },
+  // compoundMaxLen: 1
+  // ## 'Enum' for dBs
   GEPT: 0,
   BESTEP: 1,
   Kids: 2,
 }
-
-C.DEFAULT_db = C.GEPT;
 
 // ## Global variables
 let V = {
@@ -101,6 +120,9 @@ let V = {
   wordStats: {},
   repeats: new Set(),
   tallyOfRepeats: {},
+  isAutoRefresh: false,
+  refreshRequested: false, // This value doesn't need to be saved between sessions
+  isInPlaceEditing: false,
   currentDb: {},
   currentDbChoice: C.GEPT,
   OFFLIST: 0,
@@ -109,9 +131,12 @@ let V = {
   cursorOffset: 0,
   oldCursorOffset: 0,
   cursorOffsetNoMarks: 0,
-  // isInMark: false,
+  isInMark: false,
+  isTextEdit: false,
   cursorIncrement: 0,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
+  // # key: [index in textArr, index in normalized word]
+  // cursorPosInTextArr: [0, 0], //[word, char]
 }
 
 const CURSOR = {
@@ -952,7 +977,7 @@ const LOOKUP = {
     bookshop: "bookstore",
     cosy: "cozy",
     despatch: "dispatch",
-    ladybird: "ladybug",
+    // ladybird: "ladybug",
     manoeuvr: "maneuver", // include because contains oe>e AND re>er
     jewelry: "jewellery",
     skilful: "skillful",
