@@ -11,35 +11,29 @@ addListeners();
 // ***** INIT FUNCTIONS
 
 function init() {
-  setGlobalState();
-  setDb_shared(V.currentDbChoice);
-  setTab(V.currentTab);
-  setEditingMode(); // TODO: RETHINK THIS LATER
+  appStateWriteToCurrent();
+  // setDb_shared(V.currentDbChoice);
+  setDbShared(V.current.db_state);
+  // setTab(V.currentTab);
+  setTab(V.current.tab_state);
+  setupEditing(); // TODO: RETHINK THIS LATER
   HTM.form.reset();
   // toggleFinalTextDiv();
   updateDropdownMenuOptions();
 }
 
 function updateDropdownMenuOptions() {
-  HTM.selectDb.value = V.currentDbChoice;
+  // HTM.selectDb.value = V.currentDbChoice;
+  HTM.selectDb.value = V.current.db_state;
   // HTM.selectEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
 }
 
-function setGlobalState() {
-  if (!(C.SAVE_DB_STATE in localStorage)) setAppStateToDefault();
-  let [
-    dbState,
-    tabState,
-  ] = retrieveAppState();
-  V.currentDbChoice = dbState;
-  V.currentTab = tabState;
-}
 
 function addListeners() {
   addTabListeners();
   addMenuListeners();
   addWordInputListeners();
-  addEditModeListeners();
+  addEditingListeners();
 }
 
 function addWordInputListeners() {
@@ -64,20 +58,20 @@ function addMenuListeners() {
   HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
-  HTM.selectDb.addEventListener("change", setDb_shared);
+  HTM.selectDb.addEventListener("change", setDbShared);
   HTM.selectFontSize.addEventListener("change", changeFont);
-  HTM.backupButton.addEventListener("click", showBackups);
-  HTM.backupDialog.addEventListener("mouseleave", closeBackupDialog);
-  HTM.backupSave.addEventListener("click", saveBackup);
+  HTM.backupButton.addEventListener("click", backupShow);
+  HTM.backupDialog.addEventListener("mouseleave", backupDialogClose);
+  HTM.backupSave.addEventListener("click", backupSave);
   for (const id of C.backupIDs) {
-    document.getElementById(id).addEventListener("click", loadBackup);
+    document.getElementById(id).addEventListener("click", backupLoad);
   }
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
 }
 
-function addEditModeListeners() {
+function addEditingListeners() {
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
   // ## having probs removing his event listener; leave & ignore with updateInputDiv
   HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
@@ -114,7 +108,7 @@ function dropdown(e) {
   HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
 }
 
-function showBackups(e) {
+function backupShow(e) {
   /*
   1) on refresh, swap backup_0 to backup_1
   2) close backup dialog on mouseout
@@ -141,24 +135,24 @@ function showBackups(e) {
   HTM.backupDialog.style.setProperty("display", "flex");
 }
 
-function loadBackup(e) {
+function backupLoad(e) {
   /* Get backup from chosen buffer and replace contents of workingDiv with it
   Buffer contents are then loaded with the old workingDiv content to allow undo*/
   const id = e.target.id;
-  const swap = JSON.parse(JSON.stringify(grabWorkingDivText()));
+  const swap = JSON.parse(JSON.stringify(getTextFromWorkingDiv()));
   let restoredContent = localStorage.getItem(id);
   if (!restoredContent) return;
   restoredContent = newlinesToEOLs(restoredContent);
   HTM.workingDiv.innerText = restoredContent;
   forceUpdateInputDiv();
   if (swap) localStorage.setItem(id, swap);
-  closeBackupDialog("backup-dlg");
+  backupDialogClose("backup-dlg");
 }
 
 
-function resetBackup() {
+function backupReset() {
   // ** logic: put current OR most recent change in first backup (2nd backup is constantly updated)
-  let mostRecent = grabWorkingDivText();
+  let mostRecent = getTextFromWorkingDiv();
   if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
   if (!mostRecent || !mostRecent.length) return;
   localStorage.setItem(C.backupIDs[0], mostRecent);
@@ -166,8 +160,8 @@ function resetBackup() {
   localStorage.setItem(C.backupIDs[1], "");
 }
 
-function saveBackup() {
-  let currentText = grabWorkingDivText();
+function backupSave() {
+  let currentText = getTextFromWorkingDiv();
   if (!currentText) return;
   if (currentText !== localStorage.getItem(C.backupIDs[1])) {
     localStorage.setItem(C.backupIDs[1], currentText);
@@ -184,7 +178,7 @@ function saveBackup() {
   }, 1000);
 }
 
-function closeBackupDialog(id) {
+function backupDialogClose(id) {
   if (id.target) id = "backup-dlg";
   document.getElementById(id).style.display = "none";
 }
@@ -267,7 +261,7 @@ function submitWordSearchForm(e) {
     HTMLstringToDisplay = markStringAsError(errorMsg);
   } else {
     resultsArr = executeFormDataLookup(data);
-    const checkSpelling = lookupDbEntry(checkVariantWords(data.term[0]));
+    const checkSpelling = getEntryById(checkVariantWords(data.term[0]));
     if (checkSpelling) resultsArr.push(checkSpelling);
     resultsCount = resultsArr.length;
     if (resultsCount) {
@@ -277,7 +271,7 @@ function submitWordSearchForm(e) {
       resultsAsIdArr = checkVariantSuffixes(term);
       if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantLetters(term);
       if (resultsAsIdArr.length) {
-        resultsArr = lookupDbEntry(resultsAsIdArr);
+        resultsArr = getEntryById(resultsAsIdArr);
         HTMLstringToDisplay = formatResultsAsHTML([resultsArr]);
       }
       else HTMLstringToDisplay = markStringAsError("No matches found for this term.");
@@ -366,7 +360,7 @@ function executeFormDataLookup(data) {
 
 function refineSearch(find) {
   let results = V.currentDb.db.filter(el => getLemma(el).search(find.term) != -1);
-  results = results.concat(getDerivedForms(find.term).map(el => lookupDbEntry(el)));
+  results = results.concat(getDerivedForms(find.term).map(el => getEntryById(el)));
   if (find.level.length) {
     results = results.filter(el => find.level.indexOf(getLevel(el)[C.GEPT_ONLY]) > -1);
   }
@@ -431,7 +425,7 @@ function formatResultsAsHTML(results) {
     const awl_sublist = getAwlSublist(level_arr);
     const awlWord = highlightAwlWord(level_arr, getLemma(entry));
     const lemma = `<strong>${awlWord}</strong>`;
-    const pos = `[${expandPos(entry)}]`;
+    const pos = `[${getExpandedPoS(entry)}]`;
     let level = V.level_subs[level_arr[0]];
     if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
     if (!level) continue;
@@ -531,11 +525,11 @@ function displayEntryInfo(refs) {
   for (ref of refs.split(" ")) {
     const [id, normalizedWord, variantId] = ref.split(":");
     const isOfflist = (variantId) ? true : false;
-    const entry = (isOfflist) ? lookupDbEntry(variantId) : lookupDbEntry(id);
+    const entry = (isOfflist) ? getEntryById(variantId) : getEntryById(id);
     const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
     const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist);
     const level = buildDisplayLevel(entry, id, levelArr, isOfflist);
-    const pos = `[${expandPos(entry)}]`;
+    const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
     html += `<div class="word-detail ${levelClass}">${level}<br><span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
   }
@@ -575,7 +569,7 @@ function buildDisplayLevel(entry, id, level_arr, isOfflist) {
   return level;
 }
 
-function expandPos(entry) {
+function getExpandedPoS(entry) {
   const pos_str = getPoS(entry);
   if (getId(entry) < 0) return pos_str;
   const pos = (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
@@ -589,10 +583,8 @@ function normalizePastedText(e) {
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
-  V.isTextEdit = true;
   updateInputDiv(e);
-  saveBackup();
-  V.isTextEdit = false;
+  backupSave();
 }
 
 function catchKeyboardCopyEvent(e) {
@@ -610,7 +602,7 @@ function updateInputDiv(e) {
   // debug("hi", Date.now())
   V.tallyOfRepeats = {};
   V.repeats = new Set();
-  let revisedText = grabRevisedText().trim();
+  let revisedText = getRevisedText().trim();
   if (revisedText && revisedText !== CURSOR.text) {
     const [
       resultsAsHTML,
@@ -623,12 +615,12 @@ function updateInputDiv(e) {
 }
 
 
-function grabRevisedText() {
+function getRevisedText() {
   let revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
   return revisedText;
 }
 
-function grabWorkingDivText() {
+function getTextFromWorkingDiv() {
   let currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
   currentText = EOLsToNewlines(currentText);
   currentText = currentText.trim();
@@ -803,7 +795,7 @@ function pushLookups(textArr) {
         // ** do not check compounds (already checked)
         if (!id) continue;
         if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
-        const matchedEntry = lookupDbEntry(id);
+        const matchedEntry = getEntryById(id);
         // ** don't include contractions in word count
         if (getPoS(matchedEntry) === "contraction") wordCount--;
         if (!V.currentDb.compounds[word]) {
@@ -821,7 +813,7 @@ function pushLookups(textArr) {
 function updateWordStats(id) {
   if (!V.wordStats[id]) {
     V.wordStats[id] = 1;
-  } else if (!["contraction", "unknown", "digit"].includes(getPoS(lookupDbEntry(id)))) {
+  } else if (!["contraction", "unknown", "digit"].includes(getPoS(getEntryById(id)))) {
     V.wordStats[id]++;
   }
   return V.wordStats[id];
@@ -858,7 +850,7 @@ function lookupWord([word, rawWord]) {
   if (LOOKUP.symbols.includes(rawWord)) {
     word = rawWord;
   }
-  let matchedIDarr = lookupDB(word);
+  let matchedIDarr = getIdsByLemma(word);
   // ** EXECUTIVE DECISION: look up possible derivations even if word is found (to avoid, e.g. traveling being marked as int)
   // debug("first pass", matchedIDarr)
   matchedIDarr = lookupDerivations([word, rawWord], matchedIDarr);
@@ -904,7 +896,7 @@ function checkVariantWords(word) {
     const searchTerm = (V.isExactMatch) ? key : key.slice(0,word.length);
     if (searchTerm === truncated) {
       match = LOOKUP.variantWords[key];
-      matchIDarr = lookupDB(match)
+      matchIDarr = getIdsByLemma(match)
       break;
     }
   }
@@ -927,7 +919,7 @@ function checkVariantSuffixes(word) {
     }
   }
   if (match){
-    const matchIDarr = lookupDB(match);
+    const matchIDarr = getIdsByLemma(match);
     return matchIDarr
   }
   else return [];
@@ -957,7 +949,7 @@ function replaceLetters(word, letters, replacement) {
   for (const pos of indices) {
     const before = word.slice(0, pos);
     const after = word.slice(pos + letters.length)
-    matchIDarr = lookupDB(before + replacement + after);
+    matchIDarr = getIdsByLemma(before + replacement + after);
     if (matchIDarr.length) {
       break;
     }
@@ -1069,28 +1061,28 @@ function checkNames(word) {
 
 function checkArticle(word) {
   if (word === "an") {
-    return lookupDB("a")[0];
+    return getIdsByLemma("a")[0];
   }
 }
 
 function checkIrregularNegatives(word) {
   const lookup = LOOKUP.irregNegVerb[word];
   if (lookup) {
-    return winnowPoS(lookupDB(lookup), ["x", "v"])[0];
+    return winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
   }
 }
 
 function checkIrregularVerbs(word) {
   const lookup = LOOKUP.irregVerb[word];
   if (lookup) {
-    return winnowPoS(lookupDB(lookup), ["x", "v"])[0];
+    return winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
   }
 }
 
 function checkIrregularPlurals(word) {
   const lookup = LOOKUP.irregPlural[word];
   if (lookup) {
-    return winnowPoS(lookupDB(lookup), ["n"])[0];
+    return winnowPoS(getIdsByLemma(lookup), ["n"])[0];
   }
 }
 
@@ -1100,7 +1092,7 @@ function checkForeignPlurals(word) {
     const root = word.slice(0, -plural.length);
     const ending = word.slice(-plural.length);
     if (ending === plural) {
-      const lookup = lookupDB(root + singular);
+      const lookup = getIdsByLemma(root + singular);
       if (lookup.length) {
         return winnowPoS(lookup, ["n"])[0];
       }
@@ -1156,7 +1148,7 @@ function winnowPoS(roughMatches, posArr) {
   // ** Returns possible IDs of derivations as array, or empty array
   let localMatches = [];
   for (const id of roughMatches) {
-    const match = lookupDbEntry(id);
+    const match = getEntryById(id);
     for (const pos of posArr) {
       // if (match && match[C.POS].includes(pos)) {
       if (match && getPoS(match).includes(pos)) {
@@ -1167,7 +1159,7 @@ function winnowPoS(roughMatches, posArr) {
   return localMatches;
 }
 
-function lookupDbEntry(id) {
+function getEntryById(id) {
   // ** a negative id signifies an offlist word
   if (id === undefined) return;
   let parsedId = parseInt(id);
@@ -1189,14 +1181,14 @@ function buildMarkupAsHTML(textArr) {
   for (let [word, rawWord, matches] of textArr) {
     [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
     if (isEOL || !word || !matches[0]) continue;
-    const isContraction = lookupDbEntry(matches[0][0])[2] == "contraction";
+    const isContraction = getEntryById(matches[0][0])[2] == "contraction";
     const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
     isFirstWord = false;
     // ** duplicateCount = running total; totalRepeats = total
     let matchCount = 0;
     let listOfMatches = [];
     for (let [id, duplicateCount] of matches) {
-      let match = lookupDbEntry(id);
+      let match = getEntryById(id);
       listOfMatches.push([word, id, getLevelNum(match)]);
       matchCount++;
       wasEOL = false;
@@ -1215,10 +1207,10 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   let isVariant;
   let variantClass = "";
   if (displayID < 0) {
-    isVariant = getPoS(lookupDbEntry(displayID)) === "variant";
-    if (isVariant) variantEntry = lookupDbEntry(displayLevel);
+    isVariant = getPoS(getEntryById(displayID)) === "variant";
+    if (isVariant) variantEntry = getEntryById(displayLevel);
   }
-  const match = lookupDbEntry(displayID);
+  const match = getEntryById(displayID);
   V.repeats.add(displayLemma + ":" + displayID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const entryToShow = (isVariant) ? variantEntry : match;
@@ -1348,7 +1340,7 @@ function buildRepeatList(wordCount) {
       const [word, id] = el.split(":");
       if (idList.includes(id)) continue;
       else idList.push(id);
-      const entry = lookupDbEntry(id);
+      const entry = getEntryById(id);
       const level_arr = getLevel(entry);
       const isRepeated = V.wordStats[id] > 1;
       const isRepeatable = !LOOKUP.repeatableWords.includes(word);
@@ -1380,8 +1372,8 @@ function buildRepeatList(wordCount) {
 }
 
 function compareByLemma(a, b) {
-  const lemmaA = getLemma(lookupDbEntry(a)).toLowerCase();
-  const lemmaB = getLemma(lookupDbEntry(b)).toLowerCase();
+  const lemmaA = getLemma(getEntryById(a)).toLowerCase();
+  const lemmaB = getLemma(getEntryById(b)).toLowerCase();
   if (lemmaA < lemmaB) {
     return -1;
   }
@@ -1417,7 +1409,7 @@ function displayDbNameInTab2(msg) {
   HTM.finalLegend.innerHTML += `<details class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo1}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
 }
 
-function lookupDB(word) {
+function getIdsByLemma(word) {
   // ** returns empty array or array of matched IDs [4254, 4255]
   // if (typeof word !== "string") throw new Error("Search term must be a string.")
   if (typeof word !== "string" || !word) return [];
@@ -1444,7 +1436,7 @@ function findBaseForm(word, subs) {
   }
   candidates.add(word.slice(0, toSuffix));
   for (const candidate of candidates) {
-    const tmp_match = lookupDB(candidate);
+    const tmp_match = getIdsByLemma(candidate);
     if (tmp_match.length) localMatches.push(...tmp_match);
   }
   return localMatches;
@@ -1455,7 +1447,7 @@ function clearTab2() {
   HTM.finalInfoDiv.innerText = "";
   HTM.repeatsList.innerText = "";
   displayDbNameInTab2();
-  resetBackup();
+  backupReset();
 }
 
 
@@ -1466,25 +1458,20 @@ function changeFont(e) {
   HTM.root_css.style.setProperty("--font-size", fontSize);
 }
 
-function changeRefresh(e) {
-  V.isAutoRefresh = parseInt(e.target.value) === 1;
-  localStorage.setItem(C.SAVE_REFRESH_STATE_BOOL, V.isAutoRefresh);
-}
+// function changeRefresh(e) {
+//   V.isAutoRefresh = parseInt(e.target.value) === 1;
+//   localStorage.setItem(C.SAVE_REFRESH_STATE_BOOL, V.isAutoRefresh);
+// }
 
 
-function hideRefreshButton() {
-  HTM.refreshButton.style.display = "none";
-}
+// function showRefreshButton() {
+//   HTM.refreshButton.style.display = "block";
+// }
 
-function showRefreshButton() {
-  HTM.refreshButton.style.display = "block";
-}
-
-function setEditingMode(e) {
-    forceUpdateInputDiv();
-    HTM.finalInfoDiv.classList.remove("word-detail");
-  addEditModeListeners();
-  forceUpdateInputDiv();
+function setupEditing(e) {
+  HTM.finalInfoDiv.classList.remove("word-detail");
+  addEditingListeners();
+  // forceUpdateInputDiv();
 }
 
 
@@ -1527,33 +1514,71 @@ function clearTab(event) {
 }
 
 function resetApp() {
-  setAppStateToDefault();
-  V.currentTab = C.DEFAULT_tab;
+  appStateForceDefault();
+  // V.currentTab = C.DEFAULT_tab;
   clearTab1();
   clearTab2();
-  HTM.selectDb.value = C.DEFAULT_db;
-  setTab(V.currentTab);
-  setDb_shared(C.DEFAULT_db);
+  // HTM.selectDb.value = C.DEFAULT_db;
+  // setTab(V.currentTab);
+  // setDbShared(C.DEFAULT_db);
+  setTab(V.current.tab_state);
+  setDbShared(V.current.db_state);
+  HTM.selectDb.value = V.current.db_state;
 }
 
-function setAppStateToDefault() {
-  localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
-  localStorage.setItem(C.SAVE_ACTIVE_TAB_INDEX, C.DEFAULT_tab);
+function appStateForceDefault() {
+  for (const key in C.state) {
+    const defaultVal = C.state[key];
+    localStorage.setItem(key, defaultVal)
+    V.current[key] = defaultVal;
+    // debug(key, defaultVal)
+  }
+  // localStorage.setItem(C.SAVE_DB_STATE, C.DEFAULT_db);
+  // localStorage.setItem(C.SAVE_ACTIVE_TAB_INDEX, C.DEFAULT_tab);
 }
 
-function retrieveAppState() {
-  return [
-    localStorage.getItem(C.SAVE_DB_STATE),
-    localStorage.getItem(C.SAVE_ACTIVE_TAB_INDEX),
-  ];
+function appStateReadFromStorage() {
+  // return [
+  //   localStorage.getItem(C.SAVE_DB_STATE),
+  //   localStorage.getItem(C.SAVE_ACTIVE_TAB_INDEX),
+  // ];
+  let retrieved_items = {};
+  for (const key in C.state) {
+    const retrieved_item = localStorage.getItem(key);
+    retrieved_items[key] = (retrieved_item) ? parseInt(retrieved_item) : C.state[key];
+  }
+  // debug(retrieved_items)
+  return retrieved_items;
 }
 
+function appStateWriteToCurrent() {
+  const retrieved_items = appStateReadFromStorage();
+  // debug("??",retrieved_items)
+  for (const key in retrieved_items) {
+    const value = retrieved_items[key];
+    V.current[key] = value;
+    // debug(key, value)
+  }
+}
 
-function setDb_shared(e) {
+// function appStateSetOLD() {
+
+//   if (!(C.SAVE_DB_STATE in localStorage)) appStateForceDefault();
+//   let [
+//     dbState,
+//     tabState,
+//   ] = appStateGet();
+//   V.currentDbChoice = dbState;
+//   V.currentTab = tabState;
+// }
+
+function setDbShared(e) {
   let choice = (e.target) ? e.target.value : e;
-  V.currentDbChoice = parseInt(choice);
+  // V.currentDbChoice = parseInt(choice);
+  V.current.db_state = parseInt(choice);
   V.currentDb = [];
-  if (V.currentDbChoice === C.GEPT) {
+  // if (V.currentDbChoice === C.GEPT) {
+  if (V.current.db_state === C.GEPT) {
     V.currentDb = {
       name: "GEPT",
       db: indexDb(makeGEPTdb()),
@@ -1566,7 +1591,8 @@ function setDb_shared(e) {
         _accent: "#daebe8"
       }
     };
-  } else if (V.currentDbChoice === C.BESTEP) {
+  // } else if (V.currentDbChoice === C.BESTEP) {
+  } else if (V.current.db_state === C.BESTEP) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
       name: "BESTEP",
@@ -1601,19 +1627,22 @@ function setDb_shared(e) {
   }
   setDb_tab2();
   setDb_tab1();
-  localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
+  // localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
+  localStorage.setItem("db_state", V.current.db_state);
 }
 
 function isGEPT() {
-  return V.currentDbChoice === C.GEPT;
+  // return V.currentDbChoice === C.GEPT;
+  return V.current.db_state === C.GEPT;
 }
 
 function isBESTEP() {
-  return V.currentDbChoice === C.BESTEP;
+  return V.current.db_state === C.BESTEP;
 }
 
 function isKids() {
-  return V.currentDbChoice === C.Kids;
+  // return V.currentDbChoice === C.Kids;
+  return V.current.db_state === C.Kids;
 }
 
 function makeCompoundsDb(dB) {
@@ -1680,7 +1709,8 @@ function setTab(tab) {
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
-      V.currentTab = i;
+      // V.currentTab = i;
+      V.current.tab_state = i;
       HTM.tabHead.children[i].classList.add("tab-on");
       HTM.tabHead.children[i].classList.remove("tab-off");
       content.style.display = "flex";
@@ -1692,7 +1722,9 @@ function setTab(tab) {
     i++;
   }
   setTabHead();
-  localStorage.setItem(C.SAVE_ACTIVE_TAB_INDEX, V.currentTab);
+  // localStorage.setItem(C.SAVE_ACTIVE_TAB_INDEX, V.currentTab);
+  // localStorage.setItem(C.state.tab[0], V.current.tab_state);
+  localStorage.setItem("tab_state", V.current.tab_state);
   forceUpdateInputDiv();
   displayInputCursor();
   V.isExactMatch = (isFirstTab()) ? false : true;
@@ -1708,7 +1740,8 @@ function setTabHead() {
 
 function isFirstTab() {
   // debug(">>>current tab=", V.currentTab, parseInt(V.currentTab) === 0)
-  return parseInt(V.currentTab) === 0;
+  // return parseInt(V.currentTab) === 0;
+  return parseInt(V.current.tab_state) === 0;
 }
 
 function displayInputCursor() {

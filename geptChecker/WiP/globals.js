@@ -76,9 +76,13 @@ let C = {
   backupIDs: ["backup_0", "backup_1"],
   awl_level_offset: 37,
   NOTE_SEP: "|",
-  // INFO: names of local storage variables; default values in finalInit
-  SAVE_DB_STATE: "db_state",
-  SAVE_ACTIVE_TAB_INDEX: "tab_state",
+  // ** local storage: [name-of-storage-variable, default-value]
+  state: {
+    db_state: 0,
+    tab_state: 0,
+  },
+  // SAVE_DB_STATE: "db_state",
+  // SAVE_ACTIVE_TAB_INDEX: "tab_state",
   DEFAULT_tab: 0,
   MATCHES: {
     exact: ["^", "$"],
@@ -91,7 +95,7 @@ let C = {
   Kids: 2,
 }
 
-C.DEFAULT_db = C.GEPT;
+// C.DEFAULT_db = C.GEPT;
 
 // ## Global variables
 let V = {
@@ -112,6 +116,10 @@ let V = {
   // isInMark: false,
   cursorIncrement: 0,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
+  current: {
+    db_state: 0,
+    tab_state: 0,
+  },
 }
 
 const CURSOR = {
