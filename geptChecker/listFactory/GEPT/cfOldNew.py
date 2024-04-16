@@ -169,15 +169,26 @@ def main():
     print(f"\nEntries added to the new list ({len(not_in_old)}):")
     print(", ".join(not_in_old))
 
-    # compared = list(zip_longest(not_in_new,not_in_old, fillvalue=""))
-    # print("not in new","not in old")
-    # pprint(compared)
+    hyphens_in_old = [lemma for lemma in old_lemmas if "-" in lemma]
+    # print(hyphens_in_old)
 
-    # print("In old but not in new:")
-    # pprint(not_in_new)
+    hyphen_cf = []
+    for lemma in hyphens_in_old:
+        replacement = ""
+        non_hyphen = lemma.replace("-","")
+        if non_hyphen in new_lemmas:
+            replacement = non_hyphen
+        hyphen_cf.append([lemma, replacement])
+    # print(hyphen_cf)
 
-    # print("In new but not in old:")
-    # pprint(not_in_old)
+    hyphen_lost_in_new = [el[0] for el in hyphen_cf if el[1]]
+    print("\nHyphens dropped in new wordlist")
+    print(hyphen_lost_in_new)
+
+    # alternatives = [[entry[0],entry[3][entry[3].find("="):]] for entry in new_list if "=" in entry[3]]
+    # pprint(alternatives)
+
+
 
 
 if __name__ == "__main__":

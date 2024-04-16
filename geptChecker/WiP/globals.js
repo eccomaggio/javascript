@@ -365,6 +365,14 @@ const LOOKUP = {
     ed: "e",
   },
 
+  prefixes: [
+    "un", "in", "im", "il", "ir",
+  ],
+
+  // lose_hyphens: [
+  //   'break-up', 'cell-phone', 'check-up', 'clean-up', 'come-down', 'co-operate', 'co-operation', 'co-operative', 'co-ordinate', 'e-mail', 'good-bye', 'hard-working', 'line-up', 'long-time', 'make-up', 'non-stop', 'non-violent', 'north-east', 'north-west', 'over-weight', 'pick-up', 'post-war', 'set-up', 'team-mate', 'time-out',
+  // ],
+
   foreign_plurals: [
     ["ae", "a"],
     ["a", "um"],
