@@ -12,20 +12,15 @@ addListeners();
 
 function init() {
   appStateWriteToCurrent();
-  // setDb_shared(V.currentDbChoice);
   setDbShared(V.current.db_state);
-  // setTab(V.currentTab);
   setTab(V.current.tab_state);
-  setupEditing(); // TODO: RETHINK THIS LATER
+  setupEditing();
   HTM.form.reset();
-  // toggleFinalTextDiv();
   updateDropdownMenuOptions();
 }
 
 function updateDropdownMenuOptions() {
-  // HTM.selectDb.value = V.currentDbChoice;
   HTM.selectDb.value = V.current.db_state;
-  // HTM.selectEditMode.value = (V.isInPlaceEditing) ? "1" : "0";
 }
 
 
@@ -37,7 +32,7 @@ function addListeners() {
 }
 
 function addWordInputListeners() {
-  HTM.inputLemma.addEventListener("input", debounce(submitWordSearchForm, 500));
+  HTM.inputLemma.addEventListener("input", debounce(prepareSearch, 500));
   for (const el of document.getElementsByTagName("input")) {
     if (el.type != "text") {
       const label = el.labels[0];
@@ -74,7 +69,7 @@ function addMenuListeners() {
 function addEditingListeners() {
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
   // ## having probs removing his event listener; leave & ignore with updateInputDiv
-  // HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
+  HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
 
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
@@ -233,7 +228,7 @@ function registerLabelClick(e_label) {
       defaultChecked.labels[0].classList.add("selected_txt");
       refreshLabels(parentID);
     }
-    submitWordSearchForm(e_label);
+    prepareSearch(e_label);
   }
 }
 
@@ -250,36 +245,21 @@ function refreshLabels(parentID) {
   });
 }
 
-function submitWordSearchForm(e) {
+
+function prepareSearch(e) {
   let resultsCount = 0;
   let resultsArr = [];
   let HTMLstringToDisplay = "";
   const data = getFormData(e);
-  V.isExactMatch = (data.match[0] === "exact") ? true : false;
+  V.isExactMatch = (data.match[0] === "exact");
   let errorMsg = checkFormData(data);
   if (errorMsg) {
     HTMLstringToDisplay = markStringAsError(errorMsg);
   } else {
-    resultsArr = executeFormDataLookup(data);
-    const checkSpelling = getEntryById(checkVariantWords(data.term[0]));
-    if (checkSpelling) resultsArr.push(checkSpelling);
+    resultsArr = runSearch(data);
     resultsCount = resultsArr.length;
-    if (resultsCount) {
-      HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
-    } else {
-      const term = data.term[0];
-      resultsAsIdArr = checkVariantSuffixes(term);
-      if (!resultsAsIdArr.length) resultsAsIdArr = checkVariantLetters(term);
-      if (resultsAsIdArr.length) {
-        resultsArr = getEntryById(resultsAsIdArr);
-        HTMLstringToDisplay = formatResultsAsHTML([resultsArr]);
-      }
-      else HTMLstringToDisplay = markStringAsError("No matches found for this term.");
-    }
+    HTMLstringToDisplay = formatResultsAsHTML(resultsArr);
   }
-  // debug(resultsCount, resultsArr)
-  resultsArr = dedupeById(resultsArr);
-
   displayWordSearchResults(HTMLstringToDisplay, resultsCount);
 }
 
@@ -307,11 +287,18 @@ function getFormData(e) {
     if (key === "theme" && !isKids()) continue;
     if (key === "awl" && !isBESTEP()) continue;
     const digit = parseInt(value)
-    if (Number.isInteger(digit)) {
-      data[key].push(digit);
-    } else if (value.trim()) {
-      data[key].push(value.trim());
+    if (Number.isInteger(digit)) data[key].push(digit);
+    else {
+      const strVal = value.trim();
+      if (strVal) data[key].push(strVal);
+      // data[key].push(value.trim());
     }
+    // data[key].push((Number.isInteger(digit)) ? digit : value.trim());
+    // if (Number.isInteger(digit)) {
+    //   data[key].push(digit);
+    // } else if (value.trim()) {
+    //   data[key].push(value.trim());
+    // }
   }
   return data;
 }
@@ -343,7 +330,7 @@ function checkFormData(data) {
   return errorMsg;
 }
 
-function executeFormDataLookup(data) {
+function runSearch(data) {
   const term = data.term.join().split(" ")[0].toLowerCase();
   const matchType = C.MATCHES[data.match];
   const searchTerms = {
@@ -360,15 +347,22 @@ function executeFormDataLookup(data) {
 
 function refineSearch(find) {
   let results = V.currentDb.db.filter(el => getLemma(el).search(find.term) != -1);
-  // debug("1",find.term, ...results, !!results, !!results.length)
-  results = results.concat(getDerivedForms(find.term).map(el => getEntryById(el)));
-  // debug("2",find.term, ...results, !!results, !!results.length)
   if (!results.length) {
-    const matchIDarr = checkSpellingVariants(stripOutRegex(find.term));
-    if (idSuccessfullyMatched(matchIDarr)) results = [getEntryById(...matchIDarr)];
+    const word = stripOutRegex(find.term);
+    let matchedIDarr = checkDerivations(word);
+    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, word);
+    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkSpellingVariants(word);
+    if (idSuccessfullyMatched(matchedIDarr)) results = [getEntryById(...matchedIDarr)];
   }
-  if (find.level.length) {
-    results = results.filter(el => find.level.indexOf(getLevel(el)[C.GEPT_ONLY]) > -1);
+  if (Number.isInteger(find.level[0])) {
+    let tmp_matches = [];
+    for (const level of find.level) {
+      for (entry of results) {
+        if (getLevel(entry)[C.GEPT_LEVEL] === level) tmp_matches.push(entry);
+      }
+    }
+    results = tmp_matches;
+
   }
   if (find.pos.length) {
     results = results.filter(el => getPoS(el)).filter(el => getPoS(el).search(find.pos) != -1);
@@ -394,7 +388,6 @@ function refineSearch(find) {
       results = results.filter(el => find.awl.indexOf(getLevel(el)[C.AWL_LEVEL]) > -1);
     }
   }
-  // debug(results)
   results = results.filter(result => getId(result) > 0);
   return results;
 }
@@ -411,7 +404,7 @@ function stripOutRegex(term) {
 function getDerivedForms(term) {
   const raw_term = stripOutRegex(term);
   let matches = [];
-  matches = checkDerivations([raw_term, raw_term]);
+  matches = checkDerivations(raw_term);
   return matches;
 }
 
@@ -424,6 +417,9 @@ function highlightAwlWord(level_arr, word) {
 }
 
 function formatResultsAsHTML(results) {
+  if (!results.length) {
+    return "<span class='error'><b>Search returned no results.</b></span>"
+  }
   let output = "";
   let previousInitial = "";
   let currentInitial = "";
@@ -451,26 +447,26 @@ function formatResultsAsHTML(results) {
   return "<table>" + output + "</table>";
 }
 
-function getId(entry){
+function getId(entry) {
   // if (entry) return entry[0];
   // return (entry) ? entry[0] : undefined;
   return entry[0];
 
 }
 
-function getLemma(entry){
+function getLemma(entry) {
   // if (entry) return entry[1];
   // return (entry) ? entry[1] : "";
   return entry[1];
 }
 
-function getPoS(entry){
+function getPoS(entry) {
   // if (entry) return entry[2];
   // return (entry) ? entry[2] : "";
   return entry[2];
 }
 
-function getLevel(entry){
+function getLevel(entry) {
   // if (entry) return entry[3];
   // return (entry) ? entry[3] : [];
   return entry[3];
@@ -480,11 +476,13 @@ function getNotes(entry) {
   let note = "";
   let awl_note = "";
   if (entry) {
-    let [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
+    // let [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
+    [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
     note = note ? `, ${note}` : "";
     awl_note = (isBESTEP() && awl_note) ? ` <span class="awl-note">(headword: <span class="awl-headword">${awl_note}</span>)</span>` : "";
-    return [note, awl_note]
+    // return [note, awl_note]
   }
+  return [note, awl_note];
 }
 
 
@@ -504,7 +502,7 @@ function displayWordSearchResults(resultsAsHtmlString, resultCount = 0) {
 
 function clearTab1() {
   HTM.form.reset();
-  submitWordSearchForm();
+  prepareSearch();
   refreshLabels("t1_form");
 }
 
@@ -546,12 +544,14 @@ function displayEntryInfo(refs) {
   GET LEVEL FROM ID
   getLevelDetails(levelArr)
   */
-  html = "";
-  for (ref of refs.split(" ")) {
+  let html = "";
+  for (const ref of refs.split(" ")) {
     const [id, normalizedWord, variantId] = ref.split(":");
-    const isOfflist = (variantId) ? true : false;
+    // const isOfflist = (variantId) ? true : false;
+    const isOfflist = !!variantId;
     const entry = (isOfflist) ? getEntryById(variantId) : getEntryById(id);
-    const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
+    // const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
+    const [levelArr, levelClass] = getLevelDetails(entry);
     const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist);
     const level = buildDisplayLevel(entry, id, levelArr, isOfflist);
     const pos = `[${getExpandedPoS(entry)}]`;
@@ -608,6 +608,7 @@ function normalizePastedText(e) {
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
+  V.refreshRequired = true;
   updateInputDiv(e);
   backupSave();
 }
@@ -624,7 +625,8 @@ function catchKeyboardCopyEvent(e) {
 
 
 function updateInputDiv(e) {
-  // debug("hi", Date.now())
+  if (!V.refreshRequired) return;
+  // debug(Date.now())
   V.tallyOfRepeats = {};
   V.repeats = new Set();
   let revisedText = getRevisedText().trim();
@@ -664,6 +666,7 @@ function displayWorkingText(html) {
 }
 
 function processText(rawText) {
+  signalRefreshNeeded("off");
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -859,7 +862,8 @@ function markOfflist(word, type) {
   for (const entry of V.offlistDb) {
     if (getLemma(entry) === word) {
       isUnique = false;
-      offlistID = entry[0];
+      // offlistID = entry[0];
+      offlistID = getId(entry);
       break;
     }
   }
@@ -882,16 +886,12 @@ function lookupWord([word, rawWord]) {
     word = rawWord;
   }
   let matchedIDarr = getIdsByLemma(word);
-  // ** EXECUTIVE DECISION: look up possible derivations even if word is found (to avoid, e.g. traveling being marked as int)
-  // debug("first pass", matchedIDarr)
-  matchedIDarr.push(...checkDerivations([word, rawWord], matchedIDarr));
-  // debug("A.",word, ...matchedIDarr)
-  if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, rawWord);
+  matchedIDarr = checkDerivations(word, matchedIDarr);
+  if (matchedIDarr.length === 0) matchedIDarr = checkNegativePrefix(word, rawWord);
   if (!matchedIDarr.length) matchedIDarr = [markOfflist(rawWord, "offlist")];
   // ** matches[0] = [id] if matched; [[-1]] if no match so far
-  const offlistEntry = getEntryFromOfflistDb(parseInt(matchedIDarr[0]));
+  const offlistEntry = getOfflistEntry(parseInt(matchedIDarr[0]));
   const isOfflist = offlistEntry.includes("offlist");
-  // debug("offlistEntry pass", offlistEntry, isOfflist)
   if (isOfflist) {
     const offlistID = parseInt(matchedIDarr[0]);
     checkSpellingVariants(word, rawWord, offlistID);
@@ -910,9 +910,9 @@ function checkNegativePrefix(word, rawWord) {
   const negativePrefixInfo = testForNegativePrefix(word);
   // debug(word,"derivations pass", matchedIDarr, isNoMatch, negativePrefixInfo)
   if (negativePrefixInfo) {
-    const [prefix, base] = negativePrefixInfo;
+    const base = negativePrefixInfo;
     matchedIDarr = getIdsByLemma(base);
-    matchedIDarr.push(...checkDerivations([base, rawWord]));
+    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkDerivations(base, matchedIDarr);
     // debug("B.",word, prefix, base, ...matchedIDarr, isNoMatch)
   }
   return matchedIDarr;
@@ -922,23 +922,22 @@ function testForNegativePrefix(word) {
   // ** returns undefined (falsey) if no prefix found; else [prefix, base]
   let result;
   if (word.length > 4) {
-    const possiblePrefix = word.slice(0,2);
-    // if (["in", "im", "il", "ir", "un"].includes(possiblePrefix)) {
+    const possiblePrefix = word.slice(0, 2);
     if (LOOKUP.prefixes.includes(possiblePrefix)) {
-      result = [possiblePrefix, word.slice(2)];
+      result = word.slice(2);
     }
   }
   return result;
 }
 
-function getEntryFromOfflistDb(id) {
+function getOfflistEntry(id) {
   if (typeof id === "object") id = id[0];
   if (id < 0) id = -id;
   const entry = (V.offlistDb[id]) ? V.offlistDb[id] : [];
   return entry;
 }
 
-function checkSpellingVariants(word, rawWord, offlistID=0) {
+function checkSpellingVariants(word, rawWord, offlistID = 0) {
   const shouldUpdateOfflistDb = (offlistID !== 0);
   let matchIDarr = checkVariantWords(word);
   // debug("variant word?", word, matchIDarr, matchIDarr.length)
@@ -959,7 +958,7 @@ function checkVariantWords(word) {
   let matchIDarr = []
   for (let key of Object.keys(LOOKUP.variantWords)) {
     const truncated = word.slice(0, key.length)
-    const searchTerm = (V.isExactMatch) ? key : key.slice(0,word.length);
+    const searchTerm = (V.isExactMatch) ? key : key.slice(0, word.length);
     if (searchTerm === truncated) {
       match = LOOKUP.variantWords[key];
       matchIDarr = getIdsByLemma(match)
@@ -976,7 +975,7 @@ function checkVariantSuffixes(word) {
   else if (word.endsWith("d")) word = word.slice(0, -1);
   else if (word.endsWith("ing")) word = word.slice(0, -3);
   if (word.endsWith("e")) word = word.slice(0, -1);
-  for (key of Object.keys(LOOKUP.variantSuffixes)) {
+  for (const key of Object.keys(LOOKUP.variantSuffixes)) {
     const len = key.length;
     const root = word.slice(0, -len);
     const suffix = word.slice(-len);
@@ -985,12 +984,23 @@ function checkVariantSuffixes(word) {
       break;
     }
   }
-  if (match){
+  if (match) {
     matchIDarr = getIdsByLemma(match);
   }
   return matchIDarr;
 }
 
+
+
+function checkVariantHyphens(word, rawWord) {
+  let matchIDarr = [];
+  if (word.length > 4 && word.includes("-")) {
+    const deHyphenatedWord = word.replace("-", "");
+    matchIDarr = getIdsByLemma(deHyphenatedWord);
+    if (!idSuccessfullyMatched(matchIDarr)) matchIDarr = checkDerivations(deHyphenatedWord);
+  }
+  return matchIDarr;
+}
 
 function checkVariantLetters(word) {
   let matchIDarr = [];
@@ -1004,37 +1014,28 @@ function checkVariantLetters(word) {
   return matchIDarr;
 }
 
-function checkVariantHyphens(word, rawWord) {
-  let matchIDarr = [];
-  if (word.length > 4 && word.includes("-")) {
-    const deHyphenatedWord = word.replace("-","");
-    matchIDarr = getIdsByLemma(deHyphenatedWord);
-    if (!idSuccessfullyMatched(matchIDarr)) matchIDarr = checkDerivations([deHyphenatedWord, rawWord]);
-  }
-  return matchIDarr;
-}
-
-
 function replaceLetters(word, letters, replacement) {
+  let matchedIDarr = [];
   const re = new RegExp(letters, "gi")
   let found;
   let indices = [];
   while ((found = re.exec(word)) !== null) {
     indices.push(found.index);
   }
-  let matchIDarr = [];
-  for (const pos of indices) {
-    const before = word.slice(0, pos);
-    const after = word.slice(pos + letters.length)
-    matchIDarr = getIdsByLemma(before + replacement + after);
-    if (matchIDarr.length) {
-      break;
+  // debug(`${word} ->`, letters, replacement, indices)
+  if (indices.length) {
+    for (const pos of indices) {
+      const variant = word.slice(0, pos) + replacement + word.slice(pos + letters.length)
+      matchedIDarr = getIdsByLemma(variant);
+      if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkDerivations(variant);
+      // debug(word, variant, ...matchedIDarr)
+      if (idSuccessfullyMatched(matchedIDarr)) break;
     }
   }
-  return matchIDarr;
+  return matchedIDarr;
 }
 
-function checkDerivations([word, rawWord], matches = []) {
+function checkDerivations(word, matches = []) {
   /*
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
@@ -1070,11 +1071,10 @@ function checkDerivations([word, rawWord], matches = []) {
     checkSuperlatives,
     checkComparatives,
     // checkFinalS,
-    checkRegAdv,
-    // checkNegativePrefixes,
-    // checkOldHyphens,
+    checkRegularAdverbs,
   ]) {
     const result = guess(word);
+    // if (result) debug(word, result)
     if (result) {
       matches.push(result);
       break;
@@ -1097,7 +1097,7 @@ function dedupeSimpleArray(array) {
   return [...new Set(array)];
 }
 
-function dedupeById(arr, field=0) {
+function dedupeById(arr, field = 0) {
   let tmp_ids = {};
   let dedupedArr = [];
   for (let el of arr) {
@@ -1111,74 +1111,83 @@ function dedupeById(arr, field=0) {
 }
 
 function checkDigits(word) {
+  let result;
   if (word.match(/(\d+|\d+,\d+|\d+\.\d+|\d+,\d+\.d+)/i)) {
-    return markOfflist(word, "digit");
+    result = markOfflist(word, "digit");
   }
+  return result;
 }
 
 function checkUnknown(word) {
+  let result;
   if (!word.match(/[a-z]/i)) {
-    return markOfflist(word, "unknown");
+    result = markOfflist(word, "unknown");
   }
+  return result;
 }
 
 function checkSymbols(word) {
+  let result;
   if (LOOKUP.symbols.includes(word)) {
-    return markOfflist(word, "symbol");
+    result = markOfflist(word, "symbol");
   }
+  return result;
 }
 
 function checkContractions(word) {
+  let result;
   if (LOOKUP.contractions.includes(word)) {
-    return markOfflist(word, "contraction");
+    result = markOfflist(word, "contraction");
   }
+  return result;
 }
 
 function checkNames(word) {
+  let result;
   if (LOOKUP.personalNames.includes(word)) {
-    return markOfflist(word, "personal name");
+    result = markOfflist(word, "personal name");
   }
+  return result;
 }
 
 function checkArticle(word) {
+  let result;
   if (word === "an") {
-    return getIdsByLemma("a")[0];
+    result = getIdsByLemma("a")[0];
   }
+  return result;
 }
 
-// function checkNegativePrefixes(word) {
-//   if (word.length > 5) {
-//     // return removePrefix(word);
-//     const result = removePrefix(word);
-//     if (result.length) {
-//       return result;
-//     }
-//   }
-//   return;
-// }
 
 function checkIrregularNegatives(word) {
+  let result;
   const lookup = LOOKUP.irregNegVerb[word];
   if (lookup) {
-    return winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
+    result = winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
   }
+  return result;
 }
 
 function checkIrregularVerbs(word) {
+  let result;
   const lookup = LOOKUP.irregVerb[word];
   if (lookup) {
-    return winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
+    result = winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
   }
+  return result;
 }
 
 function checkIrregularPlurals(word) {
+  let result;
   const lookup = LOOKUP.irregPlural[word];
   if (lookup) {
-    return winnowPoS(getIdsByLemma(lookup), ["n"])[0];
+    result = winnowPoS(getIdsByLemma(lookup), ["n"])[0];
   }
+  return result;
 }
 
 function checkForeignPlurals(word) {
+  let result;
   if (word.length <= 2) return;
   for (const [plural, singular] of LOOKUP.foreign_plurals) {
     const root = word.slice(0, -plural.length);
@@ -1186,63 +1195,63 @@ function checkForeignPlurals(word) {
     if (ending === plural) {
       const lookup = getIdsByLemma(root + singular);
       if (lookup.length) {
-        return winnowPoS(lookup, ["n"])[0];
+        // return winnowPoS(lookup, ["n"])[0];
+        result = winnowPoS(lookup, ["n"])[0];
+        break;
       }
     }
   }
-  return;
+  return result;
 }
 
 function checkVing(word) {
+  let result;
   if (word.endsWith("ing")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.g_subs), ["v"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.g_subs), ["v"])[0];
   }
-  return;
+  return result;
 }
 
 function checkVpp(word) {
+  let result;
   if (word.endsWith("ed")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.d_subs), ["v"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.d_subs), ["v"])[0];
   }
-  return;
+  return result;
 }
 
 function checkSuperlatives(word) {
+  let result;
   if (word.endsWith("st")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.est_subs), ["j"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.est_subs), ["j"])[0];
   }
-  return;
+  return result;
 }
 
 function checkComparatives(word) {
+  let result;
   if (word.endsWith("r")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.er_subs), ["j"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.er_subs), ["j"])[0];
   }
-  return;
+  return result;
 }
 
 function checkFinalS(word) {
+  let result;
   if (word.endsWith("s")) {
     // ## pronouns ("r") included to allow 'others'
-    return winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"])[0];
   }
-  return;
+  return result;
 }
 
-function checkRegAdv(word) {
+function checkRegularAdverbs(word) {
+  let result;
   if (word.endsWith("ly")) {
-    return winnowPoS(findBaseForm(word, LOOKUP.y_subs), ["j"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.y_subs), ["j"])[0];
   }
-  return;
+  return result;
 }
-
-
-// function checkOldHyphens(word) {
-//   if (word.includes("-")) {
-//     debug(word, LOOKUP.lose_hyphens.includes(word));
-//   }
-//   return;
-// }
 
 
 function winnowPoS(roughMatches, posArr) {
@@ -1262,14 +1271,17 @@ function winnowPoS(roughMatches, posArr) {
 
 function getEntryById(id) {
   // ** a negative id signifies an offlist word
-  if (id === undefined) return;
-  let parsedId = parseInt(id);
-  const isOfflist = parsedId < 0;
-  const dB = (isOfflist) ? V.offlistDb : V.currentDb.db;
-  parsedId = Math.abs(parsedId);
-  let result = dB[parsedId]
+  let result;
+  if (id !== undefined) {
+    let parsedId = parseInt(id);
+    const isOfflist = parsedId < 0;
+    const dB = (isOfflist) ? V.offlistDb : V.currentDb.db;
+    parsedId = Math.abs(parsedId);
+    result = dB[parsedId]
+  }
   // debug(id, parsedId, variant, dB[parsedId]);
-  return dB[parsedId];
+  // return dB[parsedId];
+  return result;
 }
 
 function buildMarkupAsHTML(textArr) {
@@ -1315,7 +1327,8 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   V.repeats.add(displayLemma + ":" + displayID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const entryToShow = (isVariant) ? variantEntry : match;
-  const [levelArr, levelNum, levelClass] = getLevelDetails(entryToShow);
+  // const [levelArr, levelNum, levelClass] = getLevelDetails(entryToShow);
+  const [levelArr, levelClass] = getLevelDetails(entryToShow);
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(displayID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
@@ -1325,7 +1338,7 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
     listOfLinks += `:${getId(variantEntry)}`;
     variantClass = " variant";
   }
-  groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
+  const groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
   return groupedWord;
 }
 
@@ -1395,9 +1408,10 @@ function getDuplicateDetails(id, ignoreRepeats) {
 
 
 function getLevelDetails(entry) {
-  const levelNum = getLevelNum(entry);
+  // const levelNum = getLevelNum(entry);
   const levelClass = "level-" + getLevelPrefix(entry);
-  return [getLevel(entry), levelNum, levelClass];
+  // return [getLevel(entry), levelNum, levelClass];
+  return [getLevel(entry), levelClass];
 }
 
 
@@ -1522,7 +1536,7 @@ function getIdsByLemma(word) {
 }
 
 
-function findBaseForm(word, subs, isSuffix=true) {
+function findBaseForm(word, subs, isSuffix = true) {
   // ** Uses lookup tables to apply spelling rules to return underlying base HTM.form candidates
   let localMatches = [];
   const candidates = new Set();
@@ -1697,7 +1711,7 @@ function setDbShared(e) {
         _accent: "#daebe8"
       }
     };
-  // } else if (V.currentDbChoice === C.BESTEP) {
+    // } else if (V.currentDbChoice === C.BESTEP) {
   } else if (V.current.db_state === C.BESTEP) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
@@ -1728,11 +1742,12 @@ function setDbShared(e) {
   }
   V.currentDb.compounds = makeCompoundsDb(V.currentDb.db);
   for (const key in V.currentDb.css) {
-    const property = (key[0] == "_") ? `--${key.slice(1)}` : key;
+    // const property = (key[0] == "_") ? `--${key.slice(1)}` : key;
+    const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
     HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
   }
   setDb_tab2();
-  setDb_tab1();
+  setDbTab1();
   // localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
   localStorage.setItem("db_state", V.current.db_state);
 }
@@ -1776,7 +1791,7 @@ function makeCompoundsDb(dB) {
   return compounds;
 }
 
-function setDb_tab1() {
+function setDbTab1() {
   displayDbNameInTab1();
   // ** Allows for multiple elements to be toggled
   for (const el of V.currentDb.show) {
@@ -1785,7 +1800,7 @@ function setDb_tab1() {
   for (const el of V.currentDb.hide) {
     el.style.setProperty("display", "none");
   }
-  submitWordSearchForm();
+  prepareSearch();
 }
 
 function setDb_tab2() {
@@ -1794,11 +1809,12 @@ function setDb_tab2() {
 }
 
 function debounce(func, timeout = 500) {
-  // debug("hi", Date.now())
+  // debug(func.name === "updateInputDiv")
   let timer;
   return (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    // V.timer = timer;
   };
 }
 
@@ -1833,7 +1849,8 @@ function setTab(tab) {
   localStorage.setItem("tab_state", V.current.tab_state);
   forceUpdateInputDiv();
   displayInputCursor();
-  V.isExactMatch = (isFirstTab()) ? false : true;
+  // V.isExactMatch = (isFirstTab()) ? false : true;
+  V.isExactMatch = isFirstTab();
 }
 
 

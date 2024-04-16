@@ -105,7 +105,8 @@ function setCursorPosSafely(el, isStart = true) {
 function updateCursorPos(e) {
   const keypress = e.key;
   if (!keypress) return;
-  V.isTextEdit = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
+  V.refreshRequired = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
+  if (V.refreshRequired) signalRefreshNeeded("on");
   V.oldCursorOffset = V.cursorOffset;
   let isInMark;
   [
@@ -115,6 +116,18 @@ function updateCursorPos(e) {
   getCursorIncrement(keypress)
 }
 
+function signalRefreshNeeded(mode) {
+  if (mode === "on") {
+  // V.refreshRequired = true;
+    HTM.workingDiv.style.backgroundColor = "ivory";
+  }
+  else {
+    HTM.workingDiv.style.backgroundColor = "white";
+    V.refreshRequired = false;
+    // clearTimeout(V.timer);
+    // V.timer = null;
+  }
+}
 
 function normalizeTextForClipboard(e) {
   if (!e) {

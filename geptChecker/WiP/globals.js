@@ -110,6 +110,8 @@ let V = {
   OFFLIST: 0,
   level_subs: [],
   currentTab: null,
+  refreshRequired: false,
+  timer: null,
   cursorOffset: 0,
   oldCursorOffset: 0,
   cursorOffsetNoMarks: 0,

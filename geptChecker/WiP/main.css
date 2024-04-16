@@ -319,7 +319,8 @@
       text-decoration: none;
     }
 
-    .level-o {
+    .level-o,
+    .level-u {
       color: var(--offlist);
       font-style: italic;
       /* font-weight: bold; */
