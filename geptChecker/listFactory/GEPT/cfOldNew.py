@@ -185,8 +185,38 @@ def main():
     print("\nHyphens dropped in new wordlist")
     print(hyphen_lost_in_new)
 
-    # alternatives = [[entry[0],entry[3][entry[3].find("="):]] for entry in new_list if "=" in entry[3]]
-    # pprint(alternatives)
+    alternatives = [[entry[0],entry[3][entry[3].find("="):]] for entry in new_list if "=" in entry[3]]
+    pprint(alternatives)
+
+    print("\nPossible gendered nouns:")
+    gendered_nouns = []
+    for entry in alternatives:
+        [lemma, notes] = entry
+        line  = notes[notes.index("="):][1:].strip()
+        # print(f"{lemma}: {line}")
+        # continue
+        for el in ["man", "men", "ess"]:
+            pos = re.search(f"{el}\\b", line)
+            if pos:
+                # print(f"{lemma}: ({el}) {line}")
+                gendered_nouns.append([lemma, line])
+                break
+    pprint({el[1]:el[0] for el in gendered_nouns})
+
+    sys.exit("\nThat's all folks!")
+
+    collated_lemmas = {}
+    for i, lemma in enumerate(new_lemmas):
+        if collated_lemmas.get(lemma):
+            collated_lemmas[lemma].append(i)
+        else:
+            collated_lemmas[lemma] = [i]
+    # pprint(collated_lemmas)
+    repeated_lemmas = {lemma:id for (lemma,id) in collated_lemmas.items() if len(id) > 1}
+    print(f"\nRepeated lemmas ({len(repeated_lemmas)} entries)")
+    # pprint(", ".join(repeated_lemmas.keys()))
+    print(", ".join([f"{lemma} ({len(id)})" for (lemma, id) in repeated_lemmas.items()]))
+
 
 
 

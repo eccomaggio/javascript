@@ -2344,8 +2344,8 @@ const LOOKUP = {
     blond: "blonde",
     botanic: "botanical",
     groom: "bridegroom",
-    businessman: "businessperson",
-    businesswoman: "businessperson",
+    // businessman: "businessperson",
+    // businesswoman: "businessperson",
     carer: "caretaker",
     centigrade: "celsius",
     chairman: "chair",
@@ -2359,6 +2359,8 @@ const LOOKUP = {
     distil: "distill",
     dorm: "dormitory",
     enrol: "enroll",
+    postman: "mail carrier",
+    mailman: "mail carrier",
 
   },
 
@@ -2384,7 +2386,41 @@ const LOOKUP = {
 
   notLetterVariant: [
     "fourth",
-  ]
+  ],
+
+  // gendered_nouns: {
+  //   businessman: 'businessperson',
+  //   businesswoman: 'businessperson',
+  //   chairman: 'chairperson',
+  //   chairwoman: 'chairperson',
+  //   fireman: 'firefighter',
+  //   mailman: 'mail carrier',
+  //   postman: 'mail carrier',
+  //   salesman: 'salesperson',
+  //   saleswoman: 'salesperson',
+  //   spokesman: 'spokesperson',
+  //   spokeswoman: 'spokesperson',
+  //   sportsman: 'sportsperson',
+  //   sportswoman: 'sportsperson',
+  //   stewardess: 'steward',
+  // },
+
+  gendered_nouns: {
+    businessm: 'businessperson',
+    businesswom: 'businessperson',
+    chairm: 'chairperson',
+    chairwom: 'chairperson',
+    firem: 'firefighter',
+    mailm: 'mail carrier',
+    postm: 'mail carrier',
+    salesm: 'salesperson',
+    saleswom: 'salesperson',
+    spokesm: 'spokesperson',
+    spokeswom: 'spokesperson',
+    sportsm: 'sportsperson',
+    sportswom: 'sportsperson',
+    stewardess: 'steward',
+  },
 
 }
 
@@ -3501,6 +3537,7 @@ function checkSpellingVariants(word, rawWord, offlistID = 0) {
   let matchIDarr = checkVariantWords(word);
   // debug("variant word?", word, matchIDarr, matchIDarr.length)
   if (!matchIDarr.length) matchIDarr = checkVariantSuffixes(word);
+  if (!matchIDarr.length) matchIDarr = checkGenderedNouns(word);
   // debug("variant suffix?", word, matchIDarr, matchIDarr.length)
   if (!matchIDarr.length) matchIDarr = checkVariantLetters(word);
   // debug("variant letters?", word, matchIDarr, matchIDarr.length)
@@ -3527,6 +3564,21 @@ function checkVariantWords(word) {
   return matchIDarr;
 }
 
+function checkGenderedNouns(word) {
+  let match = "";
+  let matchIDarr = []
+  for (let key of Object.keys(LOOKUP.gendered_nouns)) {
+    const truncated = word.slice(0, key.length)
+    const searchTerm = (V.isExactMatch) ? key : key.slice(0, word.length);
+    // debug(`${word}: ${searchTerm}=${truncated} ${searchTerm === truncated}`)
+    if (searchTerm === truncated) {
+      match = LOOKUP.gendered_nouns[key];
+      matchIDarr = getIdsByLemma(match)
+      break;
+    }
+  }
+  return matchIDarr;
+}
 function checkVariantSuffixes(word) {
   let match;
   let matchIDarr = [];

@@ -983,8 +983,8 @@ const LOOKUP = {
     blond: "blonde",
     botanic: "botanical",
     groom: "bridegroom",
-    businessman: "businessperson",
-    businesswoman: "businessperson",
+    // businessman: "businessperson",
+    // businesswoman: "businessperson",
     carer: "caretaker",
     centigrade: "celsius",
     chairman: "chair",
@@ -998,6 +998,8 @@ const LOOKUP = {
     distil: "distill",
     dorm: "dormitory",
     enrol: "enroll",
+    postman: "mail carrier",
+    mailman: "mail carrier",
 
   },
 
@@ -1023,7 +1025,41 @@ const LOOKUP = {
 
   notLetterVariant: [
     "fourth",
-  ]
+  ],
+
+  // gendered_nouns: {
+  //   businessman: 'businessperson',
+  //   businesswoman: 'businessperson',
+  //   chairman: 'chairperson',
+  //   chairwoman: 'chairperson',
+  //   fireman: 'firefighter',
+  //   mailman: 'mail carrier',
+  //   postman: 'mail carrier',
+  //   salesman: 'salesperson',
+  //   saleswoman: 'salesperson',
+  //   spokesman: 'spokesperson',
+  //   spokeswoman: 'spokesperson',
+  //   sportsman: 'sportsperson',
+  //   sportswoman: 'sportsperson',
+  //   stewardess: 'steward',
+  // },
+
+  gendered_nouns: {
+    businessm: 'businessperson',
+    businesswom: 'businessperson',
+    chairm: 'chairperson',
+    chairwom: 'chairperson',
+    firem: 'firefighter',
+    mailm: 'mail carrier',
+    postm: 'mail carrier',
+    salesm: 'salesperson',
+    saleswom: 'salesperson',
+    spokesm: 'spokesperson',
+    spokeswom: 'spokesperson',
+    sportsm: 'sportsperson',
+    sportswom: 'sportsperson',
+    stewardess: 'steward',
+  },
 
 }
 

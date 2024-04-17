@@ -942,6 +942,7 @@ function checkSpellingVariants(word, rawWord, offlistID = 0) {
   let matchIDarr = checkVariantWords(word);
   // debug("variant word?", word, matchIDarr, matchIDarr.length)
   if (!matchIDarr.length) matchIDarr = checkVariantSuffixes(word);
+  if (!matchIDarr.length) matchIDarr = checkGenderedNouns(word);
   // debug("variant suffix?", word, matchIDarr, matchIDarr.length)
   if (!matchIDarr.length) matchIDarr = checkVariantLetters(word);
   // debug("variant letters?", word, matchIDarr, matchIDarr.length)
@@ -968,6 +969,21 @@ function checkVariantWords(word) {
   return matchIDarr;
 }
 
+function checkGenderedNouns(word) {
+  let match = "";
+  let matchIDarr = []
+  for (let key of Object.keys(LOOKUP.gendered_nouns)) {
+    const truncated = word.slice(0, key.length)
+    const searchTerm = (V.isExactMatch) ? key : key.slice(0, word.length);
+    // debug(`${word}: ${searchTerm}=${truncated} ${searchTerm === truncated}`)
+    if (searchTerm === truncated) {
+      match = LOOKUP.gendered_nouns[key];
+      matchIDarr = getIdsByLemma(match)
+      break;
+    }
+  }
+  return matchIDarr;
+}
 function checkVariantSuffixes(word) {
   let match;
   let matchIDarr = [];
