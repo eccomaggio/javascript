@@ -406,6 +406,7 @@
 
     .multi-diff {
       text-decoration: darkgray underline double;
+      background-color: seashell;
       -webkit-text-decoration: darkgray underline double;
     }
 
@@ -627,6 +628,13 @@
       font-style: italic;
     }
 
+    summary {
+      list-style-type: "+ ";
+    }
+
+    details[open]>summary {
+      list-style-type: "- ";
+    }
 
     /* ## PAGE COMMON ELEMENTS #################################### */
 

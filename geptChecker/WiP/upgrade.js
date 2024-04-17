@@ -105,10 +105,11 @@ function setCursorPosSafely(el, isStart = true) {
 function updateCursorPos(e) {
   const keypress = e.key;
   if (!keypress) return;
-  V.refreshRequired = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
-  if (V.refreshRequired) signalRefreshNeeded("on");
+  // V.refreshRequired = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
+  // if (V.refreshRequired) signalRefreshNeeded("on");
+  if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
   V.oldCursorOffset = V.cursorOffset;
-  let isInMark;
+  // let isInMark;
   [
     V.cursorOffset,
     V.cursorOffsetNoMarks,
@@ -118,7 +119,7 @@ function updateCursorPos(e) {
 
 function signalRefreshNeeded(mode) {
   if (mode === "on") {
-  // V.refreshRequired = true;
+    V.refreshRequired = true;
     HTM.workingDiv.style.backgroundColor = "ivory";
   }
   else {
@@ -153,7 +154,7 @@ function newlinesToEOLs(text) {
 }
 
 function forceUpdateInputDiv() {
-  V.refreshRequested = true;
+  V.refreshRequired = true;
   updateInputDiv();
-  V.refreshRequested = false;
+  // V.refreshRequested = false;
 }

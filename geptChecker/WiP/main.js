@@ -626,6 +626,8 @@ function catchKeyboardCopyEvent(e) {
 
 function updateInputDiv(e) {
   if (!V.refreshRequired) return;
+  signalRefreshNeeded("off");
+  V.isExactMatch = true;
   // debug(Date.now())
   V.tallyOfRepeats = {};
   V.repeats = new Set();
@@ -781,8 +783,10 @@ function findCompoundsAndFlattenArray(chunks) {
         if (flattenedTail.startsWith(compound)) {
           const c_id = V.currentDb.compounds[compound];
           matches = pushMatch(matches, c_id);
+          break;
         }
       }
+      // debug("&&",word_i, ...matches, matches.length)
       chunk[word_i].push(matches);
     }
     // ** required so that all wordArrs have matches ready for the next stage
@@ -809,38 +813,40 @@ function pushLookups(textArr) {
   let wordCount = 0;
   let matches = [];
   // ** capture EOL and insert line breaks
-  for (const wordArr of textArr) {
+  for (let wordArr of textArr) {
+    // ** if there is a match, delete offlist entries
     let [word, rawWord, preMatchArr] = wordArr;
+    // debug(">>", word, preMatchArr.length, ...preMatchArr)
     let matchedIDs = [];
     if (word === EOL.text) {
       processedTextArr.push([word]);
     }
     else {
       if (!word) continue;
-      matches = lookupWord(wordArr);
-      // debug(textArr, matches)
+      // ** lookup word even if matched in compound (as might be an accidental compound)
+      // ** but ignore any negative results as the compound is a bona fide match
+      let matches = lookupWord(wordArr);
+      // let matches = [];
+      // if (!preMatchArr.length) matches = lookupWord(wordArr);
       if (word) wordCount++;
       for (const id of matches) {
-        // if (!id.length) continue;
-        if (!id) continue;
-        // ** do not check compounds (already checked)
-        // debug("what??", id)
+        if (!id || (preMatchArr.length && id < 0)) continue;
+        // ** do not check compounds (results already in preMatchArr)
         if (V.currentDb.db[id] && V.currentDb.db[id][C.isCOMPOUND]) continue;
         const matchedEntry = getEntryById(id);
-        // ** don't include contractions in word count
+        // debug(word, matchedEntry, preMatchArr)
         if (!matchedEntry) continue;
         if (getPoS(matchedEntry) === "contraction") wordCount--;
         if (!V.currentDb.compounds[word]) {
           matchedIDs = pushMatch(matchedIDs, id);
         }
       }
-      // debug("??",matchedIDs, matchedIDs.length)
       // ** filter out matched compounds without spaces
+      // ** this is where the compound lookup is united with the word lookup
       preMatchArr.push(...matchedIDs);
       processedTextArr.push([word, rawWord, preMatchArr]);
     }
   }
-  // debug(">>",processedTextArr)
   return [processedTextArr, wordCount];
 }
 
@@ -885,9 +891,13 @@ function lookupWord([word, rawWord]) {
   if (LOOKUP.symbols.includes(rawWord)) {
     word = rawWord;
   }
+  else word = word.replace("-","");
+  // debug(word,rawWord)
   let matchedIDarr = getIdsByLemma(word);
   matchedIDarr = checkDerivations(word, matchedIDarr);
-  if (matchedIDarr.length === 0) matchedIDarr = checkNegativePrefix(word, rawWord);
+  // debug(word,rawWord, matchedIDarr)
+  // if (matchedIDarr.length === 0) matchedIDarr = checkNegativePrefix(word, rawWord);
+  if (!matchedIDarr.length) matchedIDarr = checkNegativePrefix(word, rawWord);
   if (!matchedIDarr.length) matchedIDarr = [markOfflist(rawWord, "offlist")];
   // ** matches[0] = [id] if matched; [[-1]] if no match so far
   const offlistEntry = getOfflistEntry(parseInt(matchedIDarr[0]));
@@ -939,19 +949,22 @@ function getOfflistEntry(id) {
 
 function checkSpellingVariants(word, rawWord, offlistID = 0) {
   const shouldUpdateOfflistDb = (offlistID !== 0);
-  let matchIDarr = checkVariantWords(word);
+  let matchedIDarr = checkVariantWords(word);
   // debug("variant word?", word, matchIDarr, matchIDarr.length)
-  if (!matchIDarr.length) matchIDarr = checkVariantSuffixes(word);
-  if (!matchIDarr.length) matchIDarr = checkGenderedNouns(word);
+  if (!matchedIDarr.length) matchedIDarr = checkVariantSuffixes(word);
+  if (!matchedIDarr.length) matchedIDarr = checkAbbreviations(word);
+  if (!matchedIDarr.length) matchedIDarr = checkGenderedNouns(word);
   // debug("variant suffix?", word, matchIDarr, matchIDarr.length)
-  if (!matchIDarr.length) matchIDarr = checkVariantLetters(word);
+  if (!matchedIDarr.length) matchedIDarr = checkVariantLetters(word);
   // debug("variant letters?", word, matchIDarr, matchIDarr.length)
-  if (!matchIDarr.length) matchIDarr = checkVariantHyphens(word, rawWord);
-  if (matchIDarr.length) {
-    const offlistEntry = [offlistID, word, "variant", matchIDarr, ""];
+  if (!matchedIDarr.length) matchedIDarr = checkVariantHyphens(word, rawWord);
+  // debug(word, matchedIDarr, matchedIDarr.length)
+  if (matchedIDarr.length) {
+  // if (!matchIDarr.length) {
+    const offlistEntry = [offlistID, word, "variant", matchedIDarr, ""];
     if (shouldUpdateOfflistDb) V.offlistDb[-offlistID] = offlistEntry;
   }
-  return matchIDarr;
+  return matchedIDarr;
 }
 
 function checkVariantWords(word) {
@@ -960,6 +973,8 @@ function checkVariantWords(word) {
   for (let key of Object.keys(LOOKUP.variantWords)) {
     const truncated = word.slice(0, key.length)
     const searchTerm = (V.isExactMatch) ? key : key.slice(0, word.length);
+    // const searchTerm = key;
+    // debug(word, V.isExactMatch, key, searchTerm, truncated)
     if (searchTerm === truncated) {
       match = LOOKUP.variantWords[key];
       matchIDarr = getIdsByLemma(match)
@@ -984,6 +999,21 @@ function checkGenderedNouns(word) {
   }
   return matchIDarr;
 }
+
+function checkAbbreviations(word) {
+  word = word.replace(".","");
+  let matchIDarr = [];
+  // if (Object.hasOwn(LOOKUP.abbrieviations, word)) {
+  // if (word in LOOKUP.abbrieviations) {
+  if (LOOKUP.abbrieviations.hasOwnProperty(word)) {
+    const match = LOOKUP.abbrieviations[word];
+    for (lemma of match.split(":")) {
+      matchIDarr.push(getIdsByLemma(lemma));
+    }
+  }
+  return matchIDarr;
+}
+
 function checkVariantSuffixes(word) {
   let match;
   let matchIDarr = [];
@@ -1756,7 +1786,7 @@ function setDbShared(e) {
       }
     };
   }
-  V.currentDb.compounds = makeCompoundsDb(V.currentDb.db);
+  V.currentDb.compounds = buildCompoundsDb(V.currentDb.db);
   for (const key in V.currentDb.css) {
     // const property = (key[0] == "_") ? `--${key.slice(1)}` : key;
     const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
@@ -1782,7 +1812,7 @@ function isKids() {
   return V.current.db_state === C.Kids;
 }
 
-function makeCompoundsDb(dB) {
+function buildCompoundsDb(dB) {
   /* ##
   A) goes through currentDb and checks for compounds (words containing spaces / hyphens)
   These are a problem as spaces are used to divide words;
@@ -1797,7 +1827,7 @@ function makeCompoundsDb(dB) {
   for (let entry of dB) {
     const word = getLemma(entry).trim().toLowerCase();
     const id = getId(entry);
-    const splitWord = word.split(/[-'\s]/g);
+    const splitWord = word.split(/[-'\s\.]/g);
     if (splitWord.length > 1) {
       const newCompound = splitWord.join("");
       entry[C.isCOMPOUND] = true;
@@ -1866,7 +1896,7 @@ function setTab(tab) {
   forceUpdateInputDiv();
   displayInputCursor();
   // V.isExactMatch = (isFirstTab()) ? false : true;
-  V.isExactMatch = isFirstTab();
+  V.isExactMatch = !isFirstTab();
 }
 
 
