@@ -122,6 +122,7 @@ let V = {
     db_state: 0,
     tab_state: 0,
   },
+  // hasApostrophe: false,
 }
 
 const CURSOR = {
@@ -1010,9 +1011,6 @@ const LOOKUP = {
     homogenous: "homogeneous",
     judgement: "judgment",
     catsup: "ketchup",
-    // kg: "kilogram",
-    // km: "kilometer",
-    // gm: "gram",
     kitty: "kitten",
     lab: "laboratory",
     limo: "limousine",
@@ -1024,7 +1022,6 @@ const LOOKUP = {
     mum: "mother",
     mummy: "mother",
     nope: "no",
-    // pingpong: "tabletennis",
     providing: "provided",
     quartette: "quartet",
     railway: "railroad",
@@ -1053,7 +1050,7 @@ const LOOKUP = {
     tb: "tuberculosis",
   },
 
-  abbrieviations: {
+  abbreviations: {
     mon: "monday",
     tue: "tuesday",
     tues: "tuesday",
@@ -1085,9 +1082,10 @@ const LOOKUP = {
     mm: "millimeter",
     l: "liter",
     lb: "pound",
+    oz: "ounce",
     m: "meter:mile",
     vol: "volume",
-    p: "page",
+    p: "page:penny",
   },
 
   variantSuffixes: {

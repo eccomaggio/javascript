@@ -755,7 +755,8 @@ function splitTextIntoPhrases(text) {
   text = text.trim();
   // ** separate out digits
   // ** should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
-  text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?))/g, "^^$1^^")
+  // text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?))/g, "^^$1^^")
+  text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^")
   // ** break at punctuation (include with digit)
   text = text.replace(/(\^\^|^\d)([.,;():?!])\s*/gi, "$2^^")
   text = text.replace(/\^{4,}/g, "^^");
@@ -891,23 +892,28 @@ function lookupWord([word, rawWord]) {
   if (LOOKUP.symbols.includes(rawWord)) {
     word = rawWord;
   }
+  // ** remove hyphens from the search term to match words with non-standard hyphenation
   else word = word.replace("-","");
-  // debug(word,rawWord)
-  let matchedIDarr = getIdsByLemma(word);
-  matchedIDarr = checkDerivations(word, matchedIDarr);
-  // debug(word,rawWord, matchedIDarr)
-  // if (matchedIDarr.length === 0) matchedIDarr = checkNegativePrefix(word, rawWord);
-  if (!matchedIDarr.length) matchedIDarr = checkNegativePrefix(word, rawWord);
-  if (!matchedIDarr.length) matchedIDarr = [markOfflist(rawWord, "offlist")];
-  // ** matches[0] = [id] if matched; [[-1]] if no match so far
-  const offlistEntry = getOfflistEntry(parseInt(matchedIDarr[0]));
-  const isOfflist = offlistEntry.includes("offlist");
-  if (isOfflist) {
-    const offlistID = parseInt(matchedIDarr[0]);
-    checkSpellingVariants(word, rawWord, offlistID);
-    // ** don't add these to matches; add to V.offlistDb
+  // ** check for contractions first so that their search form can be differentiated from abbreviations
+  let matchedIDarr = checkContractions(word, rawWord);
+  if (matchedIDarr[0]) {
+    word = getLemma(getEntryById(matchedIDarr));
   }
-  matchedIDarr = dedupeSimpleArray(matchedIDarr);
+  else {
+    matchedIDarr = getIdsByLemma(word);
+    matchedIDarr = checkDerivations(word, matchedIDarr);
+    if (!matchedIDarr.length) matchedIDarr = checkNegativePrefix(word, rawWord);
+    if (!matchedIDarr.length) matchedIDarr = [markOfflist(rawWord, "offlist")];
+    // ** matches[0] = [id] if matched; [[-1]] if no match so far
+    const offlistEntry = getOfflistEntry(parseInt(matchedIDarr[0]));
+    const isOfflist = offlistEntry.includes("offlist");
+    if (isOfflist) {
+      const offlistID = parseInt(matchedIDarr[0]);
+      checkSpellingVariants(word, rawWord, offlistID);
+      // ** don't add these to matches; add to V.offlistDb
+    }
+    matchedIDarr = dedupeSimpleArray(matchedIDarr);
+  }
   return matchedIDarr;
 }
 
@@ -1003,14 +1009,13 @@ function checkGenderedNouns(word) {
 function checkAbbreviations(word) {
   word = word.replace(".","");
   let matchIDarr = [];
-  // if (Object.hasOwn(LOOKUP.abbrieviations, word)) {
-  // if (word in LOOKUP.abbrieviations) {
-  if (LOOKUP.abbrieviations.hasOwnProperty(word)) {
-    const match = LOOKUP.abbrieviations[word];
+  if (LOOKUP.abbreviations.hasOwnProperty(word)) {
+    const match = LOOKUP.abbreviations[word];
     for (lemma of match.split(":")) {
-      matchIDarr.push(getIdsByLemma(lemma));
+      matchIDarr.push(...getIdsByLemma(lemma));
     }
   }
+  // debug(word, matchIDarr)
   return matchIDarr;
 }
 
@@ -1105,7 +1110,7 @@ function checkDerivations(word, matches = []) {
     checkDigits,
     checkUnknown,
     checkSymbols,
-    checkContractions,
+    // checkContractions,
     checkNames,
     checkArticle,
     checkIrregularNegatives,
@@ -1122,11 +1127,13 @@ function checkDerivations(word, matches = []) {
     const result = guess(word);
     // if (result) debug(word, result)
     if (result) {
+      // debug(word, result)
       matches.push(result);
       break;
     }
   }
-  // ## -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
+  // debug(word, matches)
+  // ** -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   const result = checkFinalS(word);
   if (result) {
     matches.push(result);
@@ -1180,13 +1187,22 @@ function checkSymbols(word) {
   return result;
 }
 
-function checkContractions(word) {
+function checkContractions(word, rawWord) {
   let result;
-  if (LOOKUP.contractions.includes(word)) {
+  const hasApostrophe = rawWord[0]==="'";
+  if (hasApostrophe && LOOKUP.contractions.includes(word)) {
+    word = "'" + word;
     result = markOfflist(word, "contraction");
   }
-  return result;
+  return [result];
 }
+// function checkContractions(word) {
+//   let result;
+//   if (V.hasApostrophe && LOOKUP.contractions.includes(word)) {
+//     result = markOfflist(word, "contraction");
+//   }
+//   return result;
+// }
 
 function checkNames(word) {
   let result;
@@ -1373,17 +1389,15 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   V.repeats.add(displayLemma + ":" + displayID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const entryToShow = (isVariant) ? variantEntry : match;
-  // const [levelArr, levelNum, levelClass] = getLevelDetails(entryToShow);
   const [levelArr, levelClass] = getLevelDetails(entryToShow);
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(displayID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
-  let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
-  // ** This assumes (safely) that variants will have only one match
   if (isVariant) {
-    listOfLinks += `:${getId(variantEntry)}`;
+    listOfMatches = getEntryById(displayID)[3].map(id => [getLemma(getEntryById(id)), id, 0]);
     variantClass = " variant";
   }
+  let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
   const groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
   return groupedWord;
 }
