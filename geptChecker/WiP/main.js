@@ -540,6 +540,7 @@ function hoverEffects(e) {
 }
 
 function displayEntryInfo(refs) {
+  // debug(refs)
   /*
   GET LEVEL FROM ID
   getLevelDetails(levelArr)
@@ -549,7 +550,8 @@ function displayEntryInfo(refs) {
     const [id, normalizedWord, variantId] = ref.split(":");
     // const isOfflist = (variantId) ? true : false;
     const isOfflist = !!variantId;
-    const entry = (isOfflist) ? getEntryById(variantId) : getEntryById(id);
+    // const entry = (isOfflist) ? getEntryById(variantId) : getEntryById(id);
+    const entry = getEntryById(id);
     // const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
     const [levelArr, levelClass] = getLevelDetails(entry);
     const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist);
@@ -562,19 +564,29 @@ function displayEntryInfo(refs) {
 }
 
 function buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist) {
+  const lemma = getLemma(entry).replace("'",""); // ** to allow for contractions
+  // debug(normalizedWord, id, lemma, isOfflist, variantId)
+  const isInflection = normalizedWord !== lemma;
+  // debug(id, entry, normalizedWord, variantId, isOfflist, isInflection)
   let displayLemma = "";
   if (getPoS(entry) !== "unknown") {
-    const lemma = getLemma(entry);
-    if (normalizedWord && normalizedWord !== lemma) {
-      if (isOfflist) {
-        displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>${normalizedWord} `;
-      }
-      else {
+    if (!!variantId) {
+      displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>${normalizedWord} `;
+    } else if (isInflection) {
         displayLemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${lemma})`;
-      }
     } else {
       displayLemma = `<strong>${lemma}</strong>: `;
     }
+    // if (normalizedWord && normalizedWord !== lemma) {
+    //   if (isOfflist) {
+    //     displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>${normalizedWord} `;
+    //   }
+    //   else {
+    //     displayLemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${lemma})`;
+    //   }
+    // } else {
+    //   displayLemma = `<strong>${lemma}</strong>: `;
+    // }
   }
   return displayLemma;
 }
@@ -1377,6 +1389,7 @@ function buildMarkupAsHTML(textArr) {
 
 function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   const [[displayLemma, displayID, displayLevel], levelsAreIdentical, isMultipleMatch] = getSortedMatchesInfo(listOfMatches);
+  // debug(listOfMatches, displayID)
   // ** variant
   let variantEntry;
   let isVariant;
@@ -1393,11 +1406,14 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(displayID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
+  let listOfLinks;
   if (isVariant) {
     listOfMatches = getEntryById(displayID)[3].map(id => [getLemma(getEntryById(id)), id, 0]);
+    listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}:${displayID}`]).join(" ");
     variantClass = " variant";
   }
-  let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
+  else listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
+  // let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
   const groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
   return groupedWord;
 }

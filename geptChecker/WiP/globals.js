@@ -1002,6 +1002,7 @@ const LOOKUP = {
     postman: "mail carrier",
     mailman: "mail carrier",
 
+    guerilla: "guerrilla",
     auntie: "aunt",
     aunty: "aunt",
     ad: "advertisement",
