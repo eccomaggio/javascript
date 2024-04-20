@@ -106,7 +106,7 @@ let V = {
   // ## offlist word db uses negative ids (translate to positive index) so no 0
   offlistDb: [["unused"]],
   offlistIndex: 1,
-  wordStats: {},
+  tallyOfWordReps: {},
   repeats: new Set(),
   tallyOfRepeats: {},
   currentDb: {},
