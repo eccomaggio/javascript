@@ -47,6 +47,7 @@ const HTM = {
   repeatsList: document.getElementById("t2_repeats_list"),
   tabHead: document.getElementsByTagName("tab-head")[0],
   tabBody: document.getElementsByTagName("tab-body")[0],
+  textTabTag: document.getElementById("t1_tab_tag"),
   // refreshIcon: document.getElementById("refresh-icon"),
   clearButton: document.getElementById("clear_button"),
   resetButton: document.getElementById("reset_button"),
@@ -73,7 +74,8 @@ let C = {
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   // INFO: removed hyphen & bar (- |)
   NBSP: String.fromCharCode(160),
-  backupIDs: ["backup_0", "backup_1"],
+  // backupIDs: ["backup_0", "backup_1"],
+  backupIDs: ["long_term", "short_term"],
   awl_level_offset: 37,
   NOTE_SEP: "|",
   // ** local storage: [name-of-storage-variable, default-value]
@@ -93,6 +95,8 @@ let C = {
   GEPT: 0,
   BESTEP: 1,
   Kids: 2,
+  levelLimitClass: "wrong",
+  levelLimitIds: ["l-i", "l-h", "l-o"],
 }
 
 // C.DEFAULT_db = C.GEPT;
@@ -122,7 +126,8 @@ let V = {
     db_state: 0,
     tab_state: 0,
   },
-  // hasApostrophe: false,
+  levelLimit: "",
+  appHasBeenReset: true,
 }
 
 const CURSOR = {

@@ -1,8 +1,8 @@
+// "use strict";
 /*
 
 */
 // ## SETUP ############################################
-
 init();
 addListeners();
 
@@ -17,6 +17,7 @@ function init() {
   setupEditing();
   HTM.form.reset();
   updateDropdownMenuOptions();
+  visibleLevelLimitSet();
 }
 
 function updateDropdownMenuOptions() {
@@ -64,12 +65,13 @@ function addMenuListeners() {
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
+  HTM.finalLegend.addEventListener("click", visibleLevelLimitToggle);
 }
 
 function addEditingListeners() {
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
   // ## having probs removing his event listener; leave & ignore with updateInputDiv
-  HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
+  // HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
 
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
@@ -119,7 +121,7 @@ function backupShow(e) {
     const lsContent = localStorage.getItem(id);
     let content = (lsContent) ? lsContent.trim() : "";
     if (content) {
-      if (localStorage.getItem("mostRecent") == id) content = "<span class='level-o'>Most Recent: </span>" + content;
+      if (localStorage.getItem("mostRecent") == id) content = "<span class='error'>Most Recent: </span>" + content;
       backup.innerHTML = content;
       backup.disabled = false;
     } else {
@@ -145,22 +147,71 @@ function backupLoad(e) {
 }
 
 
-function backupReset() {
-  // ** logic: put current OR most recent change in first backup (2nd backup is constantly updated)
-  let mostRecent = getTextFromWorkingDiv();
-  if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
-  if (!mostRecent || !mostRecent.length) return;
-  localStorage.setItem(C.backupIDs[0], mostRecent);
-  localStorage.setItem("mostRecent", C.backupIDs[0]);
-  localStorage.setItem(C.backupIDs[1], "");
-}
+// function backupReset() {
+//   // ** logic: put current OR most recent change in first backup (2nd backup is constantly updated)
+//   let mostRecent = getTextFromWorkingDiv();
+//   if (!mostRecent) mostRecent = localStorage.getItem(localStorage.getItem("mostRecent"));
+//   if (!mostRecent || !mostRecent.length) return;
+//   localStorage.setItem(C.backupIDs[0], mostRecent);
+//   localStorage.setItem("mostRecent", C.backupIDs[0]);
+//   localStorage.setItem(C.backupIDs[1], "");
+// }
+// function backupReset() {
+//   // ** logic: put current OR most recent change in first backup (2nd backup is constantly updated)
+//   let mostRecent = getTextFromWorkingDiv();
+//   if (!mostRecent) return;
+//   localStorage.getItem()
+
+//   localStorage.getItem(localStorage.getItem("mostRecent"));
+//   if (!mostRecent || !mostRecent.length) return;
+//   localStorage.setItem(C.backupIDs[0], mostRecent);
+//   localStorage.setItem("mostRecent", C.backupIDs[0]);
+//   localStorage.setItem(C.backupIDs[1], "");
+// }
+
+// function backupSave() {
+//   let currentText = getTextFromWorkingDiv();
+//   if (!currentText) return;
+//   if (currentText !== localStorage.getItem(C.backupIDs[1])) {
+//     localStorage.setItem(C.backupIDs[1], currentText);
+//     localStorage.setItem("mostRecent", C.backupIDs[1]);
+//     HTM.backupSave.innerText = "text saved";
+//     HTM.backupSave.classList.add("error");
+//   } else {
+//     HTM.backupSave.innerText = "already saved";
+//     HTM.backupSave.classList.add("error");
+//   }
+//   setTimeout(() => {
+//     HTM.backupSave.innerText = "save backup";
+//     HTM.backupSave.classList.remove("error");
+//   }, 1000);
+// }
 
 function backupSave() {
+  /*
+  logic
+  on save:
+  IF: nothing in div:
+    do nothing
+  ELSE:
+    IF: V.appHasBeenReset AND longterm content != short term content:
+      move short_term > long term
+      save div > short_term
+    ELSE: overwrite short_term with div
+  */
   let currentText = getTextFromWorkingDiv();
   if (!currentText) return;
-  if (currentText !== localStorage.getItem(C.backupIDs[1])) {
-    localStorage.setItem(C.backupIDs[1], currentText);
-    localStorage.setItem("mostRecent", C.backupIDs[1]);
+  const [shortTerm, longTerm] = C.backupIDs;
+  if (V.appHasBeenReset) {
+    const shortTermSavedContent = localStorage.getItem(shortTerm);
+    const longTermSavedContent = localStorage.getItem(longTerm);
+    if (shortTermSavedContent !== longTermSavedContent) {
+      localStorage.setItem(longTerm, shortTermSavedContent);
+    }
+    V.appHasBeenReset = false;
+  }
+  if (currentText !== localStorage.getItem(shortTerm)) {
+    localStorage.setItem(shortTerm, currentText);
     HTM.backupSave.innerText = "text saved";
     HTM.backupSave.classList.add("error");
   } else {
@@ -172,6 +223,7 @@ function backupSave() {
     HTM.backupSave.classList.remove("error");
   }, 1000);
 }
+
 
 function backupDialogClose(id) {
   if (id.target) id = "backup-dlg";
@@ -549,13 +601,13 @@ function displayEntryInfo(refs) {
   for (const ref of refs.split(" ")) {
     const [id, normalizedWord, variantId] = ref.split(":");
     // const isOfflist = (variantId) ? true : false;
-    const isOfflist = !!variantId;
+    const isVariant = !!variantId;
     // const entry = (isOfflist) ? getEntryById(variantId) : getEntryById(id);
     const entry = getEntryById(id);
     // const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
     const [levelArr, levelClass] = getLevelDetails(entry);
-    const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist);
-    const level = buildDisplayLevel(entry, id, levelArr, isOfflist);
+    const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isVariant);
+    const level = buildDisplayLevel(entry, id, levelArr, isVariant);
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
     html += `<div class="word-detail ${levelClass}">${level}<br><span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
@@ -563,38 +615,30 @@ function displayEntryInfo(refs) {
   return html;
 }
 
-function buildDisplayLemma(entry, id, normalizedWord, variantId, isOfflist) {
-  const lemma = getLemma(entry).replace("'",""); // ** to allow for contractions
+function buildDisplayLemma(entry, id, normalizedWord, variantId, isVariant) {
+  // const lemma = getLemma(entry).replace("'",""); // ** to allow for contractions
+  const lemma = getLemma(entry);
   // debug(normalizedWord, id, lemma, isOfflist, variantId)
-  const isInflection = normalizedWord !== lemma;
+  const isInflection = normalizedWord !== lemma.replace("'","");  // ** to allow for contractions
   // debug(id, entry, normalizedWord, variantId, isOfflist, isInflection)
   let displayLemma = "";
-  if (getPoS(entry) !== "unknown") {
-    if (!!variantId) {
-      displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>${normalizedWord} `;
-    } else if (isInflection) {
-        displayLemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${lemma})`;
-    } else {
-      displayLemma = `<strong>${lemma}</strong>: `;
-    }
-    // if (normalizedWord && normalizedWord !== lemma) {
-    //   if (isOfflist) {
-    //     displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>${normalizedWord} `;
-    //   }
-    //   else {
-    //     displayLemma = `<strong>${normalizedWord}</strong> (<em>from</em> ${lemma})`;
-    //   }
-    // } else {
-    //   displayLemma = `<strong>${lemma}</strong>: `;
-    // }
+  // if (getPoS(entry) !== "unknown") {
+  if (getPoS(entry) === "unknown") return displayLemma;
+  if (isVariant) {
+    displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>"${normalizedWord}" `;
+  } else if (isInflection) {
+      displayLemma = `<strong>${normalizedWord}</strong> &lt; "${lemma}"`;
+  } else {
+    displayLemma = `<strong>${lemma}</strong>: `;
   }
+  // }
   return displayLemma;
 }
 
-function buildDisplayLevel(entry, id, level_arr, isOfflist) {
+function buildDisplayLevel(entry, id, level_arr, isVariant) {
   let level;
   // ** If word is offlist, use its classification (digit/name, etc.) as level
-  if (!isOfflist && id < 0) {
+  if (!isVariant && id < 0) {
     level = getPoS(entry);
   } else {
     level = V.level_subs[level_arr[0]];
@@ -652,6 +696,7 @@ function updateInputDiv(e) {
     ] = processText(revisedText);
     displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
     HTM.finalInfoDiv.innerText = "";
+    backupSave();
   } else return;
 }
 
@@ -1388,42 +1433,55 @@ function buildMarkupAsHTML(textArr) {
 }
 
 function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
-  const [[displayLemma, displayID, displayLevel], levelsAreIdentical, isMultipleMatch] = getSortedMatchesInfo(listOfMatches);
-  // debug(listOfMatches, displayID)
-  // ** variant
-  let variantEntry;
-  let isVariant;
+  /*
+  This, together with getSortedMatchesInfo() parses a complicated word-type system:
+  pure lemmas (analyse, christmas)
+  inflected pure lemmas (analyses, christmas) -> display lemma and dB lemma are different
+  variant lemmas (analyze, analyze, xmas) -> offlistDb labels it as "variant" & lists Db entry ids
+  offlist / contractions / digits / symbols -> oflistDb labels type with string & number ()
+
+  It does this by looking at the (first) id of the word:
+  if positive, it is a pure or inflected lemma with all the information in the dB
+  if negative, it is another type with its information stored in the offlistDb (see "->"" above for details)
+  */
+  // const [[displayLemma, primaryID, variantID], levelsAreIdentical, isMultipleMatch] = getSortedMatchesInfo(listOfMatches);
+  // let firstLemma;
+  // let firstID;
+  // let firstVariantID;
+  // let levelsAreIdentical;
+  // let isMultipleMatch;
+
+  let firstLemma, firstID, firstVariantID, levelsAreIdentical, isMultipleMatch, isVariant;
+  [listOfMatches, [firstLemma, firstID, firstVariantID], levelsAreIdentical, isMultipleMatch, isVariant] = getSortedMatchesInfo(listOfMatches);
+  // debug(rawWord, ...listOfMatches)
+  // debug(rawWord,displayLemma,primaryID, variantID,":", ...listOfMatches[0], variantID)
+  // const matchCount = listOfMatches.length;
+  // const isVariant = (firstID < 0 && getPoS(getEntryById(firstID)) === 'variant');
+  let id = firstID;
   let variantClass = "";
-  if (displayID < 0) {
-    isVariant = getPoS(getEntryById(displayID)) === "variant";
-    if (isVariant) variantEntry = getEntryById(displayLevel);
+  let variantRefLink = "";
+  if (isVariant) {
+    id = firstVariantID;
+    variantClass = " variant";
+    // listOfMatches = getEntryById(firstID)[3].map(ID => [getLemma(getEntryById(ID)), ID, 0]);
+    variantRefLink = `:${firstID}`;
   }
-  const match = getEntryById(displayID);
-  V.repeats.add(displayLemma + ":" + displayID);
+  // debug(rawWord, firstID, firstVariantID, id)
+  const match = getEntryById(id);
+  V.repeats.add(firstLemma + ":" + firstID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
-  const entryToShow = (isVariant) ? variantEntry : match;
-  const [levelArr, levelClass] = getLevelDetails(entryToShow);
-  const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(displayID, ignoreRepeats);
+  const [levelArr, levelClass] = getLevelDetails(match);
+  const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(firstID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
-  let listOfLinks;
-  if (isVariant) {
-    listOfMatches = getEntryById(displayID)[3].map(id => [getLemma(getEntryById(id)), id, 0]);
-    listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}:${displayID}`]).join(" ");
-    variantClass = " variant";
-  }
-  else listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
-  // let listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}`]).join(" ");
-  const groupedWord = createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass);
-  return groupedWord;
-}
-
-function createGroupedWordInHTML(leaveSpace, listOfLinks, levelClass, relatedWordsClass, duplicateClass, duplicateCountInfo, anchor, localWord, levelsAreIdentical, isMultipleMatch, variantClass) {
+  const  listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}${variantRefLink}`]).join(" ");
   let showAsMultiple = "";
   if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
-  let displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  const classList = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}`;
+  const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
+
 
 function getSortedMatchesInfo(matches) {
   /* given a list of matches in this format: ['given', 3118, 0],['given', 3119, 2]]
@@ -1433,17 +1491,75 @@ function getSortedMatchesInfo(matches) {
   REASON: the item to display should be the lowest level one
   also: it will not be marked as having multiple matches if they are all the same level
   */
-  const isMultipleMatch = (matches.length > 1);
+  // const isMultipleMatch = (matches.length > 1);
   let lowest = matches[0];
-  let areSame = true;
+  const firstEntry = getEntryById(lowest[1]);
+  const isVariant = getPoS(firstEntry) === "variant";
+  if (isVariant) matches = firstEntry[3].map(ID => [getLemma(getEntryById(ID)), ID, 0]);
+  const isMultipleMatch = (matches.length > 1);
+  // debug(...firstEntry, isVariant, matches)
+  let levelsAreIdentical = true;
   if (isMultipleMatch) {
     let sorted = matches.sort((a, b) => a[2] - b[2]);
     lowest = sorted[0];
     let levels = sorted.map(el => el[2]);
-    areSame = levels.every(el => el === levels[0]);
+    levelsAreIdentical = levels.every(el => el === levels[0]);
   }
-  return [lowest, areSame, isMultipleMatch];
+  const result = [matches, lowest, levelsAreIdentical, isMultipleMatch, isVariant];
+  // debug(matches, ...lowest, areSame, isMultipleMatch)
+  return result;
 }
+
+function visibleLevelLimitToggle(e) {
+  const level = e.target.className;
+  const limitClass = "wrong";
+  if (e.target.id && level.startsWith("level")) {
+    // debug(level)
+    if (e.target.classList.contains(C.levelLimitClass)) {
+      e.target.classList.remove(C.levelLimitClass);
+      V.levelLimit = "";
+    } else {
+      V.levelLimit = level;
+      for (id of C.levelLimitIds) {
+        document.getElementById(id).classList.remove(C.levelLimitClass);
+      }
+      // recurseChildren(e.currentTarget, C.levelLimitClass);
+      e.target.classList.add(C.levelLimitClass);
+    }
+    debug(V.levelLimit)
+  }
+  // updateInputDiv();
+}
+
+function visibleLevelLimitSet() {
+  debug("huh")
+  if (V.levelLimit) {
+    const id = V.levelLimit.slice(-3);
+    const classlist = document.getElementById(id).classList;
+    classlist.remove(C.levelLimitClass);
+    debug(id, classlist.contains(C.levelLimitClass))
+    classlist.add(C.levelLimitClass);
+  }
+}
+
+function visibleLevelLimitReset() {
+  if (V.levelLimit) {
+    const id = V.levelLimit.slice(-3);
+    document.getElementById(id).classList.remove(C.levelLimitClass);
+    V.levelLimit = "";
+  }
+}
+
+// function recurseChildren(parent, classname, toAdd=false) {
+//   const children = parent.children;
+//   for (let i = 0; i < children.length; i++) {
+//     // console.log(children[i].tagName)
+//     if (toAdd) children[i].classList.add(classname);
+//     else children[i].classList.remove(classname);
+//     if (children[i].children) recurseChildren(children[i], classname, toAdd)
+//     else return;
+//   }
+// }
 
 function renderEOLsAsHTML(word, htmlString, wasEOL) {
   const isEOL = word === EOL.text;
@@ -1590,14 +1706,16 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
-  const levelInfo1 = "<span class='level-e'>elem (A2) / Kids</span>, <span class='level-i'> int (B1)</span>, <span class='level-h'>hi-int (B2)</span>";
-  const levelInfo2 = "<span class='level-o'>off-list</span>";
+  const levelInfoGEPT = "<span class='level-e'>elem (A2)</span>, <span class='level-i' id='l-i'> int (B1)</span>, <span class='level-h' id='l-h'>hi-int (B2)</span>";
+  const levelInfoKids = "<span class='level-k'>on-list</span>";
+  const levelInfo = (isKids()) ? levelInfoKids : levelInfoGEPT;
+  const levelInfo2 = "<span class='level-o' id='l-o'>off-list</span>";
   const repeatInfo1 = "<span class='multi-diff'>double underline</span> = multiple levels";
   const repeatInfo2 = "superscript<sup>n</sup> = number of repetitions";
   const variantInfo = "<span class='variant'>wavy underline</span> = form to avoid";
   const refreshInfo = "To <b>refresh markup</b>, click the 'Text' tab or wait 5 seconds without typing.";
   const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
-  HTM.finalLegend.innerHTML += `<details class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo1}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
+  HTM.finalLegend.innerHTML += `<details class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
 }
 
 function getIdsByLemma(word) {
@@ -1648,11 +1766,13 @@ function findBaseForm(word, subs, isSuffix = true) {
 
 
 function clearTab2() {
+  backupSave();
   HTM.workingDiv.innerText = "";
   HTM.finalInfoDiv.innerText = "";
   HTM.repeatsList.innerText = "";
   displayDbNameInTab2();
-  backupReset();
+  V.appHasBeenReset = true;
+  // backupReset();
 }
 
 
@@ -1714,6 +1834,7 @@ function resetApp() {
   // V.currentTab = C.DEFAULT_tab;
   clearTab1();
   clearTab2();
+  visibleLevelLimitReset();
   // HTM.selectDb.value = C.DEFAULT_db;
   // setTab(V.currentTab);
   // setDbShared(C.DEFAULT_db);
@@ -1822,6 +1943,7 @@ function setDbShared(e) {
     const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
     HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
   }
+  visibleLevelLimitSet();
   setDb_tab2();
   setDbTab1();
   // localStorage.setItem(C.SAVE_DB_STATE, V.currentDbChoice);
@@ -1880,6 +2002,7 @@ function setDbTab1() {
 }
 
 function setDb_tab2() {
+  // visibleLevelLimitSet();
   displayDbNameInTab2();
   forceUpdateInputDiv();
 }
@@ -1898,6 +2021,7 @@ function debug(...params) {
   // console.log(`* ${debug.caller.name.toUpperCase()}: `, params);
   // console.log(">", arguments.callee.caller.toString().match(/showMe\((\S)\)/)[1])
   console.log(`DEBUG: ${debug.caller.name}> `, params);
+  // console.log(`DEBUG:> `, params);
 }
 
 // ## TABS ############################################

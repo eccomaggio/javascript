@@ -121,9 +121,11 @@ function signalRefreshNeeded(mode) {
   if (mode === "on") {
     V.refreshRequired = true;
     HTM.workingDiv.style.backgroundColor = "ivory";
+    HTM.textTabTag.style.fontStyle = "italic";
   }
   else {
     HTM.workingDiv.style.backgroundColor = "white";
+    HTM.textTabTag.style.fontStyle = "normal";
     V.refreshRequired = false;
     // clearTimeout(V.timer);
     // V.timer = null;
