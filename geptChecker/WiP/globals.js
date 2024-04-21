@@ -95,8 +95,8 @@ let C = {
   GEPT: 0,
   BESTEP: 1,
   Kids: 2,
-  levelLimitClass: "wrong",
-  levelLimitIds: ["l-i", "l-h", "l-o"],
+  LEVEL_LIMIT_CLASS: "wrong",
+  LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
 }
 
 // C.DEFAULT_db = C.GEPT;
@@ -127,6 +127,8 @@ let V = {
     tab_state: 0,
   },
   levelLimit: "",
+  levelLimitActiveClasses: [],
+  levelLimitRule: null,
   appHasBeenReset: true,
 }
 

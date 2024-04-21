@@ -365,7 +365,8 @@ function checkFormData(data) {
   */
   for (const el in data) {
     if (el === "match") continue;
-    if (data[el].length) {
+    // if (data[el].length) {
+    if (!isEmpty(data[el])) {
       status = 0;
       break;
     }
@@ -399,11 +400,12 @@ function runSearch(data) {
 
 function refineSearch(find) {
   let results = V.currentDb.db.filter(el => getLemma(el).search(find.term) != -1);
-  if (!results.length) {
+  // if (!results.length) {
+  if (isEmpty(results)) {
     const word = stripOutRegex(find.term);
     let matchedIDarr = checkDerivations(word);
     if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, word);
-    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkSpellingVariants(word);
+    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkAllowedVariants(word);
     if (idSuccessfullyMatched(matchedIDarr)) results = [getEntryById(...matchedIDarr)];
   }
   if (Number.isInteger(find.level[0])) {
@@ -416,10 +418,12 @@ function refineSearch(find) {
     results = tmp_matches;
 
   }
-  if (find.pos.length) {
+  // if (find.pos.length) {
+  if (!isEmpty(find.pos)) {
     results = results.filter(el => getPoS(el)).filter(el => getPoS(el).search(find.pos) != -1);
   }
-  if (isBESTEP() && find.awl && find.awl.length) {
+  // if (isBESTEP() && find.awl && find.awl.length) {
+  if (isBESTEP() && !isEmpty(find?.awl)) {
     /*
     el[C.LEVEL][2]:
     1-in awl only
@@ -469,7 +473,8 @@ function highlightAwlWord(level_arr, word) {
 }
 
 function formatResultsAsHTML(results) {
-  if (!results.length) {
+  // if (!results.length) {
+  if (isEmpty(results)) {
     return "<span class='error'><b>Search returned no results.</b></span>"
   }
   let output = "";
@@ -804,6 +809,7 @@ function normalizeRawText(text) {
     .replace(/\n/g, ` ${EOL.text} `) // encode EOLs
     .replace(/–/g, " -- ")  // pasted in em-dashes
     .replace(/—/g, " - ")
+    // .replace(/(\w)\/(\w)/g, "$1 \/ $2")
     .replace(/(\w)\/(\w)/g, "$1 / $2")
     .replace(/\s{2,}/gm, " ");
 }
@@ -816,7 +822,9 @@ function splitTextIntoPhrases(text) {
   // text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?))/g, "^^$1^^")
   text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^")
   // ** break at punctuation (include with digit)
-  text = text.replace(/(\^\^|^\d)([.,;():?!])\s*/gi, "$2^^")
+  // text = text.replace(/(\^\^|^\d)([.,;():?!])\s*/gi, "$2^^")
+  text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^")
+  // text = text.replace(/(^\d)(\,)\s*/gi, ",^^")
   text = text.replace(/\^{4,}/g, "^^");
   text = text.split(/\s?\^\^\s?/);
   text = text.filter(el => el !== '');
@@ -842,6 +850,7 @@ function findCompoundsAndFlattenArray(chunks) {
         if (flattenedTail.startsWith(compound)) {
           const id = V.currentDb.compounds[compound];
           matches.push(id);
+          normalizeCompounds(id, tail, chunk, word_i);
           break;
         }
       }
@@ -852,6 +861,15 @@ function findCompoundsAndFlattenArray(chunks) {
     flatArray.push(...chunk);
   }
   return flatArray;
+}
+
+function normalizeCompounds(id, tail, chunk, word_i) {
+  // ** Currently doesn't do anything!
+  // ** PLAN: EITHER make rawWord match "correct" version of compount (hyphens/spaces) OR add variant warning
+  const wordlistLemma = getLemma(V.currentDb.db[id]);
+  const wordMatchesLemma = tail[0].toLowerCase === wordlistLemma;
+  // chunk[word_i][1] = (wordMatchesLemma) ? wordlistLemma;
+  debug(wordlistLemma, tail[0], id, chunk[word_i], tail[0] === wordlistLemma)
 }
 
 
@@ -946,7 +964,7 @@ function lookupWord(word, rawWord, matchedCompoundsArr) {
     if (isEmpty(matchedIDarr) && isEmpty(matchedCompoundsArr)) {
       matchedIDarr = [markOfflist(rawWord, "offlist")];
       const offlistID = parseInt(matchedIDarr[0]);
-      checkSpellingVariants(word, rawWord, offlistID);
+      checkAllowedVariants(word, rawWord, offlistID);
     }
   }
   matchedIDarr = matchedCompoundsArr.concat(matchedIDarr);
@@ -993,15 +1011,15 @@ function translateToOfflistDbID(id) {
   return (id < 0) ? -id : id;
 }
 
-function checkSpellingVariants(word, rawWord, offlistID = 0) {
+function checkAllowedVariants(word, rawWord, offlistID = 0) {
   const shouldUpdateOfflistDb = (offlistID !== 0);
   let matchedIDarr = checkVariantWords(word);
-  if (!matchedIDarr.length) matchedIDarr = checkVariantSuffixes(word);
-  if (!matchedIDarr.length) matchedIDarr = checkAbbreviations(word);
-  if (!matchedIDarr.length) matchedIDarr = checkGenderedNouns(word);
-  if (!matchedIDarr.length) matchedIDarr = checkVariantLetters(word);
-  if (!matchedIDarr.length) matchedIDarr = checkVariantHyphens(word, rawWord);
-  if (matchedIDarr.length) {
+  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantSuffixes(word);
+  if (isEmpty(matchedIDarr)) matchedIDarr = checkAbbreviations(word);
+  if (isEmpty(matchedIDarr)) matchedIDarr = checkGenderedNouns(word);
+  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantSpellings(word);
+  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantHyphens(word, rawWord);
+  if (!isEmpty(matchedIDarr)) {
     const offlistEntry = [offlistID, word, "variant", matchedIDarr, ""];
     if (shouldUpdateOfflistDb) V.offlistDb[-offlistID] = offlistEntry;
   }
@@ -1086,12 +1104,13 @@ function checkVariantHyphens(word, rawWord) {
   return matchIDarr;
 }
 
-function checkVariantLetters(word) {
+function checkVariantSpellings(word) {
   let matchIDarr = [];
   if (LOOKUP.notLetterVariant.includes(word)) return matchIDarr;
   for (const [letters, replacement] of LOOKUP.variantLetters) {
     matchIDarr = replaceLetters(word, letters, replacement);
-    if (matchIDarr.length) {
+    // if (matchIDarr.length) {
+    if (!isEmpty(matchIDarr)) {
       break;
     }
   }
@@ -1107,7 +1126,8 @@ function replaceLetters(word, letters, replacement) {
     indices.push(found.index);
   }
   // debug(`${word} ->`, letters, replacement, indices)
-  if (indices.length) {
+  // if (indices.length) {
+  if (!isEmpty(indices)) {
     for (const pos of indices) {
       const variant = word.slice(0, pos) + replacement + word.slice(pos + letters.length)
       matchedIDarr = getIdsByLemma(variant);
@@ -1168,7 +1188,8 @@ function checkDerivations(word, matches = []) {
   if (result) {
     matches.push(result);
   }
-  if (!matches.length) {
+  // if (!matches.length) {
+  if (isEmpty(matches)) {
     return [];
   }
   return dedupeSimpleArray(matches);
@@ -1277,7 +1298,8 @@ function checkForeignPlurals(word) {
     const ending = word.slice(-plural.length);
     if (ending === plural) {
       const lookup = getIdsByLemma(root + singular);
-      if (lookup.length) {
+      // if (lookup.length) {
+      if (!isEmpty(lookup)) {
         result = winnowPoS(lookup, ["n"])[0];
         break;
       }
@@ -1363,6 +1385,7 @@ function getEntryById(id) {
 }
 
 function buildMarkupAsHTML(textArr) {
+  // debug(...textArr)
   // ** textArr = array of [normalized-word, raw-word, [[matched-id, occurence]...]] for each word, repeat the raw-word for each match, but with different interpretations
   let htmlString = "";
   let isFirstWord = true;
@@ -1420,13 +1443,16 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   V.repeats.add(firstLemma + ":" + firstID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const [levelArr, levelClass] = getLevelDetails(match);
+  const limit = (V.levelLimit && levelClass in V.levelLimitActiveClasses) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+  // debug(firstLemma, V.levelLimit, levelClass, C.levelLimitClass, limit, V.levelLimitActiveClasses)
+
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(firstID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
   const listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}${variantRefLink}`]).join(" ");
   let showAsMultiple = "";
   if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
-  const classList = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}`;
+  const classList = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
   const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
@@ -1460,40 +1486,65 @@ function getSortedMatchesInfo(matches) {
 }
 
 function visibleLevelLimitToggle(e) {
-  const level = e.target.className;
-  const limitClass = "wrong";
-  if (e.target.id && level.startsWith("level")) {
-    // debug(level)
-    if (e.target.classList.contains(C.levelLimitClass)) {
-      e.target.classList.remove(C.levelLimitClass);
+  const [mainCSS, level, isValidSelection, resetPreviousSelectionRequired] = visibleLevelLimitInfo(e.target);
+  if (isValidSelection) {
+    if (resetPreviousSelectionRequired) {
+      toggleStrikethrough(V.levelLimit);
       V.levelLimit = "";
+    }
+    if (V.levelLimit) {
+      // debug(level, ">>", level === V.levelLimitActiveClasses[0], ...V.levelLimitActiveClasses)
+      if (level )
+      toggleStrikethrough(V.levelLimit);
+      V.levelLimit = "";
+      V.levelLimitActiveClasses = [];
     } else {
       V.levelLimit = level;
-      for (id of C.levelLimitIds) {
-        document.getElementById(id).classList.remove(C.levelLimitClass);
-      }
-      // recurseChildren(e.currentTarget, C.levelLimitClass);
-      e.target.classList.add(C.levelLimitClass);
+      V.levelLimitActiveClasses = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimit));
+      toggleStrikethrough(V.levelLimit, false);
     }
-    // debug(V.levelLimit)
+    // debug(V.levelLimit, ...V.levelLimitActiveClasses)
   }
-  // updateInputDiv();
+  signalRefreshNeeded("on");
+  updateInputDiv();
+}
+
+function visibleLevelLimitInfo(selectedElement) {
+  const mainCSS = document.styleSheets[1];
+  const level = selectedElement.className.split(" ")[0];
+  const isValidSelection = selectedElement.id && level.startsWith("level");
+  const resetPreviousSelectionRequired = level !== V.levelLimitActiveClasses[0];
+  return [mainCSS, level, isValidSelection, resetPreviousSelectionRequired];
+}
+
+function toggleStrikethrough(className, removeClass=true) {
+  const classesToChange = (isEmpty(V.levelLimitActiveClasses)) ?  C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(className)) : V.levelLimitActiveClasses;
+  // debug(className, ">", ...classesToChange, removeClass ? "remove" : "add")
+  for (const level of classesToChange) {
+    const targetElements = document.getElementsByClassName(level);
+    for (let i=0; i < targetElements.length; i++) {
+      if (removeClass){
+        targetElements[i].classList.remove(C.LEVEL_LIMIT_CLASS);
+      } else {
+        targetElements[i].classList.add(C.LEVEL_LIMIT_CLASS);
+      }
+    }
+  }
 }
 
 function visibleLevelLimitSet() {
   if (V.levelLimit) {
     const id = V.levelLimit.slice(-3);
     const classlist = document.getElementById(id).classList;
-    classlist.remove(C.levelLimitClass);
-    debug(id, classlist.contains(C.levelLimitClass))
-    classlist.add(C.levelLimitClass);
+    classlist.add(C.LEVEL_LIMIT_CLASS);
+    debug(id, classlist.contains(C.LEVEL_LIMIT_CLASS))
   }
 }
 
 function visibleLevelLimitReset() {
   if (V.levelLimit) {
     const id = V.levelLimit.slice(-3);
-    document.getElementById(id).classList.remove(C.levelLimitClass);
+    document.getElementById(id).classList.remove(C.LEVEL_LIMIT_CLASS);
     V.levelLimit = "";
   }
 }
@@ -1681,7 +1732,8 @@ function findBaseForm(word, subs, isSuffix = true) {
   candidates.add(word.slice(0, toSuffix));
   for (const candidate of candidates) {
     const tmp_match = getIdsByLemma(candidate);
-    if (tmp_match.length) localMatches.push(...tmp_match);
+    // if (tmp_match.length) localMatches.push(...tmp_match);
+    if (!isEmpty(tmp_match)) localMatches.push(...tmp_match);
   }
   return localMatches;
 }
