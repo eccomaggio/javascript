@@ -72,7 +72,9 @@ let C = {
   FIND_AWL_ONLY: 100,
   FIND_GEPT_ONLY: 200,
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
-  // INFO: removed hyphen & bar (- |)
+  punctuation_lite: /[,.?!'"()\[\]{}]/g,
+  // INFO: removed hyphen & bar (- |):w
+
   NBSP: String.fromCharCode(160),
   // backupIDs: ["backup_0", "backup_1"],
   backupIDs: ["long_term", "short_term"],

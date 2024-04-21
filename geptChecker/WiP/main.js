@@ -373,7 +373,7 @@ function checkFormData(data) {
   }
   if (status === 3 && !data["match"].includes("contains")) status = 2;
   const term = data.term.join().split(" ")[0].toLowerCase();
-  if (term.search(/[^a-z\-\s']/g) > -1) status = 1;
+  if (term.search(/[^a-z\-\s'\.]/g) > -1) status = 1;
   const errorMsg = [
     "",
     "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.",
@@ -384,7 +384,8 @@ function checkFormData(data) {
 }
 
 function runSearch(data) {
-  const term = data.term.join().split(" ")[0].toLowerCase();
+  let term = data.term.join().split(" ")[0].toLowerCase();
+  // term.replace(/\s\-\.\'/g, "");
   const matchType = C.MATCHES[data.match];
   const searchTerms = {
     term: new RegExp(matchType[0] + term + matchType[1], "i"),
@@ -542,7 +543,10 @@ function getNotes(entry) {
   return [note, awl_note];
 }
 
-
+function isCompound(entryOrID) {
+  const result = (Array.isArray(entryOrID)) ? entryOrID?.[5] : getEntryById(entryOrID)?.[5];
+  return result;
+}
 function formatResultsAsTablerows(col1, col2, class1, class2, row) {
   class1 = (class1) ? ` class="${class1}"` : "";
   class2 = (class2) ? ` class="${class2}"` : "";
@@ -609,9 +613,11 @@ function displayEntryInfo(refs) {
     const isVariant = !!variantId;
     // const entry = (isOfflist) ? getEntryById(variantId) : getEntryById(id);
     const entry = getEntryById(id);
+    const word = isVariant ? getLemma(getEntryById(variantId)) : normalizedWord;
     // const [levelArr, levelNum, levelClass] = getLevelDetails(entry);
     const [levelArr, levelClass] = getLevelDetails(entry);
-    const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isVariant);
+    // const lemma = buildDisplayLemma(entry, id, normalizedWord, variantId, isVariant);
+    const lemma = buildDisplayLemma(entry, id, word, variantId, isVariant);
     const level = buildDisplayLevel(entry, id, levelArr, isVariant);
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
@@ -621,13 +627,11 @@ function displayEntryInfo(refs) {
 }
 
 function buildDisplayLemma(entry, id, normalizedWord, variantId, isVariant) {
-  // const lemma = getLemma(entry).replace("'",""); // ** to allow for contractions
   const lemma = getLemma(entry);
   // debug(normalizedWord, id, lemma, isOfflist, variantId)
   const isInflection = normalizedWord !== lemma.replace("'", "");  // ** to allow for contractions
-  // debug(id, entry, normalizedWord, variantId, isOfflist, isInflection)
+  // debug(id, entry, normalizedWord, variantId, isInflection)
   let displayLemma = "";
-  // if (getPoS(entry) !== "unknown") {
   if (getPoS(entry) === "unknown") return displayLemma;
   if (isVariant) {
     displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>"${normalizedWord}" `;
@@ -636,7 +640,6 @@ function buildDisplayLemma(entry, id, normalizedWord, variantId, isVariant) {
   } else {
     displayLemma = `<strong>${lemma}</strong>: `;
   }
-  // }
   return displayLemma;
 }
 
@@ -817,14 +820,12 @@ function normalizeRawText(text) {
 function splitTextIntoPhrases(text) {
   // ** used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
   text = text.trim();
+  text = text.replace(/(p|a)\.(m)\./gi, "$1_$2_");  // ** to protect wordlist version of am/pm
   // ** separate out digits
   // ** should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
-  // text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢cp]|st|nd|rd|th)?))/g, "^^$1^^")
-  text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^")
+  text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^");
   // ** break at punctuation (include with digit)
-  // text = text.replace(/(\^\^|^\d)([.,;():?!])\s*/gi, "$2^^")
-  text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^")
-  // text = text.replace(/(^\d)(\,)\s*/gi, ",^^")
+  text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
   text = text.replace(/\^{4,}/g, "^^");
   text = text.split(/\s?\^\^\s?/);
   text = text.filter(el => el !== '');
@@ -850,7 +851,9 @@ function findCompoundsAndFlattenArray(chunks) {
         if (flattenedTail.startsWith(compound)) {
           const id = V.currentDb.compounds[compound];
           matches.push(id);
-          normalizeCompounds(id, tail, chunk, word_i);
+          // ** Restore this compound needs to be corrected in-place
+          // const correctedCompound = normalizeCompounds(id, tail, chunk, word_i);
+          // chunk[word_i][1] = correctedCompound;
           break;
         }
       }
@@ -864,12 +867,15 @@ function findCompoundsAndFlattenArray(chunks) {
 }
 
 function normalizeCompounds(id, tail, chunk, word_i) {
-  // ** Currently doesn't do anything!
-  // ** PLAN: EITHER make rawWord match "correct" version of compount (hyphens/spaces) OR add variant warning
+  // ** replaces the current compound with the 'correct' wordlist version, preserving initial capitalization & surrounding punctuation
   const wordlistLemma = getLemma(V.currentDb.db[id]);
-  const wordMatchesLemma = tail[0].toLowerCase === wordlistLemma;
-  // chunk[word_i][1] = (wordMatchesLemma) ? wordlistLemma;
-  debug(wordlistLemma, tail[0], id, chunk[word_i], tail[0] === wordlistLemma)
+  const rawCompound = chunk[word_i][1];
+  const prefix = (rawCompound[0].match(C.punctuation_lite)) ? rawCompound[0] : "";
+  const initial = (prefix.length) ? rawCompound.slice(0,1) : rawCompound[0];
+  const suffix = (rawCompound.slice(-1).match(C.punctuation_lite)) ? rawCompound.slice(-1) : "";
+  const correctedCompound = tmpWord = initial + wordlistLemma.slice(1,  wordlistLemma.length);
+  // debug(correctedCompound, tail[0], wordlistLemma, ...chunk[word_i])
+  return correctedCompound;
 }
 
 
@@ -888,6 +894,7 @@ function refineLookups(textArr) {
   let processedTextArr = [];
   let wordCount = 0;
   for (let [word, rawWord, matchedCompoundsArr] of textArr) {
+    rawWord = rawWord.replace("_", ".");  // ** preserve wordlist rendering of A.M. / P.M.
     let secondPassMatchedIDs = [];
     if (!word) continue;
     if (word === EOL.text) {
@@ -909,6 +916,7 @@ function refineLookups(textArr) {
     }
   }
   // ** precessedTextArr = [word, rawWord, [ [id, no. of reps], ...]]
+  // debug(processedTextArr)
   return [processedTextArr, wordCount];
 }
 
@@ -1021,6 +1029,8 @@ function checkAllowedVariants(word, rawWord, offlistID = 0) {
   if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantHyphens(word, rawWord);
   if (!isEmpty(matchedIDarr)) {
     const offlistEntry = [offlistID, word, "variant", matchedIDarr, ""];
+    // const offlistEntry = [offlistID, rawWord, "variant", matchedIDarr, ""];
+    // debug(word, rawWord)
     if (shouldUpdateOfflistDb) V.offlistDb[-offlistID] = offlistEntry;
   }
   return matchedIDarr;
@@ -1408,13 +1418,13 @@ function buildMarkupAsHTML(textArr) {
       wasEOL = false;
     }
     wordIndex++;
-    const groupedWord = getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace);
+    const groupedWord = getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpace);
     htmlString += groupedWord;
   }
   return htmlString;
 }
 
-function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
+function getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpace) {
   /*
   This, together with getSortedMatchesInfo() parses a complicated word-type system:
   in currentDb:
@@ -1431,6 +1441,8 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
   */
   let firstLemma, firstID, firstVariantID, levelsAreIdentical, isMultipleMatch, isVariant;
   [listOfMatches, [firstLemma, firstID, firstVariantID], levelsAreIdentical, isMultipleMatch, isVariant] = getSortedMatchesInfo(listOfMatches);
+  const isVariantCompound = (word !== rawWord && isCompound(firstID));
+  // debug(rawWord, firstID, isCompound(firstID), isVariant, isVariantCompound)
   let id = firstID;
   let variantClass = "";
   let variantRefLink = "";
@@ -1438,21 +1450,20 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord, leaveSpace) {
     id = firstVariantID;
     variantClass = " variant";
     variantRefLink = `:${firstID}`;
-  }
+  } else if (isVariantCompound) variantClass = " variant";
   const match = getEntryById(id);
   V.repeats.add(firstLemma + ":" + firstID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const [levelArr, levelClass] = getLevelDetails(match);
-  const limit = (V.levelLimit && levelClass in V.levelLimitActiveClasses) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+  // const limit = (V.levelLimit && levelClass in V.levelLimitActiveClasses) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
   // debug(firstLemma, V.levelLimit, levelClass, C.levelLimitClass, limit, V.levelLimitActiveClasses)
-
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(firstID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
   const localWord = highlightAwlWord(levelArr, rawWord);
   const listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}${variantRefLink}`]).join(" ");
   let showAsMultiple = "";
   if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
-  const classList = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
+  const classList = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}`;
   const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
@@ -1519,9 +1530,10 @@ function visibleLevelLimitInfo(selectedElement) {
 
 function toggleStrikethrough(className, removeClass=true) {
   const classesToChange = (isEmpty(V.levelLimitActiveClasses)) ?  C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(className)) : V.levelLimitActiveClasses;
-  // debug(className, ">", ...classesToChange, removeClass ? "remove" : "add")
+  let tmp = [];
   for (const level of classesToChange) {
     const targetElements = document.getElementsByClassName(level);
+    tmp.push(targetElements.length);
     for (let i=0; i < targetElements.length; i++) {
       if (removeClass){
         targetElements[i].classList.remove(C.LEVEL_LIMIT_CLASS);
@@ -1530,6 +1542,7 @@ function toggleStrikethrough(className, removeClass=true) {
       }
     }
   }
+  debug(`${className} > ${classesToChange} = ${tmp} element(s) to ${removeClass ? "remove" : "add"}`)
 }
 
 function visibleLevelLimitSet() {
@@ -1701,7 +1714,7 @@ function displayDbNameInTab2(msg) {
   const variantInfo = "<span class='variant'>wavy underline</span> = form to avoid";
   const refreshInfo = "To <b>refresh markup</b>, click the 'Text' tab or wait 5 seconds without typing.";
   const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
-  HTM.finalLegend.innerHTML += `<details class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
+  HTM.finalLegend.innerHTML += `<details open class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
 }
 
 function getIdsByLemma(word) {

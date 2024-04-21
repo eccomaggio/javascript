@@ -406,13 +406,13 @@
 
     .multi-diff {
       text-decoration: darkgray underline double;
-      background-color: seashell;
+      background-color: whitesmoke;
       -webkit-text-decoration: darkgray underline double;
     }
 
     .variant {
-      text-decoration: indianred underline wavy;
-      -webkit-text-decoration: indianred underline wavy;
+      text-decoration: lightpink underline wavy;
+      -webkit-text-decoration: lightpink underline wavy;
     }
 
     /* .multi-same {
