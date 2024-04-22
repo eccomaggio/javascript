@@ -1218,6 +1218,25 @@
           <div id="separator">&nbsp;</div>
           <div id="right-bot">
             <div id="t2_final_legend"></div>
+            <div id="t2_help">
+              <details open class='instructions'>
+                <summary class='in-list-header'>HELP</summary>
+                <ul id="help-all">
+                  <li id="help-gept">
+                    <span class='level-e'>elem (A2)</span>,
+                    <span class='level-i'>int (B1)</span>,
+                    <span class='level-h'>hi-int (B2)</span>
+                  </li>
+                  <li id="help-kids"><span class='level-k'>on-list</span></li>
+                  <li id="help-offlist"><span class='level-o' id='l-o'>off-list</span></li>
+                  <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
+                  <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid"</li>
+                  <li id="help-awl"><span class='awl-word'>dotted underline</span> = AWL word</li>
+                  <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
+                  <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above</li>
+                </ul>
+              </details>
+            </div>
             <!-- <div id="debug_cursor_pos" class="debug"></div> -->
             <div id="t2_final_info"></div>
             <!-- <div id="t2_final_text"></div> -->
@@ -1234,12 +1253,9 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    // document.getElementById("version-no").innerHTML = "Version 5-0.2"
-    const versionNumber = "6-3.0";
-    const versionDetails = "New GEPT wordlist; edits 'in place'; & advises on preferred spellings; recognizes negative prefixes and superfluous hyphens";
+    const versionNumber = "6-4.0";
+    const versionDetails = "New GEPT wordlist; edits 'in place'; advises on preferred spellings; recognizes negative prefixes and superfluous hyphens; custom level strike-through";
     const versionInfo = document.getElementById("version-no");
-    // versionDetails.innerHTML = "Version 6-1.1";
-    // versionDetails.title += "\nIncorporates new GEPT wordlist and British spelling.";
     versionInfo.innerHTML = `Version ${versionNumber}`;
     versionInfo.title += `\n${versionDetails}.`;
     document.title = `LTTC Wordlist Tool (V.${versionNumber})`;
@@ -2716,7 +2732,7 @@ function forceUpdateInputDiv() {
   </script>
 
   <script data-title="main.js">
-// "use strict";
+"use strict";
 /*
 
 */
@@ -2783,7 +2799,7 @@ function addMenuListeners() {
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
-  HTM.finalLegend.addEventListener("click", visibleLevelLimitToggle);
+  document.getElementById("help-all").addEventListener("click", visibleLevelLimitToggle);
 }
 
 function addEditingListeners() {
@@ -4173,7 +4189,7 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpac
   V.repeats.add(firstLemma + ":" + firstID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const [levelArr, levelClass] = getLevelDetails(match);
-  // const limit = (V.levelLimit && levelClass in V.levelLimitActiveClasses) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+  const limit = (V.levelLimit && V.levelLimitActiveClasses.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
   // debug(firstLemma, V.levelLimit, levelClass, C.levelLimitClass, limit, V.levelLimitActiveClasses)
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(firstID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
@@ -4181,8 +4197,10 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpac
   const listOfLinks = listOfMatches.map(el => [`${el[1]}:${el[0]}${variantRefLink}`]).join(" ");
   let showAsMultiple = "";
   if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
-  const classList = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}`;
-  const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  const classes = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
+  // debug(firstLemma, levelClass, V.levelLimitActiveClasses, V.levelLimitActiveClasses.includes(levelClass), limit, classes)
+  // const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
 
@@ -4215,35 +4233,35 @@ function getSortedMatchesInfo(matches) {
 }
 
 function visibleLevelLimitToggle(e) {
-  const [mainCSS, level, isValidSelection, resetPreviousSelectionRequired] = visibleLevelLimitInfo(e.target);
+  const [level, isValidSelection, resetPreviousSelectionRequired] = visibleLevelLimitInfo(e.target);
   if (isValidSelection) {
+    // debug("valid")
     if (resetPreviousSelectionRequired) {
+      // debug("reset required")
       toggleStrikethrough(V.levelLimit);
       V.levelLimit = "";
     }
     if (V.levelLimit) {
-      // debug(level, ">>", level === V.levelLimitActiveClasses[0], ...V.levelLimitActiveClasses)
-      if (level )
+      // debug("previous selection:", ...V.levelLimitActiveClasses)
       toggleStrikethrough(V.levelLimit);
       V.levelLimit = "";
       V.levelLimitActiveClasses = [];
     } else {
       V.levelLimit = level;
       V.levelLimitActiveClasses = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimit));
+      // debug("about to select:", ...V.levelLimitActiveClasses)
       toggleStrikethrough(V.levelLimit, false);
     }
-    // debug(V.levelLimit, ...V.levelLimitActiveClasses)
   }
-  signalRefreshNeeded("on");
-  updateInputDiv();
+  // else debug("ignore...")
 }
 
-function visibleLevelLimitInfo(selectedElement) {
-  const mainCSS = document.styleSheets[1];
-  const level = selectedElement.className.split(" ")[0];
-  const isValidSelection = selectedElement.id && level.startsWith("level");
-  const resetPreviousSelectionRequired = level !== V.levelLimitActiveClasses[0];
-  return [mainCSS, level, isValidSelection, resetPreviousSelectionRequired];
+function visibleLevelLimitInfo(el) {
+  const level = el.className.split(" ")[0];
+  const isValidSelection = level.startsWith("level") && level !== "level-e";
+  const resetPreviousSelectionRequired = (isValidSelection && !!V.levelLimitActiveClasses.length && level !== V.levelLimitActiveClasses[0]);
+  // debug(level, isValidSelection, resetPreviousSelectionRequired, ...V.levelLimitActiveClasses, V.levelLimitActiveClasses.length);
+  return [level, isValidSelection, resetPreviousSelectionRequired];
 }
 
 function toggleStrikethrough(className, removeClass=true) {
@@ -4253,6 +4271,7 @@ function toggleStrikethrough(className, removeClass=true) {
     const targetElements = document.getElementsByClassName(level);
     tmp.push(targetElements.length);
     for (let i=0; i < targetElements.length; i++) {
+        // debug(`${i+1} of ${targetElements.length}: level=${level}, ${removeClass ? "remove" : "add"}: ${targetElements[i].classList}`)
       if (removeClass){
         targetElements[i].classList.remove(C.LEVEL_LIMIT_CLASS);
       } else {
@@ -4260,7 +4279,6 @@ function toggleStrikethrough(className, removeClass=true) {
       }
     }
   }
-  debug(`${className} > ${classesToChange} = ${tmp} element(s) to ${removeClass ? "remove" : "add"}`)
 }
 
 function visibleLevelLimitSet() {
@@ -4423,16 +4441,22 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
-  const levelInfoGEPT = "<span class='level-e'>elem (A2)</span>, <span class='level-i' id='l-i'> int (B1)</span>, <span class='level-h' id='l-h'>hi-int (B2)</span>";
-  const levelInfoKids = "<span class='level-k'>on-list</span>";
-  const levelInfo = (isKids()) ? levelInfoKids : levelInfoGEPT;
-  const levelInfo2 = "<span class='level-o' id='l-o'>off-list</span>";
-  const repeatInfo1 = "<span class='multi-diff'>double underline</span> = multiple levels";
-  const repeatInfo2 = "superscript<sup>n</sup> = number of repetitions";
-  const variantInfo = "<span class='variant'>wavy underline</span> = form to avoid";
-  const refreshInfo = "To <b>refresh markup</b>, click the 'Text' tab or wait 5 seconds without typing.";
-  const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
-  HTM.finalLegend.innerHTML += `<details open class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
+  document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:block;" : "display:none;");
+  document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:block;" : "display:none;");
+  document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:block;" : "display:none;");
+  // document.getElementById("help-gept").style.display = (!isKids()) ? "block" : "none";
+  // document.getElementById("help-awl").style.display = (isBESTEP()) ? "block" : "none";
+  // document.getElementById("help-awl").style.display = (isBESTEP()) ? "block" : "none";
+  // const levelInfoGEPT = "<span class='level-e'>elem (A2)</span>, <span class='level-i' id='l-i'> int (B1)</span>, <span class='level-h' id='l-h'>hi-int (B2)</span>";
+  // const levelInfoKids = "<span class='level-k'>on-list</span>";
+  // const levelInfo = (isKids()) ? levelInfoKids : levelInfoGEPT;
+  // const levelInfo2 = "<span class='level-o' id='l-o'>off-list</span>";
+  // const repeatInfo1 = "<span class='multi-diff'>double underline</span> = multiple levels";
+  // const repeatInfo2 = "superscript<sup>n</sup> = number of repetitions";
+  // const variantInfo = "<span class='variant'>wavy underline</span> = form to avoid";
+  // const refreshInfo = "To <b>refresh markup</b>, click the 'Text' tab or wait 5 seconds without typing.";
+  // const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
+  // HTM.finalLegend.innerHTML += `<details open class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
 }
 
 function getIdsByLemma(word) {
