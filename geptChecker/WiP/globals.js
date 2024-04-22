@@ -48,7 +48,6 @@ const HTM = {
   tabHead: document.getElementsByTagName("tab-head")[0],
   tabBody: document.getElementsByTagName("tab-body")[0],
   textTabTag: document.getElementById("t1_tab_tag"),
-  // refreshIcon: document.getElementById("refresh-icon"),
   clearButton: document.getElementById("clear_button"),
   resetButton: document.getElementById("reset_button"),
   settingsMenu: document.getElementById("dropdown"),
@@ -58,6 +57,7 @@ const HTM = {
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
+  helpDetails: document.getElementById("help-details"),
 };
 
 // ## Global constants
@@ -81,9 +81,11 @@ let C = {
   awl_level_offset: 37,
   NOTE_SEP: "|",
   // ** local storage: [name-of-storage-variable, default-value]
-  state: {
+  DEFAULT_STATE: {
     db_state: 0,
     tab_state: 0,
+    limit_state: -1,
+    help_state: 1,
   },
   // SAVE_DB_STATE: "db_state",
   // SAVE_ACTIVE_TAB_INDEX: "tab_state",
@@ -127,9 +129,11 @@ let V = {
   current: {
     db_state: 0,
     tab_state: 0,
+    limit_state: -1,
+    help_state: 1,
   },
-  levelLimit: "",
-  levelLimitActiveClasses: [],
+  levelLimitStr: "",
+  levelLimitActiveClassesArr: [],
   levelLimitRule: null,
   appHasBeenReset: true,
 }

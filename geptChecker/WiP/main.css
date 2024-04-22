@@ -548,6 +548,7 @@
 
     .wrong {
       text-decoration: line-through;
+      opacity: 0.5;
     }
 
     .awl-sublist {

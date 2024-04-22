@@ -582,6 +582,7 @@
 
     .wrong {
       text-decoration: line-through;
+      opacity: 0.5;
     }
 
     .awl-sublist {
@@ -958,11 +959,6 @@
 </head>
 
 <body>
-  <!-- <div id="tab-group">
-    <div id="tab-head">
-      <div class="tab tab-off">Words</div>
-      <div class="tab tab-on">Texts</div>
-      <div class="tab-tools"> -->
   <tab-group>
     <tab-head>
       <tab-tag class="tab-off">Words</tab-tag>
@@ -1032,8 +1028,6 @@
         <div class="spacer">&nbsp;</div>
       </tab-tools>
     </tab-head>
-    <!-- <div id="tab-body">
-      <div class="tab-content" style="display: none;"> -->
     <tab-body>
       <tab-content style="display: none;">
         <div class="t1_form_in">
@@ -1219,7 +1213,7 @@
           <div id="right-bot">
             <div id="t2_final_legend"></div>
             <div id="t2_help">
-              <details open class='instructions'>
+              <details class='instructions' id="help-details">
                 <summary class='in-list-header'>HELP</summary>
                 <ul id="help-all">
                   <li id="help-gept">
@@ -1237,18 +1231,12 @@
                 </ul>
               </details>
             </div>
-            <!-- <div id="debug_cursor_pos" class="debug"></div> -->
             <div id="t2_final_info"></div>
-            <!-- <div id="t2_final_text"></div> -->
             <div id="t2_repeats_list"></div>
           </div>
       </tab-content>
     </tab-body>
   </tab-group>
-        <!-- </div>
-        </div>
-      </div>
-  </div> -->
 
   <script data-title="admin.js">
     console.clear();
@@ -1466,7 +1454,6 @@ const HTM = {
   tabHead: document.getElementsByTagName("tab-head")[0],
   tabBody: document.getElementsByTagName("tab-body")[0],
   textTabTag: document.getElementById("t1_tab_tag"),
-  // refreshIcon: document.getElementById("refresh-icon"),
   clearButton: document.getElementById("clear_button"),
   resetButton: document.getElementById("reset_button"),
   settingsMenu: document.getElementById("dropdown"),
@@ -1476,6 +1463,7 @@ const HTM = {
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
+  helpDetails: document.getElementById("help-details"),
 };
 
 // ## Global constants
@@ -1499,9 +1487,11 @@ let C = {
   awl_level_offset: 37,
   NOTE_SEP: "|",
   // ** local storage: [name-of-storage-variable, default-value]
-  state: {
+  DEFAULT_STATE: {
     db_state: 0,
     tab_state: 0,
+    limit_state: -1,
+    help_state: 1,
   },
   // SAVE_DB_STATE: "db_state",
   // SAVE_ACTIVE_TAB_INDEX: "tab_state",
@@ -1545,9 +1535,11 @@ let V = {
   current: {
     db_state: 0,
     tab_state: 0,
+    limit_state: -1,
+    help_state: 1,
   },
-  levelLimit: "",
-  levelLimitActiveClasses: [],
+  levelLimitStr: "",
+  levelLimitActiveClassesArr: [],
   levelLimitRule: null,
   appHasBeenReset: true,
 }
@@ -2732,7 +2724,7 @@ function forceUpdateInputDiv() {
   </script>
 
   <script data-title="main.js">
-"use strict";
+// "use strict";
 /*
 
 */
@@ -2751,7 +2743,8 @@ function init() {
   setupEditing();
   HTM.form.reset();
   updateDropdownMenuOptions();
-  visibleLevelLimitSet();
+  visibleLevelLimitSet(true);
+  setHelpState("fromSaved");
 }
 
 function updateDropdownMenuOptions() {
@@ -2800,6 +2793,7 @@ function addMenuListeners() {
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
   document.getElementById("help-all").addEventListener("click", visibleLevelLimitToggle);
+  HTM.helpDetails.addEventListener("toggle", setHelpState);
 }
 
 function addEditingListeners() {
@@ -2876,7 +2870,8 @@ function backupLoad(e) {
   restoredContent = newlinesToEOLs(restoredContent);
   HTM.workingDiv.innerText = restoredContent;
   forceUpdateInputDiv();
-  if (swap) localStorage.setItem(id, swap);
+  // if (swap) localStorage.setItem(id, swap);
+  if (swap) appStateSaveItem(id, swap);
   backupDialogClose("backup-dlg");
 }
 
@@ -2940,12 +2935,14 @@ function backupSave() {
     const shortTermSavedContent = localStorage.getItem(shortTerm);
     const longTermSavedContent = localStorage.getItem(longTerm);
     if (shortTermSavedContent !== longTermSavedContent) {
-      localStorage.setItem(longTerm, shortTermSavedContent);
+      // localStorage.setItem(longTerm, shortTermSavedContent);
+      appStateSaveItem(longTerm, shortTermSavedContent);
     }
     V.appHasBeenReset = false;
   }
   if (currentText !== localStorage.getItem(shortTerm)) {
-    localStorage.setItem(shortTerm, currentText);
+    // localStorage.setItem(shortTerm, currentText);
+    appStateSaveItem(shortTerm, currentText);
     HTM.backupSave.innerText = "text saved";
     HTM.backupSave.classList.add("error");
   } else {
@@ -3118,7 +3115,8 @@ function checkFormData(data) {
 }
 
 function runSearch(data) {
-  let term = data.term.join().split(" ")[0].toLowerCase();
+  // let term = data.term.join().split(" ")[0].toLowerCase();
+  let term = data.term.join().toLowerCase();
   // term.replace(/\s\-\.\'/g, "");
   const matchType = C.MATCHES[data.match];
   const searchTerms = {
@@ -3139,6 +3137,8 @@ function refineSearch(find) {
   if (isEmpty(results)) {
     const word = stripOutRegex(find.term);
     let matchedIDarr = checkDerivations(word);
+    matchedIDarr.push(lazyCheckAgainstCompounds(word))
+    // debug(word, lazyCheckAgainstCompounds(word), matchedIDarr)
     if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, word);
     if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkAllowedVariants(word);
     if (idSuccessfullyMatched(matchedIDarr)) results = [getEntryById(...matchedIDarr)];
@@ -3181,6 +3181,20 @@ function refineSearch(find) {
   }
   results = results.filter(result => getId(result) > 0);
   return results;
+}
+
+function lazyCheckAgainstCompounds(word) {
+  tmpWord = word.replace(/-'\./g, "").split(" ").join("");
+  // debug(tmpWord)
+  let result = [];
+  for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
+    // debug(tmpWord, compound.slice(0, tmpWord.length), id)
+    if (tmpWord === compound.slice(0, tmpWord.length)) {
+      result.push(id);
+      break;
+    }
+  }
+  return result;
 }
 
 function stripOutRegex(term) {
@@ -3605,9 +3619,9 @@ function normalizeCompounds(id, tail, chunk, word_i) {
   const wordlistLemma = getLemma(V.currentDb.db[id]);
   const rawCompound = chunk[word_i][1];
   const prefix = (rawCompound[0].match(C.punctuation_lite)) ? rawCompound[0] : "";
-  const initial = (prefix.length) ? rawCompound.slice(0,1) : rawCompound[0];
+  const initial = (prefix.length) ? rawCompound.slice(0, 1) : rawCompound[0];
   const suffix = (rawCompound.slice(-1).match(C.punctuation_lite)) ? rawCompound.slice(-1) : "";
-  const correctedCompound = tmpWord = initial + wordlistLemma.slice(1,  wordlistLemma.length);
+  const correctedCompound = tmpWord = initial + wordlistLemma.slice(1, wordlistLemma.length);
   // debug(correctedCompound, tail[0], wordlistLemma, ...chunk[word_i])
   return correctedCompound;
 }
@@ -3807,7 +3821,7 @@ function checkAbbreviations(word) {
   let matchIDarr = [];
   if (LOOKUP.abbreviations.hasOwnProperty(word)) {
     const match = LOOKUP.abbreviations[word];
-    for (lemma of match.split(":")) {
+    for (const lemma of match.split(":")) {
       matchIDarr.push(...getIdsByLemma(lemma));
     }
   }
@@ -4189,7 +4203,7 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpac
   V.repeats.add(firstLemma + ":" + firstID);
   const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(match));
   const [levelArr, levelClass] = getLevelDetails(match);
-  const limit = (V.levelLimit && V.levelLimitActiveClasses.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+  const limit = (V.levelLimitStr && V.levelLimitActiveClassesArr.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
   // debug(firstLemma, V.levelLimit, levelClass, C.levelLimitClass, limit, V.levelLimitActiveClasses)
   const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(firstID, ignoreRepeats);
   rawWord = insertCursorInHTML(listOfMatches.length, wordIndex, escapeHTMLentities(rawWord));
@@ -4238,20 +4252,26 @@ function visibleLevelLimitToggle(e) {
     // debug("valid")
     if (resetPreviousSelectionRequired) {
       // debug("reset required")
-      toggleStrikethrough(V.levelLimit);
-      V.levelLimit = "";
+      visibleLevelLimitApply(V.levelLimitStr);
+      V.levelLimitStr = "";
     }
-    if (V.levelLimit) {
+    if (V.levelLimitStr) {
       // debug("previous selection:", ...V.levelLimitActiveClasses)
-      toggleStrikethrough(V.levelLimit);
-      V.levelLimit = "";
-      V.levelLimitActiveClasses = [];
+      visibleLevelLimitApply(V.levelLimitStr);
+      V.levelLimitStr = "";
+      V.levelLimitActiveClassesArr = [];
+      V.current.limit_state = -1;
     } else {
-      V.levelLimit = level;
-      V.levelLimitActiveClasses = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimit));
+      V.levelLimitStr = level;
+      V.levelLimitActiveClassesArr = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimitStr));
+      V.current.limit_state = C.LEVEL_LIMITS.indexOf(level);
+      // debug("updated current.limit_state:", V.current.limit_state)
       // debug("about to select:", ...V.levelLimitActiveClasses)
-      toggleStrikethrough(V.levelLimit, false);
+      visibleLevelLimitApply(V.levelLimitStr, false);
     }
+    appStateSaveItem("limit_state", V.current.limit_state);
+    // debug("saved limit state:", localStorage.getItem("limit_state"), V.current.limit_state)
+
   }
   // else debug("ignore...")
 }
@@ -4259,20 +4279,20 @@ function visibleLevelLimitToggle(e) {
 function visibleLevelLimitInfo(el) {
   const level = el.className.split(" ")[0];
   const isValidSelection = level.startsWith("level") && level !== "level-e";
-  const resetPreviousSelectionRequired = (isValidSelection && !!V.levelLimitActiveClasses.length && level !== V.levelLimitActiveClasses[0]);
+  const resetPreviousSelectionRequired = (isValidSelection && !!V.levelLimitActiveClassesArr.length && level !== V.levelLimitActiveClassesArr[0]);
   // debug(level, isValidSelection, resetPreviousSelectionRequired, ...V.levelLimitActiveClasses, V.levelLimitActiveClasses.length);
   return [level, isValidSelection, resetPreviousSelectionRequired];
 }
 
-function toggleStrikethrough(className, removeClass=true) {
-  const classesToChange = (isEmpty(V.levelLimitActiveClasses)) ?  C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(className)) : V.levelLimitActiveClasses;
+function visibleLevelLimitApply(className, removeClass = true) {
+  const classesToChange = (isEmpty(V.levelLimitActiveClassesArr)) ? C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(className)) : V.levelLimitActiveClassesArr;
   let tmp = [];
   for (const level of classesToChange) {
     const targetElements = document.getElementsByClassName(level);
     tmp.push(targetElements.length);
-    for (let i=0; i < targetElements.length; i++) {
-        // debug(`${i+1} of ${targetElements.length}: level=${level}, ${removeClass ? "remove" : "add"}: ${targetElements[i].classList}`)
-      if (removeClass){
+    for (let i = 0; i < targetElements.length; i++) {
+      // debug(`${i+1} of ${targetElements.length}: level=${level}, ${removeClass ? "remove" : "add"}: ${targetElements[i].classList}`)
+      if (removeClass) {
         targetElements[i].classList.remove(C.LEVEL_LIMIT_CLASS);
       } else {
         targetElements[i].classList.add(C.LEVEL_LIMIT_CLASS);
@@ -4281,21 +4301,54 @@ function toggleStrikethrough(className, removeClass=true) {
   }
 }
 
-function visibleLevelLimitSet() {
-  if (V.levelLimit) {
-    const id = V.levelLimit.slice(-3);
-    const classlist = document.getElementById(id).classList;
-    classlist.add(C.LEVEL_LIMIT_CLASS);
-    debug(id, classlist.contains(C.LEVEL_LIMIT_CLASS))
+function visibleLevelLimitSet(fromSaved = false) {
+  if (fromSaved) {
+    V.levelLimitStr = (V.current.limit_state >= 0) ? C.LEVEL_LIMITS[V.current.limit_state] : "";
+    V.levelLimitActiveClassesArr = (V.levelLimitStr) ? C.LEVEL_LIMITS.slice(V.current.limit_state) : [];
+    // debug(`saved level: (${V.current.limit_state}) ${V.levelLimitStr} ->`, ...V.levelLimitActiveClassesArr)
+  }
+  if (V.levelLimitStr) {
+    // debug("implementing limit...")
+    visibleLevelLimitApply(V.levelLimitStr, false);
+    // const id = V.levelLimit.slice(-3);
+    // const classlist = document.getElementById(id).classList;
+    // classlist.add(C.LEVEL_LIMIT_CLASS);
+    // debug(id, classlist.contains(C.LEVEL_LIMIT_CLASS))
+  }
+  else {
+    visibleLevelLimitApply(C.LEVEL_LIMITS[0])
   }
 }
 
 function visibleLevelLimitReset() {
-  if (V.levelLimit) {
-    const id = V.levelLimit.slice(-3);
-    document.getElementById(id).classList.remove(C.LEVEL_LIMIT_CLASS);
-    V.levelLimit = "";
+  appStateSaveItem("limit_state", C.DEFAULT_STATE.limit_state);
+  visibleLevelLimitSet(true);
+  // if (V.levelLimitStr) {
+  //   const id = V.levelLimitStr.slice(-3);
+  //   document.getElementById(id)?.classList.remove(C.LEVEL_LIMIT_CLASS);
+  //   V.levelLimitStr = "";
+  // }
+}
+
+function setHelpState(e) {
+  let el, mode;
+  if (e.target) {
+    el = e.target;
+    mode = "toggle";
+  } else {
+    el = HTM.helpDetails;
+    mode = e;
   }
+  if (mode === "toggle") {
+    V.current.help_state = (el.hasAttribute("open")) ? 1 : 0;
+  }
+  else {
+    if (mode === "reset") V.current.help_state = C.DEFAULT_STATE.help_state;
+    if (V.current.help_state) el.setAttribute("open","")
+    else el.removeAttribute("open");
+  }
+  appStateSaveItem("help_state", V.current.help_state);
+  // debug(mode, V.current.help_state, !!V.current.help_state, el.hasAttribute("open"))
 }
 
 
@@ -4570,21 +4623,24 @@ function resetApp() {
   setTab(V.current.tab_state);
   setDbShared(V.current.db_state);
   HTM.selectDb.value = V.current.db_state;
+  setHelpState("reset");
+  visibleLevelLimitReset();
 }
 
 function appStateForceDefault() {
-  for (const key in C.state) {
-    const defaultVal = C.state[key];
-    localStorage.setItem(key, defaultVal)
+  for (const key in C.DEFAULT_STATE) {
+    const defaultVal = C.DEFAULT_STATE[key];
+    // localStorage.setItem(key, defaultVal)
+    appStateSaveItem(key, defaultVal)
     V.current[key] = defaultVal;
   }
 }
 
 function appStateReadFromStorage() {
   let retrieved_items = {};
-  for (const key in C.state) {
+  for (const key in C.DEFAULT_STATE) {
     const retrieved_item = localStorage.getItem(key);
-    retrieved_items[key] = (retrieved_item) ? parseInt(retrieved_item) : C.state[key];
+    retrieved_items[key] = (retrieved_item) ? parseInt(retrieved_item) : C.DEFAULT_STATE[key];
   }
   return retrieved_items;
 }
@@ -4595,6 +4651,10 @@ function appStateWriteToCurrent() {
     const value = retrieved_items[key];
     V.current[key] = value;
   }
+}
+
+function appStateSaveItem(item, value) {
+  localStorage.setItem(item, value);
 }
 
 
@@ -4651,7 +4711,8 @@ function setDbShared(e) {
   visibleLevelLimitSet();
   setDb_tab2();
   setDbTab1();
-  localStorage.setItem("db_state", V.current.db_state);
+  // localStorage.setItem("db_state", V.current.db_state);
+  appStateSaveItem("db_state", V.current.db_state);
 }
 
 function isGEPT() {
@@ -4758,7 +4819,8 @@ function setTab(tab) {
     i++;
   }
   setTabHead();
-  localStorage.setItem("tab_state", V.current.tab_state);
+  // localStorage.setItem("tab_state", V.current.tab_state);
+  appStateSaveItem("tab_state", V.current.tab_state);
   forceUpdateInputDiv();
   displayInputCursor();
   V.isExactMatch = !isFirstTab();
