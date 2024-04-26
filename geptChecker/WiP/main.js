@@ -990,6 +990,7 @@ function lookupWord(word, rawWord, matchedCompoundsArr) {
   if (isEmpty(matchedIDarr)) {
     matchedIDarr = getIdsByLemma(word);
     matchedIDarr = checkDerivations(word, matchedIDarr);
+    // debug(JSON.stringify(matchedIDarr), word)
     if (isEmpty(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, rawWord);
     if (isEmpty(matchedIDarr) && isEmpty(matchedCompoundsArr)) {
       matchedIDarr = [markOfflist(rawWord, "offlist")];
@@ -1191,9 +1192,13 @@ function checkDerivations(word, matches = []) {
   if (LOOKUP.falseDerivations.includes(word)) {
     return matches;
   }
+
+  // let localMatches = runChecks(word, matches);
+
+  let localMatches = [];
   for (const guess of [
     checkDigits,
-    checkUnknown,
+    checkNonAscii,
     checkSymbols,
     // checkContractions,
     checkNames,
@@ -1210,26 +1215,63 @@ function checkDerivations(word, matches = []) {
     checkRegularAdverbs,
   ]) {
     const result = guess(word);
-    if (result) {
-      matches.push(result);
+    debug("@", word, result, (result) ? !isEmpty(result) : "nowt")
+    // if (result && !isEmpty(result)) {
+    if (result && !isEmpty(result)) {
+      localMatches.push(result);
       break;
     }
   }
   // ** -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   const result = checkFinalS(word);
   if (result) {
-    matches.push(result);
+    localMatches.push(result);
   }
-  // if (!matches.length) {
-  if (isEmpty(matches)) {
-    return [];
+  if (!localMatches || isEmpty(localMatches)) {
+    return matches;
   }
+  matches.push(localMatches);
   return dedupeSimpleArray(matches);
 }
 
+// function runChecks(word, matches) {
+//   matches = checkDigits(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkNonAscii(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkSymbols(word);
+//   if (!isEmpty(matches)) return matches;
+//   // checkContractions,
+//   matches = checkNames(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkArticle(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkIrregularNegatives(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkIrregularVerbs(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkIrregularPlurals(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkForeignPlurals(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkVing(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkVpp(word);
+//   // debug(word, matches, (!!matches), isEmpty(matches))
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkSuperlatives(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkComparatives(word);
+//   if (!isEmpty(matches)) return matches;
+//   // checkFinalS,
+//   matches = checkRegularAdverbs(word);
+//   if (!isEmpty(matches)) return matches;
+//   else return [];
+// }
 
-function dedupeSimpleArray(array) {
-  return [...new Set(array)];
+function dedupeSimpleArray(arr) {
+  if (typeof arr !== "object") arr = [arr];
+  return [...new Set(arr)];
 }
 
 function dedupeById(arr, field = 0) {
@@ -1253,7 +1295,7 @@ function checkDigits(word) {
   return result;
 }
 
-function checkUnknown(word) {
+function checkNonAscii(word) {
   let result;
   if (!word.match(/[a-z]/i)) {
     result = markOfflist(word, "unknown");
@@ -1316,8 +1358,11 @@ function checkIrregularVerbs(word) {
 function checkIrregularPlurals(word) {
   let result;
   const lookup = LOOKUP.irregPlural[word];
+  // debug(word, LOOKUP.irregPlural[word])
   if (lookup) {
-    result = winnowPoS(getIdsByLemma(lookup), ["n"])[0];
+    // result = winnowPoS(getIdsByLemma(lookup), ["n"])[0];
+    // ** words in the lookup are most likely the correct word (and 'others / yourselves' aren't nouns!)
+    result = getIdsByLemma(lookup);
   }
   return result;
 }
@@ -1343,7 +1388,7 @@ function checkForeignPlurals(word) {
 function checkVing(word) {
   let result;
   if (word.endsWith("ing")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.g_subs), ["v"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.ing_subs), ["v"])[0];
   }
   return result;
 }
@@ -1351,7 +1396,7 @@ function checkVing(word) {
 function checkVpp(word) {
   let result;
   if (word.endsWith("ed")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.d_subs), ["v"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.ed_subs), ["v"])[0];
   }
   return result;
 }
@@ -1375,8 +1420,10 @@ function checkComparatives(word) {
 function checkFinalS(word) {
   let result;
   if (word.endsWith("s")) {
-    // ** pronouns ("r") included to allow 'others'
-    result = winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"])[0];
+    // ** DISREGARD: pronouns ("r") included to allow 'others' (allows 'thems'!!)
+    // result = winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v", "r"])[0];
+    // debug(word, findBaseForm(word, LOOKUP.s_subs))
+    result = winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v"])[0];
   }
   return result;
 }
@@ -1384,7 +1431,7 @@ function checkFinalS(word) {
 function checkRegularAdverbs(word) {
   let result;
   if (word.endsWith("ly")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.y_subs), ["j"])[0];
+    result = winnowPoS(findBaseForm(word, LOOKUP.ly_subs), ["j"])[0];
   }
   return result;
 }
@@ -1397,10 +1444,12 @@ function winnowPoS(roughMatches, posArr) {
     const match = getEntryById(id);
     for (const pos of posArr) {
       if (match && getPoS(match).includes(pos)) {
+        // if (match && getPoS(match) === pos) {
         localMatches.push(id);
       }
     }
   }
+  // if (!Array.isArray(localMatches)) localMatches = [localMatches];
   return localMatches;
 }
 
@@ -1618,7 +1667,7 @@ function setHelpState(e) {
   }
   else {
     if (mode === "reset") V.current.help_state = C.DEFAULT_STATE.help_state;
-    if (V.current.help_state) el.setAttribute("open","")
+    if (V.current.help_state) el.setAttribute("open", "")
     else el.removeAttribute("open");
   }
   appStateSaveItem("help_state", V.current.help_state);
@@ -1796,29 +1845,48 @@ function getIdsByLemma(word) {
   return searchResults;
 }
 
-
-function findBaseForm(word, subs, isSuffix = true) {
+function findBaseForm(word, subs) {
   // ** Uses lookup tables to apply spelling rules to return underlying base HTM.form candidates
   let localMatches = [];
-  const candidates = new Set();
-  const affix_lookups = (isSuffix) ? "_suffix" : "_prefix";
-  const toSuffix = -(subs[affix_lookups].length);
-  for (const derivedForm in subs) {
-    const i = -(derivedForm.length);
-    const affix = subs[word.slice(i)];
-    if (affix != undefined) {
-      const candidate = word.slice(0, i) + affix;
-      candidates.add(candidate);
+  for (const [ending, sub] of subs) {
+    const root = word.slice(0, -ending.length);
+    if ((root + ending) === word) {
+      const candidate = root + sub;
+      const tmp_match = getIdsByLemma(candidate);
+      if (!isEmpty(tmp_match)) {
+        // debug(word, ending, root + sub, ...tmp_match)
+        localMatches.push(...tmp_match);
+      }
     }
   }
-  candidates.add(word.slice(0, toSuffix));
-  for (const candidate of candidates) {
-    const tmp_match = getIdsByLemma(candidate);
-    // if (tmp_match.length) localMatches.push(...tmp_match);
-    if (!isEmpty(tmp_match)) localMatches.push(...tmp_match);
-  }
+  // debug(word, localMatches)
   return localMatches;
 }
+
+// function findBaseForm(word, subs, isSuffix = true) {
+//   // ** Uses lookup tables to apply spelling rules to return underlying base HTM.form candidates
+//   let localMatches = [];
+//   const candidates = new Set();
+//   // const affix_lookups = (isSuffix) ? "_suffix" : "_prefix";
+//   // const toSuffix = -(subs[affix_lookups].length);
+//   const toSuffix = -(subs["_suffix"].length);
+//   for (const ending in subs) {
+//     const i = -(ending.length);
+//     const affix = subs[word.slice(i)];
+//     if (affix != undefined) {
+//       const candidate = word.slice(0, i) + affix;
+//       debug(word, ending, affix, candidate)
+//       candidates.add(candidate);
+//     }
+//   }
+//   candidates.add(word.slice(0, toSuffix));
+//   for (const candidate of candidates) {
+//     const tmp_match = getIdsByLemma(candidate);
+//     // if (tmp_match.length) localMatches.push(...tmp_match);
+//     if (!isEmpty(tmp_match)) localMatches.push(...tmp_match);
+//   }
+//   return localMatches;
+// }
 
 
 function clearTab2() {
@@ -2013,7 +2081,15 @@ function lemmaIsInCompoundsDb(lemma) {
 function isEmpty(arr) {
   // TODO: simplify to !arr.length ?
   // return !arr?.flat(Infinity).length;
-  return !arr.length;
+  // const hasContent = !!arr || arr.length;
+  let hasContent;
+  if (!arr) hasContent = false;
+  else if (arr && typeof arr !== "object") hasContent = true;
+  else hasContent = arr.length > 0;
+  // debug(arr, arr ? typeof arr : "n/a")
+  // debug(arr, !hasContent)
+  // return !arr.length;
+  return !hasContent;
 }
 
 function buildCompoundsDb(dB) {
