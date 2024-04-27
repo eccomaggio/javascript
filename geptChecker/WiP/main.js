@@ -734,6 +734,7 @@ function updateInputDiv(e) {
 
 function getRevisedText() {
   let revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
+  // debug(JSON.stringify(revisedText))
   return revisedText;
 }
 
@@ -757,6 +758,7 @@ function displayWorkingText(html) {
 
 function processText(rawText) {
   signalRefreshNeeded("off");
+  V.idOfAM = getIdsByLemma("am")[0];
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -773,6 +775,7 @@ function processText(rawText) {
   const text = normalizeRawText(rawText);
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
+  // debug(JSON.stringify(flatTextArr))
   const [resultsAsTextArr, wordCount] = refineLookups(flatTextArr);
   const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
   const repeatsAsHTML = buildRepeatList(wordCount);
@@ -842,15 +845,18 @@ function normalizeRawText(text) {
 function splitTextIntoPhrases(text) {
   // ** used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
   text = text.trim();
-  text = text.replace(/(p|a)\.(m)\./gi, "$1_$2_");  // ** to protect wordlist version of am/pm
+  text = text.replace(/\.{3}/g, "___"); // ** to protect ellipses (...)
+  text = text.replace(/(p|a)\.(m)\./gi, "$1_$2_.");  // ** to protect wordlist version of A.M / P.M.
   // ** separate out digits
   // ** should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
   text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^");
   // ** break at punctuation (include with digit)
   text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
   text = text.replace(/\^{4,}/g, "^^");
+  text = text.replace(/_\./g, "_"); // ** also to protect wordlist version of A.M. / P.M.
   text = text.split(/\s?\^\^\s?/);
   text = text.filter(el => el !== '');
+  // debug("!!", JSON.stringify(text))
   return text;
 }
 
@@ -872,11 +878,18 @@ function findCompoundsAndFlattenArray(chunks) {
       for (const compound in V.currentDb.compounds) {
         if (flattenedTail.startsWith(compound)) {
           const id = V.currentDb.compounds[compound];
-          matches.push(id);
-          // ** Restore this compound needs to be corrected in-place
-          // const correctedCompound = normalizeCompounds(id, tail, chunk, word_i);
-          // chunk[word_i][1] = correctedCompound;
-          break;
+          // ** This cludge is to stop 'a.m.' matching with anything that begins 'am...'
+          const isValidMatch = (compound.length === 2) ?  flattenedTail.length === 2 : true;
+          // debug("^^", compound, flattenedTail, isValidMatch, V.isExactMatch)
+          if (isValidMatch) {
+            matches.push(id);
+            break;
+          }
+          //   matches.push(id);
+          // // ** Restore this compound needs to be corrected in-place
+          // // const correctedCompound = normalizeCompounds(id, tail, chunk, word_i);
+          // // chunk[word_i][1] = correctedCompound;
+          //   break;
         }
       }
       chunk[word_i].push(matches);
@@ -890,6 +903,7 @@ function findCompoundsAndFlattenArray(chunks) {
 
 function normalizeCompounds(id, tail, chunk, word_i) {
   // ** replaces the current compound with the 'correct' wordlist version, preserving initial capitalization & surrounding punctuation
+  // ** Currently not used as decided to clearly show form should be changed
   const wordlistLemma = getLemma(V.currentDb.db[id]);
   const rawCompound = chunk[word_i][1];
   const prefix = (rawCompound[0].match(C.punctuation_lite)) ? rawCompound[0] : "";
@@ -916,7 +930,7 @@ function refineLookups(textArr) {
   let processedTextArr = [];
   let wordCount = 0;
   for (let [word, rawWord, matchedCompoundsArr] of textArr) {
-    rawWord = rawWord.replace("_", ".");  // ** preserve wordlist rendering of A.M. / P.M.
+    rawWord = rawWord.replace(/_/g, ".");  // ** preserve wordlist rendering of A.M. / P.M.
     let secondPassMatchedIDs = [];
     if (!word) continue;
     if (word === EOL.text) {
@@ -925,20 +939,24 @@ function refineLookups(textArr) {
     else {
       wordCount++;
       for (const id of lookupWord(word, rawWord, matchedCompoundsArr)) {
+        if (!id) continue;
         // ** by this point, the type of all words in offlistDb have been recorded there
         // ** pure & inflected lemmas are clear by being in currentDb.db
         // ** compounds have been merged seamlessly into single-word matches
         const compoundAlreadyMatched = (matchedCompoundsArr.length && isInOfflistDb(id));
-        if (!id || compoundAlreadyMatched) continue;
+        const isNotBeVerb = (id === V.idOfAM && rawWord.toLowerCase().includes(".m."));
+        // debug(word, rawWord, id, ...matchedCompoundsArr)
+        if (compoundAlreadyMatched) continue;
+        if (isNotBeVerb) continue;
         const matchedEntry = getEntryById(id);
         if (getPoS(matchedEntry) === "contraction") wordCount--;
         secondPassMatchedIDs = pushMatch(secondPassMatchedIDs, id);
+        // debug(word, rawWord, id, ...secondPassMatchedIDs, (id === V.idOfAM && rawWord.toLowerCase().includes(".m.")))
       }
       processedTextArr.push([word, rawWord, secondPassMatchedIDs]);
     }
   }
   // ** precessedTextArr = [word, rawWord, [ [id, no. of reps], ...]]
-  // debug(processedTextArr)
   return [processedTextArr, wordCount];
 }
 
@@ -985,21 +1003,21 @@ function lookupWord(word, rawWord, matchedCompoundsArr) {
   // ** first, account for non-ascii, hyphenated words & contractions (which are listes with apostrophe to disambiguate from abbreviations, e.g. 'm = contraction, m = meter/mile)
   if (LOOKUP.symbols.includes(rawWord)) word = rawWord;
   else word = word.replace("-", "");
-  let matchedIDarr;
-  [matchedIDarr, word] = checkContractions(word, rawWord);
-  if (isEmpty(matchedIDarr)) {
-    matchedIDarr = getIdsByLemma(word);
-    matchedIDarr = checkDerivations(word, matchedIDarr);
-    // debug(JSON.stringify(matchedIDarr), word)
-    if (isEmpty(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, rawWord);
-    if (isEmpty(matchedIDarr) && isEmpty(matchedCompoundsArr)) {
-      matchedIDarr = [markOfflist(rawWord, "offlist")];
-      const offlistID = parseInt(matchedIDarr[0]);
+  let localMatchedIDarr;
+  [localMatchedIDarr, word] = checkContractions(word, rawWord);
+  if (isEmpty(localMatchedIDarr)) {
+    localMatchedIDarr = getIdsByLemma(word);
+    localMatchedIDarr = checkDerivations(word, localMatchedIDarr);
+    // debug(JSON.stringify(localMatchedIDarr), word, matchedCompoundsArr)
+    if (isEmpty(localMatchedIDarr)) localMatchedIDarr = checkNegativePrefix(word, rawWord);
+    if (isEmpty(localMatchedIDarr) && isEmpty(matchedCompoundsArr)) {
+      localMatchedIDarr = [markOfflist(rawWord, "offlist")];
+      const offlistID = parseInt(localMatchedIDarr[0]);
       checkAllowedVariants(word, rawWord, offlistID);
     }
   }
-  matchedIDarr = matchedCompoundsArr.concat(matchedIDarr);
-  return matchedIDarr;
+  localMatchedIDarr = matchedCompoundsArr.concat(localMatchedIDarr);
+  return localMatchedIDarr;
 }
 
 function idSuccessfullyMatched(idArr) {
@@ -1172,7 +1190,7 @@ function replaceLetters(word, letters, replacement) {
   return matchedIDarr;
 }
 
-function checkDerivations(word, matches = []) {
+function checkDerivations(word, preMatchedIDarr = []) {
   /*
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
@@ -1190,7 +1208,7 @@ function checkDerivations(word, matches = []) {
   regular ADVs =  happily clumsily annually finely sensibly sadly automatically
   */
   if (LOOKUP.falseDerivations.includes(word)) {
-    return matches;
+    return preMatchedIDarr;
   }
 
   // let localMatches = runChecks(word, matches);
@@ -1215,23 +1233,26 @@ function checkDerivations(word, matches = []) {
     checkRegularAdverbs,
   ]) {
     const result = guess(word);
-    debug("@", word, result, (result) ? !isEmpty(result) : "nowt")
-    // if (result && !isEmpty(result)) {
+    // debug("@", word, result, (result) ? !isEmpty(result) : "nowt")
     if (result && !isEmpty(result)) {
+    // const resultLemma = (!isEmpty(result)) ? getLemma(getEntryById(result)) : "";
+    // debug("**", result, resultLemma, LOOKUP.falseDerivations[resultLemma])
+    // if (result && !isEmpty(result) && !LOOKUP.falseDerivations[resultLemma]) {
       localMatches.push(result);
       break;
     }
   }
   // ** -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   const result = checkFinalS(word);
+  // debug(word, result)
   if (result) {
     localMatches.push(result);
   }
   if (!localMatches || isEmpty(localMatches)) {
-    return matches;
+    return preMatchedIDarr;
   }
-  matches.push(localMatches);
-  return dedupeSimpleArray(matches);
+  preMatchedIDarr.push(localMatches);
+  return dedupeSimpleArray(preMatchedIDarr);
 }
 
 // function runChecks(word, matches) {
@@ -1450,6 +1471,7 @@ function winnowPoS(roughMatches, posArr) {
     }
   }
   // if (!Array.isArray(localMatches)) localMatches = [localMatches];
+  // debug(...localMatches)
   return localMatches;
 }
 
@@ -1477,6 +1499,8 @@ function buildMarkupAsHTML(textArr) {
     [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
     if (isEOL || !word || !matches[0]) continue;
     const isContraction = getEntryById(matches[0][0])[2] == "contraction";
+    // const isAMorPM = rawWord.toLowerCase().indexOf("m_") >= 0;
+    // debug("@", wordArr, word, rawWord, ...matches, rawWord.toLowerCase().indexOf("m_") >= 0)
     const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
     isFirstWord = false;
     // ** duplicateCount = running total; totalRepeats = total
@@ -2084,11 +2108,10 @@ function isEmpty(arr) {
   // const hasContent = !!arr || arr.length;
   let hasContent;
   if (!arr) hasContent = false;
-  else if (arr && typeof arr !== "object") hasContent = true;
+  // else if (arr && typeof arr !== "object") hasContent = true;
+  else if (typeof arr !== "object") hasContent = true;
+  // else if (Array.isArray(arr)) hasContent = true;
   else hasContent = arr.length > 0;
-  // debug(arr, arr ? typeof arr : "n/a")
-  // debug(arr, !hasContent)
-  // return !arr.length;
   return !hasContent;
 }
 

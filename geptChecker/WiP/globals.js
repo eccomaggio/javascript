@@ -136,6 +136,7 @@ let V = {
   levelLimitActiveClassesArr: [],
   levelLimitRule: null,
   appHasBeenReset: true,
+  idOfAM: 0,
 }
 
 const CURSOR = {
@@ -298,6 +299,7 @@ const LOOKUP = {
     ["ves", "f"],
     ["es", "e"],
     ["es", ""],
+    ["s", ""],
   ],
 
   ly_subs: [
@@ -455,6 +457,7 @@ const LOOKUP = {
     ["ied", "y"],
     ["ed", "e"],
     ["ed", ""],
+    ["d", ""],
   ],
   // ed_subs: {
   //   _suffix: "ed",
@@ -520,7 +523,6 @@ const LOOKUP = {
     women: "woman",
     children: "child",
     oxen: "ox",
-    themes: "theme",  // ** irregular because ...?
     others: "other",  // ** irregular because it's an adj/pronoun
     // an: "a"
   },
@@ -559,6 +561,7 @@ const LOOKUP = {
     arisen: "arise",
     arose: "arise",
     ate: "eat",
+    awoken: "awake",
     babysat: "babysit",
     beaten: "beat",
     became: "become",
@@ -821,7 +824,7 @@ const LOOKUP = {
 
   // List of irregular lexical items (NOT regular derivations)
   // e.g. hardly is not derived from adj: hard
-  falseDerivations: ["inner", "outer", "lately", "hardly"],
+  falseDerivations: ["inner", "outer", "lately", "hardly", "am",],
 
   // setOfCommonNames: new Set([
   personalNames: [
