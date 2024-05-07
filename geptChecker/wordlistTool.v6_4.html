@@ -1542,6 +1542,7 @@ let V = {
   levelLimitActiveClassesArr: [],
   levelLimitRule: null,
   appHasBeenReset: true,
+  idOfAM: 0,
 }
 
 const CURSOR = {
@@ -1704,6 +1705,7 @@ const LOOKUP = {
     ["ves", "f"],
     ["es", "e"],
     ["es", ""],
+    ["s", ""],
   ],
 
   ly_subs: [
@@ -1861,6 +1863,7 @@ const LOOKUP = {
     ["ied", "y"],
     ["ed", "e"],
     ["ed", ""],
+    ["d", ""],
   ],
   // ed_subs: {
   //   _suffix: "ed",
@@ -1926,7 +1929,6 @@ const LOOKUP = {
     women: "woman",
     children: "child",
     oxen: "ox",
-    themes: "theme",  // ** irregular because ...?
     others: "other",  // ** irregular because it's an adj/pronoun
     // an: "a"
   },
@@ -1965,6 +1967,7 @@ const LOOKUP = {
     arisen: "arise",
     arose: "arise",
     ate: "eat",
+    awoken: "awake",
     babysat: "babysit",
     beaten: "beat",
     became: "become",
@@ -2227,7 +2230,7 @@ const LOOKUP = {
 
   // List of irregular lexical items (NOT regular derivations)
   // e.g. hardly is not derived from adj: hard
-  falseDerivations: ["inner", "outer", "lately", "hardly"],
+  falseDerivations: ["inner", "outer", "lately", "hardly", "am",],
 
   // setOfCommonNames: new Set([
   personalNames: [
@@ -2654,170 +2657,7 @@ V.level_subs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
 
   </script>
 
-  <script data-title="upgrade.js">
-
-// ## CURSOR HANDLING ######################################
-
-function insertCursorPlaceholder(el, index) {
-  let plainText = newlinesToPlaintext(removeTags(el)).innerText;
-  const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
-  return updatedText;
-}
-
-function getCursorInfoInEl(element) {
-  let preCursorOffset = 0;
-  let preCursorOffsetNoMarks = 0;
-  let isInMark = false;
-  let sel = window.getSelection();
-  if (sel.rangeCount > 0) {
-    // ** Create a range stretching from beginning of div to cursor
-    const currentRange = sel.getRangeAt(0);
-    const preCursorRange = document.createRange();
-    preCursorRange.selectNodeContents(element);
-    preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
-    let preCursorHTML = rangeToHTML(preCursorRange);
-    preCursorHTML = newlinesToPlaintext(preCursorHTML);
-    preCursorOffset = preCursorHTML.innerText.length;
-
-    // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-    let preCursorHTMLNoMarks = removeTags(preCursorHTML);
-    preCursorOffsetNoMarks = preCursorHTMLNoMarks.innerText.length;
-  }
-  return [preCursorOffset, preCursorOffsetNoMarks];
-}
-
-function rangeToHTML(range) {
-  const nodes = document.createElement("root");
-  nodes.append(range.cloneContents());
-  return nodes;
-}
-
-function getCopyWithoutMarks(range) {
-  // Equivalent of newlinesToPlaintext(removeTags(rangeToHTML(range)))
-  const noMarksNodes = document.createElement("root");
-  noMarksNodes.append(range.cloneContents());
-  let divText = removeTags(noMarksNodes);
-  divText = newlinesToPlaintext(divText);
-  return divText;
-}
-
-
-function removeTags(node, tagName = "mark") {
-  const divTextCopy = node.cloneNode(true);
-  const marks = divTextCopy.querySelectorAll(tagName);
-  return divTextCopy;
-}
-
-function newlinesToPlaintext(divText) {
-  // ** Typing 'Enter' creates a <div>
-  const divs = divText.querySelectorAll("div");
-  for (let el of divs) {
-    el.before(` ${EOL.text} `);
-    // ** Element.before() only introduced in Chrome 54
-    // el.insertAdjacentText("beforebegin", ` ${EOL.text} `);
-  }
-  // ** Pasting in text creates <br> (so have to search for both!)
-  const EOLs = divText.querySelectorAll("br, hr");
-  for (let el of EOLs) {
-    el.textContent = ` ${EOL.text} `;
-  }
-  return divText;
-}
-
-
-function getCursorIncrement(keypress) {
-  V.cursorIncrement = 0;
-  if (V.cursorOffset < V.oldCursorOffset) V.cursorIncrement = -1;
-  if (V.cursorOffset > V.oldCursorOffset) V.cursorIncrement = 1;
-}
-
-function setCursorPos(el, textToInsert = "") {
-  if (!el) return;
-  const selectedRange = document.createRange();
-  selectedRange.setStart(el, 0);
-  if (textToInsert) {
-    const text = document.createTextNode(textToInsert);
-    selectedRange.insertNode(text);
-  }
-  selectedRange.collapse(true);
-  const selectedText = window.getSelection();
-  selectedText.removeAllRanges();
-  selectedText.addRange(selectedRange);
-  el.remove();
-  el.focus();
-}
-
-function setCursorPosSafely(el, isStart = true) {
-  if (!el) return;
-  const selectedRange = document.createRange();
-  selectedRange.selectNode(el);
-  const pos = (isStart) ? true : false;
-  selectedRange.collapse(pos);
-  const selectedText = window.getSelection();
-  selectedText.removeAllRanges();
-  selectedText.addRange(selectedRange);
-  el.focus();
-}
-
-function updateCursorPos(e) {
-  const keypress = e.key;
-  if (!keypress) return;
-  // V.refreshRequired = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
-  // if (V.refreshRequired) signalRefreshNeeded("on");
-  if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
-  V.oldCursorOffset = V.cursorOffset;
-  // let isInMark;
-  [
-    V.cursorOffset,
-    V.cursorOffsetNoMarks,
-  ] = getCursorInfoInEl(HTM.workingDiv);
-  getCursorIncrement(keypress)
-}
-
-function signalRefreshNeeded(mode) {
-  if (mode === "on") {
-    V.refreshRequired = true;
-    HTM.workingDiv.style.backgroundColor = "ivory";
-    HTM.textTabTag.style.fontStyle = "italic";
-  }
-  else {
-    HTM.workingDiv.style.backgroundColor = "white";
-    HTM.textTabTag.style.fontStyle = "normal";
-    V.refreshRequired = false;
-    // clearTimeout(V.timer);
-    // V.timer = null;
-  }
-}
-
-function normalizeTextForClipboard(e) {
-  if (!e) {
-    e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
-  }
-  const sel = document.getSelection();
-  let copiedText = sel.getRangeAt(0);
-  let normalizedText = getCopyWithoutMarks(copiedText);
-  normalizedText = normalizedText.innerText;
-  normalizedText = EOLsToNewlines(normalizedText);
-  e.clipboardData.setData("text/plain", normalizedText);
-  e.preventDefault();
-}
-
-function EOLsToNewlines(text) {
-  const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
-  const noEOLs = text.replace(re, "\n");
-  return noEOLs;
-}
-
-function newlinesToEOLs(text) {
-  return text.replace("\n", " " + EOL.text + " ");
-}
-
-function forceUpdateInputDiv() {
-  V.refreshRequired = true;
-  updateInputDiv();
-  // V.refreshRequested = false;
-}
-  </script>
+  <!-- <script src="upgrade.js"></script> -->
 
   <script data-title="main.js">
 // "use strict";
@@ -3556,6 +3396,7 @@ function updateInputDiv(e) {
 
 function getRevisedText() {
   let revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
+  // debug(JSON.stringify(revisedText))
   return revisedText;
 }
 
@@ -3579,6 +3420,7 @@ function displayWorkingText(html) {
 
 function processText(rawText) {
   signalRefreshNeeded("off");
+  V.idOfAM = getIdsByLemma("am")[0];
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -3595,6 +3437,7 @@ function processText(rawText) {
   const text = normalizeRawText(rawText);
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
+  // debug(JSON.stringify(flatTextArr))
   const [resultsAsTextArr, wordCount] = refineLookups(flatTextArr);
   const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
   const repeatsAsHTML = buildRepeatList(wordCount);
@@ -3664,15 +3507,18 @@ function normalizeRawText(text) {
 function splitTextIntoPhrases(text) {
   // ** used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
   text = text.trim();
-  text = text.replace(/(p|a)\.(m)\./gi, "$1_$2_");  // ** to protect wordlist version of am/pm
+  text = text.replace(/\.{3}/g, "___"); // ** to protect ellipses (...)
+  text = text.replace(/(p|a)\.(m)\./gi, "$1_$2_.");  // ** to protect wordlist version of A.M / P.M.
   // ** separate out digits
   // ** should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
   text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^");
   // ** break at punctuation (include with digit)
   text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
   text = text.replace(/\^{4,}/g, "^^");
+  text = text.replace(/_\./g, "_"); // ** also to protect wordlist version of A.M. / P.M.
   text = text.split(/\s?\^\^\s?/);
   text = text.filter(el => el !== '');
+  // debug("!!", JSON.stringify(text))
   return text;
 }
 
@@ -3694,11 +3540,18 @@ function findCompoundsAndFlattenArray(chunks) {
       for (const compound in V.currentDb.compounds) {
         if (flattenedTail.startsWith(compound)) {
           const id = V.currentDb.compounds[compound];
-          matches.push(id);
-          // ** Restore this compound needs to be corrected in-place
-          // const correctedCompound = normalizeCompounds(id, tail, chunk, word_i);
-          // chunk[word_i][1] = correctedCompound;
-          break;
+          // ** This cludge is to stop 'a.m.' matching with anything that begins 'am...'
+          const isValidMatch = (compound.length === 2) ?  flattenedTail.length === 2 : true;
+          // debug("^^", compound, flattenedTail, isValidMatch, V.isExactMatch)
+          if (isValidMatch) {
+            matches.push(id);
+            break;
+          }
+          //   matches.push(id);
+          // // ** Restore this compound needs to be corrected in-place
+          // // const correctedCompound = normalizeCompounds(id, tail, chunk, word_i);
+          // // chunk[word_i][1] = correctedCompound;
+          //   break;
         }
       }
       chunk[word_i].push(matches);
@@ -3712,6 +3565,7 @@ function findCompoundsAndFlattenArray(chunks) {
 
 function normalizeCompounds(id, tail, chunk, word_i) {
   // ** replaces the current compound with the 'correct' wordlist version, preserving initial capitalization & surrounding punctuation
+  // ** Currently not used as decided to clearly show form should be changed
   const wordlistLemma = getLemma(V.currentDb.db[id]);
   const rawCompound = chunk[word_i][1];
   const prefix = (rawCompound[0].match(C.punctuation_lite)) ? rawCompound[0] : "";
@@ -3738,7 +3592,7 @@ function refineLookups(textArr) {
   let processedTextArr = [];
   let wordCount = 0;
   for (let [word, rawWord, matchedCompoundsArr] of textArr) {
-    rawWord = rawWord.replace("_", ".");  // ** preserve wordlist rendering of A.M. / P.M.
+    rawWord = rawWord.replace(/_/g, ".");  // ** preserve wordlist rendering of A.M. / P.M.
     let secondPassMatchedIDs = [];
     if (!word) continue;
     if (word === EOL.text) {
@@ -3747,20 +3601,24 @@ function refineLookups(textArr) {
     else {
       wordCount++;
       for (const id of lookupWord(word, rawWord, matchedCompoundsArr)) {
+        if (!id) continue;
         // ** by this point, the type of all words in offlistDb have been recorded there
         // ** pure & inflected lemmas are clear by being in currentDb.db
         // ** compounds have been merged seamlessly into single-word matches
         const compoundAlreadyMatched = (matchedCompoundsArr.length && isInOfflistDb(id));
-        if (!id || compoundAlreadyMatched) continue;
+        const isNotBeVerb = (id === V.idOfAM && rawWord.toLowerCase().includes(".m."));
+        // debug(word, rawWord, id, ...matchedCompoundsArr)
+        if (compoundAlreadyMatched) continue;
+        if (isNotBeVerb) continue;
         const matchedEntry = getEntryById(id);
         if (getPoS(matchedEntry) === "contraction") wordCount--;
         secondPassMatchedIDs = pushMatch(secondPassMatchedIDs, id);
+        // debug(word, rawWord, id, ...secondPassMatchedIDs, (id === V.idOfAM && rawWord.toLowerCase().includes(".m.")))
       }
       processedTextArr.push([word, rawWord, secondPassMatchedIDs]);
     }
   }
   // ** precessedTextArr = [word, rawWord, [ [id, no. of reps], ...]]
-  // debug(processedTextArr)
   return [processedTextArr, wordCount];
 }
 
@@ -3807,21 +3665,21 @@ function lookupWord(word, rawWord, matchedCompoundsArr) {
   // ** first, account for non-ascii, hyphenated words & contractions (which are listes with apostrophe to disambiguate from abbreviations, e.g. 'm = contraction, m = meter/mile)
   if (LOOKUP.symbols.includes(rawWord)) word = rawWord;
   else word = word.replace("-", "");
-  let matchedIDarr;
-  [matchedIDarr, word] = checkContractions(word, rawWord);
-  if (isEmpty(matchedIDarr)) {
-    matchedIDarr = getIdsByLemma(word);
-    matchedIDarr = checkDerivations(word, matchedIDarr);
-    // debug(JSON.stringify(matchedIDarr), word)
-    if (isEmpty(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, rawWord);
-    if (isEmpty(matchedIDarr) && isEmpty(matchedCompoundsArr)) {
-      matchedIDarr = [markOfflist(rawWord, "offlist")];
-      const offlistID = parseInt(matchedIDarr[0]);
+  let localMatchedIDarr;
+  [localMatchedIDarr, word] = checkContractions(word, rawWord);
+  if (isEmpty(localMatchedIDarr)) {
+    localMatchedIDarr = getIdsByLemma(word);
+    localMatchedIDarr = checkDerivations(word, localMatchedIDarr);
+    // debug(JSON.stringify(localMatchedIDarr), word, matchedCompoundsArr)
+    if (isEmpty(localMatchedIDarr)) localMatchedIDarr = checkNegativePrefix(word, rawWord);
+    if (isEmpty(localMatchedIDarr) && isEmpty(matchedCompoundsArr)) {
+      localMatchedIDarr = [markOfflist(rawWord, "offlist")];
+      const offlistID = parseInt(localMatchedIDarr[0]);
       checkAllowedVariants(word, rawWord, offlistID);
     }
   }
-  matchedIDarr = matchedCompoundsArr.concat(matchedIDarr);
-  return matchedIDarr;
+  localMatchedIDarr = matchedCompoundsArr.concat(localMatchedIDarr);
+  return localMatchedIDarr;
 }
 
 function idSuccessfullyMatched(idArr) {
@@ -3994,7 +3852,7 @@ function replaceLetters(word, letters, replacement) {
   return matchedIDarr;
 }
 
-function checkDerivations(word, matches = []) {
+function checkDerivations(word, preMatchedIDarr = []) {
   /*
   returns => array of matched ids
   NB. always returns a match, even if it is just "offlist"
@@ -4012,7 +3870,7 @@ function checkDerivations(word, matches = []) {
   regular ADVs =  happily clumsily annually finely sensibly sadly automatically
   */
   if (LOOKUP.falseDerivations.includes(word)) {
-    return matches;
+    return preMatchedIDarr;
   }
 
   // let localMatches = runChecks(word, matches);
@@ -4037,23 +3895,26 @@ function checkDerivations(word, matches = []) {
     checkRegularAdverbs,
   ]) {
     const result = guess(word);
-    debug("@", word, result, (result) ? !isEmpty(result) : "nowt")
-    // if (result && !isEmpty(result)) {
+    // debug("@", word, result, (result) ? !isEmpty(result) : "nowt")
     if (result && !isEmpty(result)) {
+    // const resultLemma = (!isEmpty(result)) ? getLemma(getEntryById(result)) : "";
+    // debug("**", result, resultLemma, LOOKUP.falseDerivations[resultLemma])
+    // if (result && !isEmpty(result) && !LOOKUP.falseDerivations[resultLemma]) {
       localMatches.push(result);
       break;
     }
   }
   // ** -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   const result = checkFinalS(word);
+  // debug(word, result)
   if (result) {
     localMatches.push(result);
   }
   if (!localMatches || isEmpty(localMatches)) {
-    return matches;
+    return preMatchedIDarr;
   }
-  matches.push(localMatches);
-  return dedupeSimpleArray(matches);
+  preMatchedIDarr.push(localMatches);
+  return dedupeSimpleArray(preMatchedIDarr);
 }
 
 // function runChecks(word, matches) {
@@ -4272,6 +4133,7 @@ function winnowPoS(roughMatches, posArr) {
     }
   }
   // if (!Array.isArray(localMatches)) localMatches = [localMatches];
+  // debug(...localMatches)
   return localMatches;
 }
 
@@ -4299,6 +4161,8 @@ function buildMarkupAsHTML(textArr) {
     [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
     if (isEOL || !word || !matches[0]) continue;
     const isContraction = getEntryById(matches[0][0])[2] == "contraction";
+    // const isAMorPM = rawWord.toLowerCase().indexOf("m_") >= 0;
+    // debug("@", wordArr, word, rawWord, ...matches, rawWord.toLowerCase().indexOf("m_") >= 0)
     const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
     isFirstWord = false;
     // ** duplicateCount = running total; totalRepeats = total
@@ -4906,11 +4770,10 @@ function isEmpty(arr) {
   // const hasContent = !!arr || arr.length;
   let hasContent;
   if (!arr) hasContent = false;
-  else if (arr && typeof arr !== "object") hasContent = true;
+  // else if (arr && typeof arr !== "object") hasContent = true;
+  else if (typeof arr !== "object") hasContent = true;
+  // else if (Array.isArray(arr)) hasContent = true;
   else hasContent = arr.length > 0;
-  // debug(arr, arr ? typeof arr : "n/a")
-  // debug(arr, !hasContent)
-  // return !arr.length;
   return !hasContent;
 }
 
@@ -5018,6 +4881,168 @@ function displayInputCursor() {
 // ## IN-PLACE EDITING CODE######################################
 // currently in upgrade.js
 
+// ## CURSOR HANDLING ######################################
+
+function insertCursorPlaceholder(el, index) {
+  let plainText = newlinesToPlaintext(removeTags(el)).innerText;
+  const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
+  return updatedText;
+}
+
+function getCursorInfoInEl(element) {
+  let preCursorOffset = 0;
+  let preCursorOffsetNoMarks = 0;
+  let isInMark = false;
+  let sel = window.getSelection();
+  if (sel.rangeCount > 0) {
+    // ** Create a range stretching from beginning of div to cursor
+    const currentRange = sel.getRangeAt(0);
+    const preCursorRange = document.createRange();
+    preCursorRange.selectNodeContents(element);
+    preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
+    let preCursorHTML = rangeToHTML(preCursorRange);
+    preCursorHTML = newlinesToPlaintext(preCursorHTML);
+    preCursorOffset = preCursorHTML.innerText.length;
+
+    // ** Make a copy of this and remove <mark> (i.e. additional) tag content
+    let preCursorHTMLNoMarks = removeTags(preCursorHTML);
+    preCursorOffsetNoMarks = preCursorHTMLNoMarks.innerText.length;
+  }
+  return [preCursorOffset, preCursorOffsetNoMarks];
+}
+
+function rangeToHTML(range) {
+  const nodes = document.createElement("root");
+  nodes.append(range.cloneContents());
+  return nodes;
+}
+
+function getCopyWithoutMarks(range) {
+  // Equivalent of newlinesToPlaintext(removeTags(rangeToHTML(range)))
+  const noMarksNodes = document.createElement("root");
+  noMarksNodes.append(range.cloneContents());
+  let divText = removeTags(noMarksNodes);
+  divText = newlinesToPlaintext(divText);
+  return divText;
+}
+
+
+function removeTags(node, tagName = "mark") {
+  const divTextCopy = node.cloneNode(true);
+  const marks = divTextCopy.querySelectorAll(tagName);
+  return divTextCopy;
+}
+
+function newlinesToPlaintext(divText) {
+  // ** Typing 'Enter' creates a <div>
+  const divs = divText.querySelectorAll("div");
+  for (let el of divs) {
+    el.before(` ${EOL.text} `);
+    // ** Element.before() only introduced in Chrome 54
+    // el.insertAdjacentText("beforebegin", ` ${EOL.text} `);
+  }
+  // ** Pasting in text creates <br> (so have to search for both!)
+  const EOLs = divText.querySelectorAll("br, hr");
+  for (let el of EOLs) {
+    el.textContent = ` ${EOL.text} `;
+  }
+  return divText;
+}
+
+
+function getCursorIncrement(keypress) {
+  V.cursorIncrement = 0;
+  if (V.cursorOffset < V.oldCursorOffset) V.cursorIncrement = -1;
+  if (V.cursorOffset > V.oldCursorOffset) V.cursorIncrement = 1;
+}
+
+function setCursorPos(el, textToInsert = "") {
+  if (!el) return;
+  const selectedRange = document.createRange();
+  selectedRange.setStart(el, 0);
+  if (textToInsert) {
+    const text = document.createTextNode(textToInsert);
+    selectedRange.insertNode(text);
+  }
+  selectedRange.collapse(true);
+  const selectedText = window.getSelection();
+  selectedText.removeAllRanges();
+  selectedText.addRange(selectedRange);
+  el.remove();
+  el.blur()
+  el.focus();
+}
+
+function setCursorPosSafely(el, isStart = true) {
+  if (!el) return;
+  const selectedRange = document.createRange();
+  selectedRange.selectNode(el);
+  const pos = (isStart) ? true : false;
+  selectedRange.collapse(pos);
+  const selectedText = window.getSelection();
+  selectedText.removeAllRanges();
+  selectedText.addRange(selectedRange);
+  el.focus();
+}
+
+function updateCursorPos(e) {
+  const keypress = e.key;
+  if (!keypress) return;
+  // V.refreshRequired = (["Backspace", "Enter"].includes(keypress) || keypress.length === 1);
+  // if (V.refreshRequired) signalRefreshNeeded("on");
+  if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
+  V.oldCursorOffset = V.cursorOffset;
+  // let isInMark;
+  [
+    V.cursorOffset,
+    V.cursorOffsetNoMarks,
+  ] = getCursorInfoInEl(HTM.workingDiv);
+  getCursorIncrement(keypress)
+}
+
+function signalRefreshNeeded(mode) {
+  if (mode === "on") {
+    V.refreshRequired = true;
+    HTM.workingDiv.style.backgroundColor = "ivory";
+    HTM.textTabTag.style.fontStyle = "italic";
+  }
+  else {
+    HTM.workingDiv.style.backgroundColor = "white";
+    HTM.textTabTag.style.fontStyle = "normal";
+    V.refreshRequired = false;
+    // clearTimeout(V.timer);
+    // V.timer = null;
+  }
+}
+
+function normalizeTextForClipboard(e) {
+  if (!e) {
+    e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
+  }
+  const sel = document.getSelection();
+  let copiedText = sel.getRangeAt(0);
+  let normalizedText = getCopyWithoutMarks(copiedText);
+  normalizedText = normalizedText.innerText;
+  normalizedText = EOLsToNewlines(normalizedText);
+  e.clipboardData.setData("text/plain", normalizedText);
+  e.preventDefault();
+}
+
+function EOLsToNewlines(text) {
+  const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+  const noEOLs = text.replace(re, "\n");
+  return noEOLs;
+}
+
+function newlinesToEOLs(text) {
+  return text.replace("\n", " " + EOL.text + " ");
+}
+
+function forceUpdateInputDiv() {
+  V.refreshRequired = true;
+  updateInputDiv();
+  // V.refreshRequested = false;
+}
   </script>
 
 
