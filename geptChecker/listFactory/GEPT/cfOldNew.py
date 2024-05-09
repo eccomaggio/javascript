@@ -154,7 +154,8 @@ def main():
     new_list = return_list_from_json_file("./dbGEPT.json")
     new_lemmas = [entry[C.LEMMA.value] for entry in new_list]
 
-    old_list = return_list_from_json_file("./PRIOR.dbGEPT.json")
+    # old_list = return_list_from_json_file("./PRIOR.dbGEPT.json")
+    old_list = return_list_from_json_file("./previous_versions/UR.dbGEPT.json")
     old_lemmas = [entry[C.LEMMA.value] for entry in old_list]
 
     not_in_new = [entry for entry in old_lemmas if entry not in new_lemmas]
