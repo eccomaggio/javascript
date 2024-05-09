@@ -300,7 +300,8 @@ def normalize_cols(list):
 
 
 def main():
-    raw_gept = return_separated_file_as_list("GEPTwordlist(updated2024).tsv")
+    # raw_gept = return_separated_file_as_list("GEPTwordlist(updated2024).tsv")
+    raw_gept = return_separated_file_as_list("GEPTwordlist.latest.tsv")
     raw_gept.pop(0) ## Remove header line
     gept_list = normalize_cols(raw_gept)
     gept_list.insert(0,

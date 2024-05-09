@@ -232,7 +232,6 @@
 
     [placeholder]:empty::before {
       content: attr(placeholder);
-      /* color: #555;  */
       color: var(--dark);
     }
 
@@ -286,7 +285,8 @@
     /* ## wide-screen version ############################################## */
 
     @media (min-width: 600px) {
-      #container {
+      /* #container { */
+      .tab-content {
         flex-direction: row;
       }
 
@@ -296,7 +296,8 @@
         cursor: col-resize;
       }
 
-      .tab-content {
+      /* .tab-content { */
+      tab-content {
         flex-direction: row;
       }
 

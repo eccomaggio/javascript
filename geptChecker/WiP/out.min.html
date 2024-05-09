@@ -127,7 +127,7 @@
                 <label for="t1_level_i">int.
                   <input type="checkbox" name="level" id="t1_level_i" value="1">
                 </label>
-                <label for="t1_level_h">hi-Int.
+                <label for="t1_level_h">hi-int.
                   <input type="checkbox" name="level" id="t1_level_h" value="2">
                 </label>
               </div>
@@ -262,36 +262,36 @@
       <div class="tab-content" style="display: flex;"> -->
       </tab-content>
       <tab-content style="display: flex;">
-        <div id="container">
-          <div id="left-top">
-            <div id="t2_raw_text" contenteditable="true" spellcheck="false"
-              placeholder="Paste or type text here. (Choose Settings/manual-refresh if you have a lot of text.)"></div>
+        <!-- <div id="container"> -->
+        <div id="left-top">
+          <div id="t2_raw_text" contenteditable="true" spellcheck="false"
+            placeholder="Paste or type text here. (Choose Settings/manual-refresh if you have a lot of text.)"></div>
+        </div>
+        <div id="separator">&nbsp;</div>
+        <div id="right-bot">
+          <div id="t2_final_legend"></div>
+          <div id="t2_help">
+            <details class='instructions' id="help-details">
+              <summary class='in-list-header'>HELP</summary>
+              <ul id="help-all">
+                <li id="help-gept">
+                  <span class='level-e'>elem (A2)</span>,
+                  <span class='level-i'>int (B1)</span>,
+                  <span class='level-h'>hi-int (B2)</span>
+                </li>
+                <li id="help-kids"><span class='level-k'>on-list</span></li>
+                <li id="help-offlist"><span class='level-o' id='l-o'>off-list</span></li>
+                <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
+                <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid"</li>
+                <li id="help-awl"><span class='awl-word'>dotted underline</span> = AWL word</li>
+                <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
+                <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above</li>
+              </ul>
+            </details>
           </div>
-          <div id="separator">&nbsp;</div>
-          <div id="right-bot">
-            <div id="t2_final_legend"></div>
-            <div id="t2_help">
-              <details class='instructions' id="help-details">
-                <summary class='in-list-header'>HELP</summary>
-                <ul id="help-all">
-                  <li id="help-gept">
-                    <span class='level-e'>elem (A2)</span>,
-                    <span class='level-i'>int (B1)</span>,
-                    <span class='level-h'>hi-int (B2)</span>
-                  </li>
-                  <li id="help-kids"><span class='level-k'>on-list</span></li>
-                  <li id="help-offlist"><span class='level-o' id='l-o'>off-list</span></li>
-                  <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
-                  <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid"</li>
-                  <li id="help-awl"><span class='awl-word'>dotted underline</span> = AWL word</li>
-                  <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
-                  <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above</li>
-                </ul>
-              </details>
-            </div>
-            <div id="t2_final_info"></div>
-            <div id="t2_repeats_list"></div>
-          </div>
+          <div id="t2_final_info"></div>
+          <div id="t2_repeats_list"></div>
+        </div>
       </tab-content>
     </tab-body>
   </tab-group>
