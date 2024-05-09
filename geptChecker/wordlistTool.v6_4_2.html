@@ -1225,10 +1225,10 @@
                 <li id="help-kids"><span class='level-k'>on-list</span></li>
                 <li id="help-offlist"><span class='level-o' id='l-o'>off-list</span></li>
                 <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
-                <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid"</li>
+                <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid</li>
                 <li id="help-awl"><span class='awl-word'>dotted underline</span> = AWL word</li>
                 <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
-                <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above</li>
+                <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above;<br>click again to remove</li>
               </ul>
             </details>
           </div>
@@ -1242,7 +1242,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    const versionNumber = "6-4.1";
+    const versionNumber = "6-4.2";
     const versionDetails = "New GEPT wordlist; edits 'in place'; advises on preferred spellings; recognizes negative prefixes and superfluous hyphens; custom level strike-through";
     const versionInfo = document.getElementById("version-no");
     versionInfo.innerHTML = `Version ${versionNumber}`;
@@ -1687,18 +1687,6 @@ const LOOKUP = {
   // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
 
   // ## plural nouns, 3rd person present verbs
-  // s_subs: {
-  //   _suffix: "s",
-  //   ies: "y",
-  //   oes: "o",
-  //   ves: "fe",
-  //   ves: "f",
-  //   // ses: "sis",
-  //   es: "",
-  //   es: "e",
-  //   //s: ""
-  // },
-
   s_subs: [
     ["ies", "y"],
     ["oes", "o"],
@@ -1718,15 +1706,6 @@ const LOOKUP = {
     ["ly", ""],
   ],
 
-  // ## adverbs
-  // ly_subs: {
-  //   _suffix: "ly",
-  //   ily: "y",
-  //   lly: "l",
-  //   ely: "e",
-  //   ically: "ic",
-  //   bly: "ble",
-  // },
 
   // ## gerunds
   ing_subs: [
@@ -1749,26 +1728,6 @@ const LOOKUP = {
     ["ing", ""],
     ],
 
-  // ing_subs: {
-  //   _suffix: "ing",
-  //   bbing: "b",
-  //   dding: "d",
-  //   ffing: "f",
-  //   gging: "g",
-  //   lling: "l",
-  //   mming: "m",
-  //   nning: "n",
-  //   pping: "p",
-  //   rring: "r",
-  //   ssing: "s",
-  //   tting: "t",
-  //   vving: "v",
-  //   zzing: "z",
-  //   ying: "ie",
-  //   cking: "c",
-  //   ing: "e",
-  // },
-
 
   // ## superlative adjs
   est_subs: [
@@ -1789,24 +1748,6 @@ const LOOKUP = {
     ["est", "e"],
     ["est", ""],
     ],
-  // est_subs: {
-  //   _suffix: "est",
-  //   bbest: "b",
-  //   ddest: "d",
-  //   ffest: "f",
-  //   ggest: "g",
-  //   llest: "l",
-  //   mmest: "m",
-  //   nnerst: "n",
-  //   ppest: "p",
-  //   rrest: "r",
-  //   ssest: "s",
-  //   ttest: "t",
-  //   vvest: "v",
-  //   zzest: "z",
-  //   iest: "y",
-  //   est: "e",
-  // },
 
   // ## comparative adjs & agent nouns? (good idea??)
   er_subs: [
@@ -1827,24 +1768,6 @@ const LOOKUP = {
     ["er", "e"],
     ["er", ""],
     ],
-  // er_subs: {
-  //   _suffix: "er",
-  //   bber: "b",
-  //   dder: "d",
-  //   ffer: "f",
-  //   gger: "g",
-  //   ller: "l",
-  //   mmer: "m",
-  //   nner: "n",
-  //   pper: "p",
-  //   rrer: "r",
-  //   sser: "s",
-  //   tter: "t",
-  //   vver: "v",
-  //   zzer: "z",
-  //   ier: "y",
-  //   er: "e",
-  // },
 
   // ## regular past -ed endings
   ed_subs: [
@@ -1866,32 +1789,11 @@ const LOOKUP = {
     ["ed", ""],
     ["d", ""],
   ],
-  // ed_subs: {
-  //   _suffix: "ed",
-  //   bbed: "b",
-  //   dded: "d",
-  //   ffed: "f",
-  //   gged: "g",
-  //   lled: "l",
-  //   mmed: "m",
-  //   nned: "n",
-  //   pped: "p",
-  //   rred: "r",
-  //   ssed: "s",
-  //   tted: "t",
-  //   vved: "v",
-  //   zzed: "z",
-  //   ied: "y",
-  //   ed: "e",
-  // },
 
   prefixes: [
     "un", "in", "im", "il", "ir",
   ],
 
-  // lose_hyphens: [
-  //   'break-up', 'cell-phone', 'check-up', 'clean-up', 'come-down', 'co-operate', 'co-operation', 'co-operative', 'co-ordinate', 'e-mail', 'good-bye', 'hard-working', 'line-up', 'long-time', 'make-up', 'non-stop', 'non-violent', 'north-east', 'north-west', 'over-weight', 'pick-up', 'post-war', 'set-up', 'team-mate', 'time-out',
-  // ],
 
   foreign_plurals: [
     ["ae", "a"],
@@ -2607,17 +2509,18 @@ const LOOKUP = {
     p: "page:penny",
   },
 
-  variantSuffixes: {
-    enc: "ense",    // licence
-    // e: "",
-    r: "er",        // centre
-    is: "ize",      // organise
-    is: "ice",      // practise
-    lys: "lyze",    // analyse
-    ogu: "og",      // dialogue
-    eabl: "able",   // likeable
-    ward: "ward",   //  downwards
-  },
+
+  variantSuffixes: [
+    ["enc", "ense"],    // licence
+    // ["e", ""],
+    ["r", "er"],        // centre
+    ["is", "ize"],      // organise
+    ["is", "ice"],      // practise
+    ["lys", "lyze"],    // analyse
+    ["ogu", "og"],      // dialogue
+    ["eabl", "able"],   // likeable
+    ["ward", "ward"],   //  downwards
+  ],
 
   variantLetters: [
     ["ou", "o"],
@@ -3783,28 +3686,30 @@ function checkAbbreviations(word) {
   return matchIDarr;
 }
 
+
 function checkVariantSuffixes(word) {
-  let match;
+  let localMatches = [];
   let matchIDarr = [];
   if (word.endsWith("s")) word = word.slice(0, -1);
   else if (word.endsWith("d")) word = word.slice(0, -1);
   else if (word.endsWith("ing")) word = word.slice(0, -3);
   if (word.endsWith("e")) word = word.slice(0, -1);
-  for (const key of Object.keys(LOOKUP.variantSuffixes)) {
-    const len = key.length;
+  for (const [variant, replacement] of LOOKUP.variantSuffixes) {
+    const len = variant.length;
     const root = word.slice(0, -len);
     const suffix = word.slice(-len);
-    if (key === suffix) {
-      match = root + LOOKUP.variantSuffixes[suffix];
-      break;
+    if (variant === suffix) {
+      localMatches.push(root + replacement);
     }
   }
-  if (match) {
-    matchIDarr = getIdsByLemma(match);
+  if (!isEmpty(localMatches)) {
+    for (const match of localMatches) {
+      const variant = getIdsByLemma(match);
+      if (variant) matchIDarr.push(...variant);
+    }
   }
   return matchIDarr;
 }
-
 
 
 function checkVariantHyphens(word, rawWord) {

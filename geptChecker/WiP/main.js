@@ -1121,28 +1121,30 @@ function checkAbbreviations(word) {
   return matchIDarr;
 }
 
+
 function checkVariantSuffixes(word) {
-  let match;
+  let localMatches = [];
   let matchIDarr = [];
   if (word.endsWith("s")) word = word.slice(0, -1);
   else if (word.endsWith("d")) word = word.slice(0, -1);
   else if (word.endsWith("ing")) word = word.slice(0, -3);
   if (word.endsWith("e")) word = word.slice(0, -1);
-  for (const key of Object.keys(LOOKUP.variantSuffixes)) {
-    const len = key.length;
+  for (const [variant, replacement] of LOOKUP.variantSuffixes) {
+    const len = variant.length;
     const root = word.slice(0, -len);
     const suffix = word.slice(-len);
-    if (key === suffix) {
-      match = root + LOOKUP.variantSuffixes[suffix];
-      break;
+    if (variant === suffix) {
+      localMatches.push(root + replacement);
     }
   }
-  if (match) {
-    matchIDarr = getIdsByLemma(match);
+  if (!isEmpty(localMatches)) {
+    for (const match of localMatches) {
+      const variant = getIdsByLemma(match);
+      if (variant) matchIDarr.push(...variant);
+    }
   }
   return matchIDarr;
 }
-
 
 
 function checkVariantHyphens(word, rawWord) {

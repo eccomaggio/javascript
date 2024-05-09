@@ -280,18 +280,6 @@ const LOOKUP = {
   // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
 
   // ## plural nouns, 3rd person present verbs
-  // s_subs: {
-  //   _suffix: "s",
-  //   ies: "y",
-  //   oes: "o",
-  //   ves: "fe",
-  //   ves: "f",
-  //   // ses: "sis",
-  //   es: "",
-  //   es: "e",
-  //   //s: ""
-  // },
-
   s_subs: [
     ["ies", "y"],
     ["oes", "o"],
@@ -311,15 +299,6 @@ const LOOKUP = {
     ["ly", ""],
   ],
 
-  // ## adverbs
-  // ly_subs: {
-  //   _suffix: "ly",
-  //   ily: "y",
-  //   lly: "l",
-  //   ely: "e",
-  //   ically: "ic",
-  //   bly: "ble",
-  // },
 
   // ## gerunds
   ing_subs: [
@@ -342,26 +321,6 @@ const LOOKUP = {
     ["ing", ""],
     ],
 
-  // ing_subs: {
-  //   _suffix: "ing",
-  //   bbing: "b",
-  //   dding: "d",
-  //   ffing: "f",
-  //   gging: "g",
-  //   lling: "l",
-  //   mming: "m",
-  //   nning: "n",
-  //   pping: "p",
-  //   rring: "r",
-  //   ssing: "s",
-  //   tting: "t",
-  //   vving: "v",
-  //   zzing: "z",
-  //   ying: "ie",
-  //   cking: "c",
-  //   ing: "e",
-  // },
-
 
   // ## superlative adjs
   est_subs: [
@@ -382,24 +341,6 @@ const LOOKUP = {
     ["est", "e"],
     ["est", ""],
     ],
-  // est_subs: {
-  //   _suffix: "est",
-  //   bbest: "b",
-  //   ddest: "d",
-  //   ffest: "f",
-  //   ggest: "g",
-  //   llest: "l",
-  //   mmest: "m",
-  //   nnerst: "n",
-  //   ppest: "p",
-  //   rrest: "r",
-  //   ssest: "s",
-  //   ttest: "t",
-  //   vvest: "v",
-  //   zzest: "z",
-  //   iest: "y",
-  //   est: "e",
-  // },
 
   // ## comparative adjs & agent nouns? (good idea??)
   er_subs: [
@@ -420,24 +361,6 @@ const LOOKUP = {
     ["er", "e"],
     ["er", ""],
     ],
-  // er_subs: {
-  //   _suffix: "er",
-  //   bber: "b",
-  //   dder: "d",
-  //   ffer: "f",
-  //   gger: "g",
-  //   ller: "l",
-  //   mmer: "m",
-  //   nner: "n",
-  //   pper: "p",
-  //   rrer: "r",
-  //   sser: "s",
-  //   tter: "t",
-  //   vver: "v",
-  //   zzer: "z",
-  //   ier: "y",
-  //   er: "e",
-  // },
 
   // ## regular past -ed endings
   ed_subs: [
@@ -459,32 +382,11 @@ const LOOKUP = {
     ["ed", ""],
     ["d", ""],
   ],
-  // ed_subs: {
-  //   _suffix: "ed",
-  //   bbed: "b",
-  //   dded: "d",
-  //   ffed: "f",
-  //   gged: "g",
-  //   lled: "l",
-  //   mmed: "m",
-  //   nned: "n",
-  //   pped: "p",
-  //   rred: "r",
-  //   ssed: "s",
-  //   tted: "t",
-  //   vved: "v",
-  //   zzed: "z",
-  //   ied: "y",
-  //   ed: "e",
-  // },
 
   prefixes: [
     "un", "in", "im", "il", "ir",
   ],
 
-  // lose_hyphens: [
-  //   'break-up', 'cell-phone', 'check-up', 'clean-up', 'come-down', 'co-operate', 'co-operation', 'co-operative', 'co-ordinate', 'e-mail', 'good-bye', 'hard-working', 'line-up', 'long-time', 'make-up', 'non-stop', 'non-violent', 'north-east', 'north-west', 'over-weight', 'pick-up', 'post-war', 'set-up', 'team-mate', 'time-out',
-  // ],
 
   foreign_plurals: [
     ["ae", "a"],
@@ -1200,17 +1102,18 @@ const LOOKUP = {
     p: "page:penny",
   },
 
-  variantSuffixes: {
-    enc: "ense",    // licence
-    // e: "",
-    r: "er",        // centre
-    is: "ize",      // organise
-    is: "ice",      // practise
-    lys: "lyze",    // analyse
-    ogu: "og",      // dialogue
-    eabl: "able",   // likeable
-    ward: "ward",   //  downwards
-  },
+
+  variantSuffixes: [
+    ["enc", "ense"],    // licence
+    // ["e", ""],
+    ["r", "er"],        // centre
+    ["is", "ize"],      // organise
+    ["is", "ice"],      // practise
+    ["lys", "lyze"],    // analyse
+    ["ogu", "og"],      // dialogue
+    ["eabl", "able"],   // likeable
+    ["ward", "ward"],   //  downwards
+  ],
 
   variantLetters: [
     ["ou", "o"],

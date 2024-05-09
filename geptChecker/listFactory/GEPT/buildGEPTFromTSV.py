@@ -291,13 +291,6 @@ def normalize_cols(list):
     return normalized
 
 
-# def main_OLD():
-#     # awl_list = get_full_AWL_list()
-#     gept_list = return_separated_file_as_list("./GEPTwordlist(updated2024).tsv")
-#     for id, entry in gept_list.items():
-#        print(id, entry)
-#     print(gept_list[0])
-
 
 def main():
     # raw_gept = return_separated_file_as_list("GEPTwordlist(updated2024).tsv")
