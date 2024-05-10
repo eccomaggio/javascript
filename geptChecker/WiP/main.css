@@ -192,6 +192,7 @@
     #t1_results_text,
     #t2_final_text,
     #t2_raw_text,
+    #t2_help,
     #t2_final_info {
       font-size: var(--font-size);
     }
@@ -245,7 +246,7 @@
 
     /* #t2_final_text, */
     #t2_repeats_list {
-      margin-top: 1em;
+      /* margin-top: 1em; */
       padding: 1em;
       white-space: pre-wrap;
     }
@@ -257,6 +258,10 @@
     #t2_repeats_list, #t2_final_text {
       flex-grow: 1;
     }
+
+    /* #level-stats-cols {
+      column-count: 2;
+    } */
 
     #t2_final_info {
       width: 90%;
@@ -324,12 +329,10 @@
     .level-u {
       color: var(--offlist);
       font-style: italic;
-      /* font-weight: bold; */
     }
 
     .level-h {
       color: var(--high);
-      /* font-weight: bold; */
     }
 
     .level-i {
@@ -346,6 +349,11 @@
     .level-c,
     .level-d {
       color: var(--misc);
+    }
+
+    /* awl list in general (in levelStats) */
+    .level-a {
+      color: darkgray;
     }
 
     td.level-o,
@@ -576,15 +584,24 @@
       font-size: medium;
     }
 
-    #repeats {
+    #repeats,
+    .repeats,
+    .level-stats-cols {
       /* columns: 2 auto; */
       columns: 180px;
     }
 
-    #repeats p {
+    #repeats p,
+    .repeats p,
+    .level-stats-cols p {
       line-height: normal;
       margin-top: 0;
       margin-bottom: 0;
+    }
+
+    /* where is the extra 1em padding coming from with #repeats p ??*/
+    .level-stats-cols p {
+      padding-left: 1em;
     }
 
     .anchors {
@@ -611,7 +628,8 @@
 
     .instructions {
       color: var(--dark);
-      font-size: small;
+      /* font-size: smaller; */
+      font-size: 95%;
     }
 
     .debug {

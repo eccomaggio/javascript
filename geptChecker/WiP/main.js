@@ -721,11 +721,12 @@ function updateInputDiv(e) {
   let revisedText = getRevisedText().trim();
   if (revisedText && revisedText !== CURSOR.text) {
     const [
-      resultsAsHTML,
-      repeatsAsHTML,
+      resultsHTML,
+      repeatsHTML,
+      levelStatsHTML,
       wordCount
     ] = processText(revisedText);
-    displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount);
+    displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
     HTM.finalInfoDiv.innerText = "";
     backupSave();
   } else return;
@@ -745,10 +746,10 @@ function getTextFromWorkingDiv() {
   return currentText;
 }
 
-function displayProcessedText(resultsAsHTML, repeatsAsHTML, wordCount) {
+function displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
   displayDbNameInTab2(getWordCountForDisplay(wordCount));
-  displayRepeatsList(repeatsAsHTML);
-  displayWorkingText(resultsAsHTML);
+  displayRepeatsList(repeatsHTML, levelStatsHTML);
+  displayWorkingText(resultsHTML);
 }
 
 function displayWorkingText(html) {
@@ -776,14 +777,64 @@ function processText(rawText) {
   const chunkedText = splitText(text);
   const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
   // debug(JSON.stringify(flatTextArr))
+  // debug(flatTextArr)
   const [resultsAsTextArr, wordCount] = refineLookups(flatTextArr);
-  const resultsAsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
-  const repeatsAsHTML = buildRepeatList(wordCount);
-  return [resultsAsHTML, repeatsAsHTML, wordCount];
+  // debug(resultsAsTextArr)
+  const [totalWordCount, separateLemmasCount, levelStats] = getLevelStats(resultsAsTextArr);
+  const resultsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
+  // const repeatsAsHTML = buildRepeatList(wordCount);
+  // return [resultsAsHTML, repeatsAsHTML, wordCount];
+  const repeatsHTML = buildRepeatList(totalWordCount);
+  const levelStatsHTML = buildLevelStats(separateLemmasCount, levelStats);
+  return [resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount];
 }
 
-function displayRepeatsList(listOfRepeats) {
-  HTM.repeatsList.innerHTML = listOfRepeats;
+
+function getLevelStats(textArr) {
+  const firstAppearanceOfWord = [];
+  const subsequentAppearances = [];
+  for (const entry of textArr) {
+    // if (entry.length > 1 && entry[2][0][1] === 1) {
+    const isMetaCharacter = entry.length < 2;
+    // if (entry.length > 1) {
+    if (!isMetaCharacter) {
+      let type = "";
+      const [word, rawWord, [[id, reps]]] = entry;
+      if (id < 0) {
+        const isNotWord = getOfflistEntry(id)[2] !== "offlist";
+        if (isNotWord) continue;
+        level = -1;
+      }
+      if (reps === 1) {
+        const [level, awlLevel] = (id > 0) ? getLevel(getEntryById(id)).slice(0,2) : [-1, -1];
+        const info = [word, id, level, awlLevel];
+        firstAppearanceOfWord.push(info)
+      }
+      else subsequentAppearances.push([word,id])
+    }
+  }
+  const separateLemmasCount = firstAppearanceOfWord.length;
+  // const repetitions = subsequentAppearances.length;
+  const totalWordCount = separateLemmasCount + subsequentAppearances.length;
+  let lemmasBylevel = {};
+  for (const [word, id, geptLevel, awlLevel] of firstAppearanceOfWord) {
+    // ** NB awl words are also included in the GEPT level counts
+    lemmasBylevel[geptLevel] = (lemmasBylevel[geptLevel] || 0) + 1;
+    if (awlLevel > -1) lemmasBylevel[awlLevel] = (lemmasBylevel[awlLevel] || 0) + 1;
+  }
+  let levelStats = [];
+  for (const level in lemmasBylevel) {
+    const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
+    const lemmasAtThisLevel = lemmasBylevel[level];
+    levelStats.push([level, levelText, lemmasAtThisLevel, Math.round(100 * (lemmasAtThisLevel / separateLemmasCount)) + "%"]);
+  }
+  // debug(separateLemmas, repetitions, totalWords)
+  // debug(firstAppearanceOfWord, subsequentAppearances, lemmasBylevel, levelStats)
+  return [totalWordCount, separateLemmasCount, levelStats];
+}
+
+function displayRepeatsList(listOfRepeats, levelStatsHTML) {
+  HTM.repeatsList.innerHTML = levelStatsHTML + listOfRepeats;
 }
 
 function splitText(rawText) {
@@ -829,20 +880,21 @@ function splitText(rawText) {
 
 function normalizeRawText(text) {
   return text
-    .replace(/[\u2018\u2019']/g, " '") // ## replace curly single quotes
-    .replace(/[\u201C\u201D]/g, '"')   // ## replace curly double  quotes
+    .replace(/[\u2018\u2019']/g, " '")    // replace curly single quotes
+    .replace(/[\u201C\u201D]/g, '"')      // replace curly double  quotes
     .replace(/…/g, "...")
-    .replace(/(\r\n|\r|\n)/g, "\n") // encode EOLs
+    .replace(/(\r\n|\r|\n)/g, "\n")       // encode EOLs
     .replace(/\n{2,}/g, "\n")
-    .replace(/\n/g, ` ${EOL.text} `) // encode EOLs
-    .replace(/–/g, " -- ")  // pasted in em-dashes
+    .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+    // .replace(/\n{2,}/g, ` ${EOL.text} `)  // encode EOLs
+    .replace(/–/g, " -- ")                // pasted in em-dashes
     .replace(/—/g, " - ")
-    // .replace(/(\w)\/(\w)/g, "$1 \/ $2")
-    .replace(/(\w)\/(\w)/g, "$1 / $2")
-    .replace(/\s{2,}/gm, " ");
+    .replace(/(\w)\/(\w)/g, "$1 / $2")    // insert spaces either side of slash
+    .replace(/\s{2,}/gm, " ");            //
 }
 
 function splitTextIntoPhrases(text) {
+  const tmp = text;
   // ** used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
   text = text.trim();
   text = text.replace(/\.{3}/g, "___"); // ** to protect ellipses (...)
@@ -851,12 +903,15 @@ function splitTextIntoPhrases(text) {
   // ** should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
   text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^");
   // ** break at punctuation (include with digit)
+  // text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
   text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
+  // text = text.replace(/(\^\^)\s*/gi, "$1^^");
+  // text = text.replace(/([^\d][.,;():?!"']+)\s*/gi, "$1^^");
+  // text = text.replace(/([^\s][.,;():?!"']+\w)\s*/gi, "^^$1");
   text = text.replace(/\^{4,}/g, "^^");
   text = text.replace(/_\./g, "_"); // ** also to protect wordlist version of A.M. / P.M.
   text = text.split(/\s?\^\^\s?/);
   text = text.filter(el => el !== '');
-  // debug("!!", JSON.stringify(text))
   return text;
 }
 
@@ -932,7 +987,11 @@ function refineLookups(textArr) {
   for (let [word, rawWord, matchedCompoundsArr] of textArr) {
     rawWord = rawWord.replace(/_/g, ".");  // ** preserve wordlist rendering of A.M. / P.M.
     let secondPassMatchedIDs = [];
-    if (!word) continue;
+    // if (!word) continue;
+    if (!word) {
+      debug(word, rawWord, matchedCompoundsArr)
+      // processedTextArr.push([rawWord]);
+    }
     if (word === EOL.text) {
       processedTextArr.push([word]);
     }
@@ -943,6 +1002,7 @@ function refineLookups(textArr) {
         // ** by this point, the type of all words in offlistDb have been recorded there
         // ** pure & inflected lemmas are clear by being in currentDb.db
         // ** compounds have been merged seamlessly into single-word matches
+        if (word === "i" && rawWord.includes("I")) word = "I";
         const compoundAlreadyMatched = (matchedCompoundsArr.length && isInOfflistDb(id));
         const isNotBeVerb = (id === V.idOfAM && rawWord.toLowerCase().includes(".m."));
         // debug(word, rawWord, id, ...matchedCompoundsArr)
@@ -1011,7 +1071,8 @@ function lookupWord(word, rawWord, matchedCompoundsArr) {
     // debug(JSON.stringify(localMatchedIDarr), word, matchedCompoundsArr)
     if (isEmpty(localMatchedIDarr)) localMatchedIDarr = checkNegativePrefix(word, rawWord);
     if (isEmpty(localMatchedIDarr) && isEmpty(matchedCompoundsArr)) {
-      localMatchedIDarr = [markOfflist(rawWord, "offlist")];
+      // localMatchedIDarr = [markOfflist(rawWord, "offlist")];
+      localMatchedIDarr = [markOfflist(word, "offlist")];
       const offlistID = parseInt(localMatchedIDarr[0]);
       checkAllowedVariants(word, rawWord, offlistID);
     }
@@ -1240,6 +1301,7 @@ function checkDerivations(word, preMatchedIDarr = []) {
     // const resultLemma = (!isEmpty(result)) ? getLemma(getEntryById(result)) : "";
     // debug("**", result, resultLemma, LOOKUP.falseDerivations[resultLemma])
     // if (result && !isEmpty(result) && !LOOKUP.falseDerivations[resultLemma]) {
+      // debug(word, result)
       localMatches.push(result);
       break;
     }
@@ -1253,7 +1315,7 @@ function checkDerivations(word, preMatchedIDarr = []) {
   if (!localMatches || isEmpty(localMatches)) {
     return preMatchedIDarr;
   }
-  preMatchedIDarr.push(localMatches);
+  preMatchedIDarr.push(...localMatches);
   return dedupeSimpleArray(preMatchedIDarr);
 }
 
@@ -1496,14 +1558,18 @@ function buildMarkupAsHTML(textArr) {
   let isFirstWord = true;
   let wasEOL = false;
   let isEOL = false;
+  let wasPunctuation = false;
   let wordIndex = 0;
   for (let [word, rawWord, matches] of textArr) {
     [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
-    if (isEOL || !word || !matches[0]) continue;
+    // if (isEOL || !word || !matches[0]) continue;
+    if (isEOL || !matches[0]) continue;
+    const isPunctuation = (!word) ? "([".includes(rawWord) : false;
     const isContraction = getEntryById(matches[0][0])[2] == "contraction";
-    // const isAMorPM = rawWord.toLowerCase().indexOf("m_") >= 0;
-    // debug("@", wordArr, word, rawWord, ...matches, rawWord.toLowerCase().indexOf("m_") >= 0)
-    const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
+    // const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
+    const leaveSpace = (isContraction || isFirstWord || wasEOL || wasPunctuation) ? "" : " ";
+    wasPunctuation = isPunctuation;
+    // const leaveSpace = (isContraction || isFirstWord || wasEOL || !word) ? "" : " ";
     isFirstWord = false;
     // ** duplicateCount = running total; totalRepeats = total
     let matchCount = 0;
@@ -1765,6 +1831,17 @@ function getLevelPrefix(entry) {
   return level[0];
 }
 
+function buildLevelStats(separateLemmasCount, levelStats) {
+  if (!separateLemmasCount || isKids()) return "";
+  let levelStatsHTMLstr = `<p><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></p><div class="level-stats-cols">`
+  for (const [levelID, levelText, total, percent] of levelStats.sort((a,b)=>a[0]-b[0])){
+    if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
+    else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
+  }
+  levelStatsHTMLstr = `<div id="level-stats">${levelStatsHTMLstr}</div></div>`;
+  return levelStatsHTMLstr;
+}
+
 
 function buildRepeatList(wordCount) {
   let countReps = 0;
@@ -1842,23 +1919,11 @@ function displayDbNameInTab1() {
 
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
-  HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  // HTM.finalLegend.innerHTML = `Checking against <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
+  HTM.finalLegend.innerHTML = `Checking <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
   document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:block;" : "display:none;");
   document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:block;" : "display:none;");
   document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:block;" : "display:none;");
-  // document.getElementById("help-gept").style.display = (!isKids()) ? "block" : "none";
-  // document.getElementById("help-awl").style.display = (isBESTEP()) ? "block" : "none";
-  // document.getElementById("help-awl").style.display = (isBESTEP()) ? "block" : "none";
-  // const levelInfoGEPT = "<span class='level-e'>elem (A2)</span>, <span class='level-i' id='l-i'> int (B1)</span>, <span class='level-h' id='l-h'>hi-int (B2)</span>";
-  // const levelInfoKids = "<span class='level-k'>on-list</span>";
-  // const levelInfo = (isKids()) ? levelInfoKids : levelInfoGEPT;
-  // const levelInfo2 = "<span class='level-o' id='l-o'>off-list</span>";
-  // const repeatInfo1 = "<span class='multi-diff'>double underline</span> = multiple levels";
-  // const repeatInfo2 = "superscript<sup>n</sup> = number of repetitions";
-  // const variantInfo = "<span class='variant'>wavy underline</span> = form to avoid";
-  // const refreshInfo = "To <b>refresh markup</b>, click the 'Text' tab or wait 5 seconds without typing.";
-  // const awlHelp = (isBESTEP()) ? "<li><span class='awl-word'>dotted underline</span> = AWL word</li>" : "";
-  // HTM.finalLegend.innerHTML += `<details open class='instructions'><summary class='in-list-header'>HELP</summary><ul><li>${levelInfo}</li><li>${levelInfo2}</li>${awlHelp}<li>${repeatInfo1}</li><li>${variantInfo}</li><li>${repeatInfo2}</li><li>${refreshInfo}</li></ul></details>`;
 }
 
 function getIdsByLemma(word) {

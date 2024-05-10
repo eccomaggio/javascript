@@ -452,9 +452,9 @@ const LOOKUP = {
   },
 
   irregVerb: {
-    am: "be",
-    is: "be",
-    are: "be",
+    // am: "be",
+    // is: "be",
+    // are: "be",   // these are listed as sep words in the wordlist
     were: "be",
     was: "be",
     been: "be",
