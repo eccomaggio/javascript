@@ -3377,9 +3377,7 @@ function getLevelStats(textArr) {
   const firstAppearanceOfWord = [];
   const subsequentAppearances = [];
   for (const entry of textArr) {
-    // if (entry.length > 1 && entry[2][0][1] === 1) {
     const isMetaCharacter = entry.length < 2;
-    // if (entry.length > 1) {
     if (!isMetaCharacter) {
       let type = "";
       const [word, rawWord, [[id, reps]]] = entry;
@@ -3406,14 +3404,26 @@ function getLevelStats(textArr) {
     if (awlLevel > -1) lemmasBylevel[awlLevel] = (lemmasBylevel[awlLevel] || 0) + 1;
   }
   let levelStats = [];
+  let awlCount = 0;
+  let awlEntries = 0;
   for (const level in lemmasBylevel) {
     const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
     const lemmasAtThisLevel = lemmasBylevel[level];
-    levelStats.push([level, levelText, lemmasAtThisLevel, Math.round(100 * (lemmasAtThisLevel / separateLemmasCount)) + "%"]);
+    // levelStats.push([level, levelText, lemmasAtThisLevel, Math.round(100 * (lemmasAtThisLevel / separateLemmasCount)) + "%"]);
+    levelStats.push(addLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount));
+    if (isBESTEP() && level >= 38) {
+      awlCount += lemmasAtThisLevel;
+      awlEntries++;
+    }
   }
+  if (isBESTEP() && awlEntries > 1) levelStats.push(addLevelStat(37, "<b>AWL total</b>", awlCount, separateLemmasCount));
   // debug(separateLemmas, repetitions, totalWords)
   // debug(firstAppearanceOfWord, subsequentAppearances, lemmasBylevel, levelStats)
   return [totalWordCount, separateLemmasCount, levelStats];
+}
+
+function addLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount) {
+  return [level, levelText, lemmasAtThisLevel, Math.round(100 * (lemmasAtThisLevel / separateLemmasCount)) + "%"];
 }
 
 function displayRepeatsList(listOfRepeats, levelStatsHTML) {
