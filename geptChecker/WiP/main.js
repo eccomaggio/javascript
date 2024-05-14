@@ -19,6 +19,8 @@ function init() {
   updateDropdownMenuOptions();
   visibleLevelLimitSet(true);
   setHelpState("fromSaved");
+  // setLevelState("fromSaved");
+  // setRepeatState("fromSaved");
 }
 
 function updateDropdownMenuOptions() {
@@ -29,6 +31,7 @@ function updateDropdownMenuOptions() {
 function addListeners() {
   addTabListeners();
   addMenuListeners();
+  addDetailListeners();
   addWordInputListeners();
   addEditingListeners();
 }
@@ -66,20 +69,25 @@ function addMenuListeners() {
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
-  document.getElementById("help-all").addEventListener("click", visibleLevelLimitToggle);
-  HTM.helpDetails.addEventListener("toggle", setHelpState);
+  // HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
+  // HTM.helpDetails.addEventListener("toggle", setHelpState);
+}
+
+function addDetailListeners() {
+  HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
+  HTM.help_state.addEventListener("toggle", setHelpState);
+  // HTM.level_state.addEventListener("toggle", setLevelState);
+  // HTM.repeat_state.addEventListener("toggle", setRepeatState);
 }
 
 function addEditingListeners() {
   HTM.workingDiv.addEventListener("paste", normalizePastedText);
   // ## having probs removing his event listener; leave & ignore with updateInputDiv
   // HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
-
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   HTM.workingDiv.addEventListener("keyup", updateCursorPos);
-
   setHoverEffects();
 }
 
@@ -750,6 +758,8 @@ function displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCoun
   displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsHTML, levelStatsHTML);
   displayWorkingText(resultsHTML);
+  document.getElementById("level-details").addEventListener("toggle", setLevelState);
+  document.getElementById("repeat-details").addEventListener("toggle", setRepeatState);
 }
 
 function displayWorkingText(html) {
@@ -999,7 +1009,7 @@ function refineLookups(textArr) {
     let secondPassMatchedIDs = [];
     // if (!word) continue;
     if (!word) {
-      debug(word, rawWord, matchedCompoundsArr)
+      // debug(word, rawWord, matchedCompoundsArr)
       // processedTextArr.push([rawWord]);
     }
     if (word === EOL.text) {
@@ -1755,28 +1765,61 @@ function visibleLevelLimitReset() {
   // }
 }
 
+// function setHelpState(e) {
+//   let el, mode;
+//   if (e.target) {
+//     el = e.target;
+//     mode = "toggle";
+//   } else {
+//     el = HTM.helpDetails;
+//     mode = e;
+//   }
+//   if (mode === "toggle") {
+//     V.current.help_state = (el.hasAttribute("open")) ? 1 : 0;
+//   }
+//   else {
+//     if (mode === "reset") V.current.help_state = C.DEFAULT_STATE.help_state;
+//     if (V.current.help_state) el.setAttribute("open", "")
+//     else el.removeAttribute("open");
+//   }
+//   appStateSaveItem("help_state", V.current.help_state);
+//   // debug(mode, V.current.help_state, !!V.current.help_state, el.hasAttribute("open"))
+// }
+
 function setHelpState(e) {
+  setDetailState(e, "help_state");
+}
+
+function setRepeatState(e) {
+  setDetailState(e, "repeat_state");
+}
+
+function setLevelState(e) {
+  setDetailState(e, "level_state");
+}
+
+
+function setDetailState(e, destination) {
+  // const destination = "help_state";
   let el, mode;
   if (e.target) {
     el = e.target;
     mode = "toggle";
   } else {
-    el = HTM.helpDetails;
+    el = HTM[destination];
     mode = e;
   }
   if (mode === "toggle") {
-    V.current.help_state = (el.hasAttribute("open")) ? 1 : 0;
+    V.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
   }
   else {
-    if (mode === "reset") V.current.help_state = C.DEFAULT_STATE.help_state;
-    if (V.current.help_state) el.setAttribute("open", "")
-    else el.removeAttribute("open");
+    if (mode === "reset") V.current[destination] = C.DEFAULT_STATE[destination];
+    if (V.current[destination] && el) el.setAttribute("open", "")
+    else if (el) el.removeAttribute("open");
   }
-  appStateSaveItem("help_state", V.current.help_state);
+  appStateSaveItem(destination, V.current[destination]);
   // debug(mode, V.current.help_state, !!V.current.help_state, el.hasAttribute("open"))
 }
-
-
 function renderEOLsAsHTML(word, htmlString, wasEOL) {
   const isEOL = word === EOL.text;
   if (isEOL) {
@@ -1841,17 +1884,77 @@ function getLevelPrefix(entry) {
   return level[0];
 }
 
+// function buildLevelStats(separateLemmasCount, levelStats) {
+//   if (!separateLemmasCount || isKids()) return "";
+//   let levelStatsHTMLstr = `<p><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></p><div class="level-stats-cols">`
+//   for (const [levelID, levelText, total, percent] of levelStats.sort((a,b)=>a[0]-b[0])){
+//     if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
+//     else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
+//   }
+//   levelStatsHTMLstr = `<div id="level-stats">${levelStatsHTMLstr}</div></div>`;
+//   return levelStatsHTMLstr;
+// }
+
 function buildLevelStats(separateLemmasCount, levelStats) {
   if (!separateLemmasCount || isKids()) return "";
-  let levelStatsHTMLstr = `<p><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></p><div class="level-stats-cols">`
+  let levelStatsHTMLstr = `<summary><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
   for (const [levelID, levelText, total, percent] of levelStats.sort((a,b)=>a[0]-b[0])){
     if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
     else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
   }
-  levelStatsHTMLstr = `<div id="level-stats">${levelStatsHTMLstr}</div></div>`;
+  const toggleOpen = (V.current.level_state) ? " open" : "";
+  levelStatsHTMLstr = `<details id="level-details"${toggleOpen}>${levelStatsHTMLstr}</div></details>`;
   return levelStatsHTMLstr;
 }
 
+// function buildRepeatList(wordCount) {
+//   let countReps = 0;
+//   let listOfRepeats = "";
+//   if (!wordCount) {
+//     V.tallyOfWordReps = {};
+//   } else {
+//     /* List of repeated lemmas
+//     in line with display policy, if two lemmas are identical,
+//     the id with the lowest level is linked/displayed
+//     This fits with buildMarkupAsHTML()
+//     same lemma, different rawWord: only first is displayed (i.e. 'learned (learns)')
+//     */
+//     const repeatsList = [...V.repeats].sort();
+//     let idList = [];
+//     for (const el of repeatsList) {
+//       const [word, id] = el.split(":");
+//       if (idList.includes(id)) continue;
+//       else idList.push(id);
+//       const entry = getEntryById(id);
+//       const level_arr = getLevel(entry);
+//       const isRepeated = V.tallyOfWordReps[id] > 1;
+//       const isRepeatable = !LOOKUP.repeatableWords.includes(word);
+//       const isWord = !LOOKUP.symbols.includes(word);
+//       if (isRepeated && isRepeatable && isWord) {
+//         countReps++;
+//         let anchors = "";
+//         for (let repetition = 1; repetition <= V.tallyOfWordReps[id]; repetition++) {
+//           let display = repetition;
+//           let displayClass = 'class="anchors" ';
+//           if (repetition === 1) {
+//             display = highlightAwlWord(level_arr, word);
+//             displayClass = `class="level-${getLevelPrefix(entry)}" `;
+//           }
+//           anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${repetition}'); return false;">${display}</a>`;
+//         }
+//         listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(entry)}'>${anchors}</p>`;
+//       }
+//     }
+//     let repeatsHeader;
+//     if (countReps) {
+//       repeatsHeader = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p>`
+//       listOfRepeats = `${repeatsHeader}<div id='repeats'>${listOfRepeats}</div>`;
+//     } else {
+//       listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words.</strong></p>";
+//     }
+//   }
+//   return listOfRepeats
+// }
 
 function buildRepeatList(wordCount) {
   let countReps = 0;
@@ -1893,14 +1996,16 @@ function buildRepeatList(wordCount) {
     }
     let repeatsHeader;
     if (countReps) {
-      repeatsHeader = `<p id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}:</strong><br><em>Click on word / number to jump to that occurance.</em></p>`
-      listOfRepeats = `${repeatsHeader}<div id='repeats'>${listOfRepeats}</div>`;
+      const toggleOpen = (V.current.repeat_state) ? " open" : "";
+      repeatsHeader = `<details id="repeat-details"${toggleOpen}><summary id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}</strong></summary>`;
+      listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id='repeats'>${listOfRepeats}</div></details>`;
     } else {
       listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words.</strong></p>";
     }
   }
   return listOfRepeats
 }
+
 
 function compareByLemma(a, b) {
   const lemmaA = getLemma(getEntryById(a)).toLowerCase();
@@ -2067,6 +2172,8 @@ function resetApp() {
   setDbShared(V.current.db_state);
   HTM.selectDb.value = V.current.db_state;
   setHelpState("reset");
+  // setLevelState("reset");
+  // setRepeatState("reset");
   visibleLevelLimitReset();
 }
 

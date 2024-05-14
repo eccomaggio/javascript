@@ -57,7 +57,10 @@ const HTM = {
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
-  helpDetails: document.getElementById("help-details"),
+  helpAll: document.getElementById("help-all"),
+  help_state: document.getElementById("help-details"),
+  // level_state: document.getElementById("level-details"),
+  // repeat_state: document.getElementById("repeat-details"),
 };
 
 // ## Global constants
@@ -86,6 +89,8 @@ let C = {
     tab_state: 0,
     limit_state: -1,
     help_state: 1,
+    level_state: 1,
+    repeat_state: 1,
   },
   // SAVE_DB_STATE: "db_state",
   // SAVE_ACTIVE_TAB_INDEX: "tab_state",
@@ -131,6 +136,8 @@ let V = {
     tab_state: 0,
     limit_state: -1,
     help_state: 1,
+    level_state: 1,
+    repeat_state: 1,
   },
   levelLimitStr: "",
   levelLimitActiveClassesArr: [],

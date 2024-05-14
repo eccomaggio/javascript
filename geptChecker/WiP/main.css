@@ -604,6 +604,10 @@
       padding-left: 1em;
     }
 
+    #level-details, #repeat-details {
+      padding-top: 1em;
+    }
+
     .anchors {
       font-size: smaller;
     }
