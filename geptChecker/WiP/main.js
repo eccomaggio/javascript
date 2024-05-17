@@ -758,6 +758,7 @@ function displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCoun
   displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsHTML, levelStatsHTML);
   displayWorkingText(resultsHTML);
+  // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
   document.getElementById("level-details").addEventListener("toggle", setLevelState);
   document.getElementById("repeat-details").addEventListener("toggle", setRepeatState);
 }
@@ -2319,6 +2320,8 @@ function buildCompoundsDb(dB) {
       const newCompound = splitWord.join("");
       entry[C.isCOMPOUND] = true;
       compounds[newCompound] = id;
+      // ** to catch A.M. and P.M.
+      if (/[ap]\.m\./.test(word)) compounds[word] = id;
     }
   }
   return compounds;

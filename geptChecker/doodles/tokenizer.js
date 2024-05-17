@@ -1,4 +1,4 @@
-const p1 = `I'll hope you've still remembered our brand-new things in the 1st week. \nWell, the key-point was that a $2,500.99 or 67% proportion of greenhouse gases come from the food we eat in the 1990s at 3 A.M. or 2 P.M., or 1 a.m. or thereabouts. ` //And of this food, it's red meat - principally beef, lamb and pork -- that have a brand-new impact on our global climate, much more than vegetables or even other types of meat. Clearly, the question is: how can consumers be persuaded to eat less red meat? In today's class, I'll talk about "a recent study that addresses one method of achieving just that."?`;
+const p1 = `I'll hope, Mr. Brown,  you've still remembered our brand-new things in the 1st week. \nWell, the know-how was that a $2,500.99 or 67% proportion of Senior High Schools come from the drums we eat in the 1990s at 3 A.M. or 2 P.M., or 1 a.m. or even 7pm thereabouts. ` //And of this food, it's red meat - principally beef, lamb and pork -- that have a brand-new impact on our global climate, much more than vegetables or even other types of meat. Clearly, the question is: how can consumers be persuaded to eat less red meat? In today's class, I'll talk about "a recent study that addresses one method of achieving just that."?`;
 
 const p2 = `The researchers wanted to gauge whether labeling a food as good or bad for the environment could influence the way people dine. For the study, more than 5,000 participants were shown a fast food menu and then asked to choose one item. The first group received a menu which labeled red meat items as having a "high climate impact. " The second group's menu highlighted items that had a "low climate impact, " such as chicken, fish, and vegetarian options. The menu for the third group, which was the control group, had no labels. marcus. marcus. Marcus,`;
 
@@ -131,8 +131,17 @@ const compounds = {
   "cooperative": 8840,
   "cooperatively": 8841,
   "nonconformist": 8953,
-  "nonconformity": 8954
+  "nonconformity": 8954,
+
+  "a.m.": 2,
+  "p.m.": 5232,
 }
+
+function debug(...params) {
+  console.log(`DEBUG: ${debug.caller.name}> `, params);
+  // console.log(`DEBUG:> `, params);
+}
+
 
 
 function chunkTextByRegex(text) {
@@ -150,6 +159,7 @@ function chunkTextByRegex(text) {
 
 function chunkText(text){
   text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");
+  text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");
   text = text.replaceAll("\n", " EOL ")
   let textArr = split(text);
   textArr = tokenize(textArr);
@@ -208,7 +218,7 @@ function tokenize2(textArr){
     const curr = textArr[i];
     const c_n = curr[1] + next[1];
     const p_c_n = prev[1]+c_n;
-    inPhrase = "wsc".includes(curr[1]);  // word/space/contractions
+    inPhrase = "wsc".includes(curr[1]);                  // word/space/contractions
     entry = [inPhrase];
     if (p_c_n === "waw") entry.push("+", "c");           // contractions
     else if (c_n === "$d") entry.push("+", "d");         // currency signs
@@ -223,44 +233,54 @@ function tokenize2(textArr){
 
 function tokenize3(textArr){
   // Pass 3: Merge specified chunks
+  const TOKEN = 0;    // word or punctuation
+  const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+  const isWORD = 2;   // i.e. is type "w" or "s"
+  const CMD = 3;      // + = combine with next; - = delete
+  const newTYPE = 4;  // if combining, what is new type
+
   let tmpArr = [];
   let acc = [];
   for (let el of textArr){
-    if (el[3] === "-") continue;
+    if (el[CMD] === "-") continue;
     const accumulatorEmpty = !!acc.length;
     const combineWithNext = el.length === 5;
     if (combineWithNext) {
-      if (accumulatorEmpty) acc = [acc[0]+el[0], el[4], el[2]];
-      else acc = [el[0], el[4], el[2]];
+      if (accumulatorEmpty) acc = [acc[TOKEN]+el[TOKEN], el[newTYPE], el[2]];
+      else acc = [el[TOKEN], el[newTYPE], el[isWORD]];
     }
     else {
       if (accumulatorEmpty){
-        acc = [acc[0]+el[0], acc[1], el[2]];
+        acc = [acc[TOKEN]+el[TOKEN], acc[TYPE], el[isWORD]];
         tmpArr.push(acc);
         acc = [];
       }
-      else tmpArr.push([el[0], el[1], el[2]]);
+      else tmpArr.push([el[TOKEN], el[TYPE], el[isWORD]]);
     }
   }
   return tmpArr;
 }
 
 function tokenize4(textArr){
-  // Pass 4: Mark chunks
+  // Pass 4: Mark punctuation-delimited chunks
+  const TOKEN = 0;    // word or punctuation
+  const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+  const isWORDorSPACE = 2;
+
   tmpArr = [];
   chunk = [];
   inPhrase = false;
   for (let el of textArr){
-    const newEl = [el[0], el[0].toLowerCase(), el[1], []]
-    if (!inPhrase && el[2]) {
+    const newEl = [el[TOKEN], el[TYPE]];
+    if (!inPhrase && el[isWORDorSPACE]) {
       // START
       inPhrase = true;
       chunk = [newEl];
     }
-    else if (inPhrase && !el[2]){
+    else if (inPhrase && !el[isWORDorSPACE]){
       // STOP
       inPhrase = false;
-      chunk.push(el);
+      chunk.push(newEl);
       tmpArr.push(chunk);
     }
     else {
@@ -271,50 +291,31 @@ function tokenize4(textArr){
 }
 
 function findCompoundsAndFlattenArray(chunks) {
+  // ** for each word (token[1]==="w"), search within punctuation-delimited chunk for compound match
+  const TOKEN = 0;    // word or punctuation
+  const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+
   let flatArray = [];
   for (const chunk of chunks) {
-    /* for each word, checks normalized words to end of chunk in search of compound match
-    then adds this as a match
-    "tail" is the sequence of words in a chunk (punctuation delimited block) as an array.
-    The function iterates through it, removing the first word each time
-    */
-    for (let word_i = 0; word_i <= chunk.length - 1; word_i++) {
-      if (chunk[word_i][2] === "s") {
-        word_i++;
-        continue;
-      }
-      console.log("???", chunk[word_i])
-      let tail = [];
-      for (let j = word_i; j < chunk.length; j++) {
-        tail.push(chunk[j][0])
-      }
-      let matches = [];
-      const flattenedTail = tail.join("").replace(/-/g, "");
-      for (const compound in compounds) {
-        if (flattenedTail.startsWith(compound)) {
-          const id = compounds[compound];
-          // ** This cludge is to stop 'a.m.' matching with anything that begins 'am...'
-          const isValidMatch = (compound.length === 2) ?  flattenedTail.length === 2 : true;
-          // debug("^^", compound, flattenedTail, isValidMatch, V.isExactMatch)
-          if (isValidMatch) {
-            matches.push(id);
+    for (let word = 0; word <= chunk.length - 1; word++) {
+      let match = [];
+      if (chunk[word][1] === "w") {
+        let flattenedTail = chunk.slice(word).reduce((acc, entry)=>{
+          acc.push((entry[1]==="w") ? entry[TOKEN].toLowerCase() : "");
+          return acc;
+        }, []).join("");
+        for (const compound in compounds) {
+          if (flattenedTail.startsWith(compound)) {
+            match = [compounds[compound]]
             break;
           }
         }
       }
-      chunk[word_i].push(matches);
+      flatArray.push([...chunk[word], match]);
     }
-    // ** required so that all wordArrs have matches ready for the next stage
-    chunk[chunk.length - 1].push([]);
-    flatArray.push(...chunk);
   }
   return flatArray;
 }
-
-function getType(el) {
-  return el[2];
-}
-
 
 
 let text = chunkText(p1);
