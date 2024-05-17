@@ -1,6 +1,8 @@
-const p1 = `I'll hope, Mr. Brown,  you've still remembered our brand-new things in the 1st week. \nWell, the know-how was that a $2,500.99 or 67% proportion of Senior High Schools come from the drums we eat in the 1990s at 3 A.M. or 2 P.M., or 1 a.m. or even 7pm thereabouts. ` //And of this food, it's red meat - principally beef, lamb and pork -- that have a brand-new impact on our global climate, much more than vegetables or even other types of meat. Clearly, the question is: how can consumers be persuaded to eat less red meat? In today's class, I'll talk about "a recent study that addresses one method of achieving just that."?`;
+const p1 = `"I'll hope, Mr. Brown@gmail.com,  you've still remembered our #1 brand-new things in the 1st week, such as 1+1=2?" \nWell, the know-how was that a $2,500.99 & 67% proportion of Senior High Schools come from the drums we eat in the 1990s at 3 A.M. or 2 P.M., or 1 a.m. or even 7pm thereabouts. ` //And of this food, it's red meat - principally beef, lamb and pork -- that have a brand-new impact on our global climate, much more than vegetables or even other types of meat. Clearly, the question is: how can consumers be persuaded to eat less red meat? In today's class, I'll talk about "a recent study that addresses one method of achieving just that."?`;
 
 const p2 = `The researchers wanted to gauge whether labeling a food as good or bad for the environment could influence the way people dine. For the study, more than 5,000 participants were shown a fast food menu and then asked to choose one item. The first group received a menu which labeled red meat items as having a "high climate impact. " The second group's menu highlighted items that had a "low climate impact, " such as chicken, fish, and vegetarian options. The menu for the third group, which was the control group, had no labels. marcus. marcus. Marcus,`;
+
+const p3 = `("That's why he said ['blah!']?")`;
 
 const compounds = {
   "am": 2,
@@ -139,38 +141,22 @@ const compounds = {
 
 function debug(...params) {
   console.log(`DEBUG: ${debug.caller.name}> `, params);
-  // console.log(`DEBUG:> `, params);
 }
 
 
-
-function chunkTextByRegex(text) {
-  const chop = "_";
-  let textArr;
-  text = text.replaceAll(/(\w)-(\w)/g, "$1qqqh$2")
-  text = text.replaceAll(/(\w|\d)'(\w)/g, "$1qqqx$2")
-  text = text.replaceAll(/(\b[#$£]\d)/g, "_$1");
-  text = text.replaceAll(/(\dp|s|%|¢|st|nd|rd|th)/g, "_$1");
-  text = text.replaceAll(/\s+/g, chop);
-  // textArr = text.split(/\b/);
-  textArr = text.split(chop);
-  console.log(textArr)
-}
 
 function chunkText(text){
-  text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");
-  text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");
-  text = text.replaceAll("\n", " EOL ")
   let textArr = split(text);
   textArr = tokenize(textArr);
   return textArr;
 }
+
 function split(text) {
-  let textArr;
-  textArr = text.split(/\b/);
-  // textArr = text.trim().split(/([^a-zA-Z0-9])/);
-  // console.log(textArr)
-  return(textArr);
+  text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");
+  text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");
+  text = text.replaceAll("\n", " EOL ")
+  text = text.replaceAll(/([#\$£]\d)/g, "___$1");
+  return text.split(/\___|\b/);
 }
 
 
@@ -194,6 +180,7 @@ function tokenize1(textArr) {
     else if (/\d/.test(el)) token = "d";                // digit
     else if (/[#$£]/.test(el)) token = "$";             // pre-digit punctuation (i.e. money etc.)
     else if (/[%¢]/.test(el)) token = "%";              // post-digit punctuation (i.e. money etc.)
+    else if (/[\+\-=@\*<>&]/.test(el)) token = "y";     // symbols
     else if (el === ".") token = "@";                   // punctuation digit (i.e. occurs in digits)
     else if (el === ",") token = "@";
     else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";  // punctuation
@@ -210,16 +197,14 @@ function tokenize1(textArr) {
 function tokenize2(textArr){
   // Pass 2: use context to identify tokens & assign suitability to compound search
   const max = textArr.length - 1;
-  let inPhrase;
-  let entry;
   for (let i=0; i <= max; i++){
     const prev = (i > 0) ? textArr[i-1] : [null,"-"];
     const next = (i < max) ? textArr[i+1] : [null,"-"];
     const curr = textArr[i];
     const c_n = curr[1] + next[1];
     const p_c_n = prev[1]+c_n;
-    inPhrase = "wsc".includes(curr[1]);                  // word/space/contractions
-    entry = [inPhrase];
+    // debug(...textArr[i], p_c_n)
+    let entry = [];
     if (p_c_n === "waw") entry.push("+", "c");           // contractions
     else if (c_n === "$d") entry.push("+", "d");         // currency signs
     else if (c_n === "d%") entry.push("+", "d");         // post-digit punctuation
@@ -235,27 +220,26 @@ function tokenize3(textArr){
   // Pass 3: Merge specified chunks
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
-  const isWORD = 2;   // i.e. is type "w" or "s"
-  const CMD = 3;      // + = combine with next; - = delete
-  const newTYPE = 4;  // if combining, what is new type
+  const CMD = 2;      // + = combine with next; - = delete
+  const newTYPE = 3;  // if combining, what is new type
 
   let tmpArr = [];
   let acc = [];
   for (let el of textArr){
     if (el[CMD] === "-") continue;
     const accumulatorEmpty = !!acc.length;
-    const combineWithNext = el.length === 5;
+    const combineWithNext = !!el[CMD];
     if (combineWithNext) {
-      if (accumulatorEmpty) acc = [acc[TOKEN]+el[TOKEN], el[newTYPE], el[2]];
-      else acc = [el[TOKEN], el[newTYPE], el[isWORD]];
+      if (accumulatorEmpty) acc = [acc[TOKEN]+el[TOKEN], el[newTYPE]];
+      else acc = [el[TOKEN], el[newTYPE]];
     }
     else {
       if (accumulatorEmpty){
-        acc = [acc[TOKEN]+el[TOKEN], acc[TYPE], el[isWORD]];
+        acc = [acc[TOKEN]+el[TOKEN], acc[TYPE]];
         tmpArr.push(acc);
         acc = [];
       }
-      else tmpArr.push([el[TOKEN], el[TYPE], el[isWORD]]);
+      else tmpArr.push([el[TOKEN], el[TYPE]]);
     }
   }
   return tmpArr;
@@ -265,28 +249,32 @@ function tokenize4(textArr){
   // Pass 4: Mark punctuation-delimited chunks
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
-  const isWORDorSPACE = 2;
 
   tmpArr = [];
   chunk = [];
+  const inPhraseTypes = "wsc";
   inPhrase = false;
   for (let el of textArr){
+    const isWORDorSPACE = inPhraseTypes.includes(el[TYPE]);
     const newEl = [el[TOKEN], el[TYPE]];
-    if (!inPhrase && el[isWORDorSPACE]) {
-      // START
+    if (!inPhrase && isWORDorSPACE) {
+      // START PHRASE
       inPhrase = true;
       chunk = [newEl];
     }
-    else if (inPhrase && !el[isWORDorSPACE]){
-      // STOP
+    else if (inPhrase && !isWORDorSPACE){
+      // STOP PHRASE
       inPhrase = false;
       chunk.push(newEl);
       tmpArr.push(chunk);
     }
     else {
+      // CONTINUE PHRASE
       chunk.push(newEl);
     }
   }
+  const firstEl = [textArr[0]];
+  if (!inPhraseTypes.includes(firstEl[TYPE])) tmpArr = [firstEl, ...tmpArr];
   return tmpArr;
 }
 
@@ -299,9 +287,9 @@ function findCompoundsAndFlattenArray(chunks) {
   for (const chunk of chunks) {
     for (let word = 0; word <= chunk.length - 1; word++) {
       let match = [];
-      if (chunk[word][1] === "w") {
+      if (chunk[word][TYPE] === "w") {
         let flattenedTail = chunk.slice(word).reduce((acc, entry)=>{
-          acc.push((entry[1]==="w") ? entry[TOKEN].toLowerCase() : "");
+          acc.push((entry[TYPE]==="w") ? entry[TOKEN].toLowerCase() : "");
           return acc;
         }, []).join("");
         for (const compound in compounds) {
@@ -320,4 +308,5 @@ function findCompoundsAndFlattenArray(chunks) {
 
 let text = chunkText(p1);
 text = findCompoundsAndFlattenArray(text);
-console.log(text)
+// console.log(text)
+console.log(text, text.map(el=>el[0]).join(""))
