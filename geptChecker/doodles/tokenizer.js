@@ -152,19 +152,19 @@ function chunkText(text){
 }
 
 function split(text) {
-  text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");
-  text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");
-  text = text.replaceAll("\n", " EOL ")
-  text = text.replaceAll(/([#\$£]\d)/g, "___$1");
-  return text.split(/\___|\b/);
+  text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");   // protect preferred A.M. / P.M.
+  text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");  // separate 7pm > 7 pm
+  text = text.replaceAll("\n", " EOL ")                     // catch newlines
+  text = text.replaceAll(/([#\$£]\d)/g, "___$1");           // ensure currency symbols stay with number
+  return text.split(/\___|\b/);                             // use triple underscore as extra breakpoint
 }
 
 
 function tokenize(textArr){
-  textArr = tokenize1(textArr);
-  textArr = tokenize2(textArr);
-  textArr = tokenize3(textArr);
-  textArr = tokenize4(textArr);
+  textArr = tokenize1(textArr);   // identify main tokens
+  textArr = tokenize2(textArr);   // confirm identification + prepare for grouping
+  textArr = tokenize3(textArr);   // fine-tune position of splits
+  textArr = tokenize4(textArr);   // split into phrases (preparing for compound identification)
   return textArr;
 }
 
@@ -174,21 +174,21 @@ function tokenize1(textArr) {
   for (let el of textArr){
     if (!el.length) continue;
     let token = "**";
-    if (/^\s+$/.test(el)) token = "s";                  // space
-    else if (el === "-") token = "s";                   // hyphen
-    else if (el === "'") token = "a";                   // apostrophe
-    else if (/\d/.test(el)) token = "d";                // digit
-    else if (/[#$£]/.test(el)) token = "$";             // pre-digit punctuation (i.e. money etc.)
-    else if (/[%¢]/.test(el)) token = "%";              // post-digit punctuation (i.e. money etc.)
-    else if (/[\+\-=@\*<>&]/.test(el)) token = "y";     // symbols
-    else if (el === ".") token = "@";                   // punctuation digit (i.e. occurs in digits)
-    else if (el === ",") token = "@";
+    if (/^\s+$/.test(el))              token = "s";  // space
+    else if (el === "-")               token = "s";  // hyphen
+    else if (el === "'")               token = "a";  // apostrophe
+    else if (/\d/.test(el))            token = "d";  // digit
+    else if (/[#$£]/.test(el))         token = "$";  // pre-digit punctuation (i.e. money etc.)
+    else if (/[%¢]/.test(el))          token = "%";  // post-digit punctuation (i.e. money etc.)
+    else if (/[\+\-=@\*<>&]/.test(el)) token = "y";  // symbols
+    else if (el === ".")               token = "@";  // punctuation digit (i.e. occurs in digits)
+    else if (el === ",")               token = "@";
     else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";  // punctuation
     else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
-    else if (el.indexOf("EOL") >= 0) token = "p";
-    else if (/--/.test(el)) token = "p";                          // m-dash
+    else if (el.indexOf("EOL") >= 0)   token = "p";
+    else if (/--/.test(el)) token = "p";             // m-dash
     else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";  // dash (i.e. punctuation)
-    else if (/[a-zA-Z]/.test(el)) token = "w";                    // word
+    else if (/[a-zA-Z]/.test(el))      token = "w";  // word
     tmpArr.push([el, token]);
   }
   return tmpArr;
@@ -201,15 +201,15 @@ function tokenize2(textArr){
     const prev = (i > 0) ? textArr[i-1] : [null,"-"];
     const next = (i < max) ? textArr[i+1] : [null,"-"];
     const curr = textArr[i];
+    // ** create patterns of elements for easy identification
     const c_n = curr[1] + next[1];
     const p_c_n = prev[1]+c_n;
-    // debug(...textArr[i], p_c_n)
     let entry = [];
-    if (p_c_n === "waw") entry.push("+", "c");           // contractions
-    else if (c_n === "$d") entry.push("+", "d");         // currency signs
-    else if (c_n === "d%") entry.push("+", "d");         // post-digit punctuation
-    else if (c_n === "d@") entry.push("+", "d");         // decimal point / thousand separator
-    else if (p_c_n === "d@d") entry.push("+", "d");      // decimal point / thousand separator
+    if (p_c_n === "waw")        entry.push("+", "c");  // contractions
+    else if (c_n === "$d")      entry.push("+", "d");  // currency signs
+    else if (c_n === "d%")      entry.push("+", "d");  // post-digit punctuation
+    else if (c_n === "d@")      entry.push("+", "d");  // decimal point / thousand separator
+    else if (p_c_n === "d@d")   entry.push("+", "d");  // decimal point / thousand separator
     else if (prev[0] === "EOL") entry.push("-");
     curr.push(...entry);
   }
@@ -309,4 +309,6 @@ function findCompoundsAndFlattenArray(chunks) {
 let text = chunkText(p1);
 text = findCompoundsAndFlattenArray(text);
 // console.log(text)
-console.log(text, text.map(el=>el[0]).join(""))
+console.log(text)
+console.log(text.map(el=>el[0]))
+console.log(text.map(el=>el[0]).join(""))

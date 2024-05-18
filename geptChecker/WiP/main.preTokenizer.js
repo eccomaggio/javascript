@@ -784,195 +784,31 @@ function processText(rawText) {
   // ## reset V.wordStats
   V.tallyOfWordReps = {};
   if (typeof rawText === "object") return;
-  let text;
-  text = normalizeRawText(rawText);
-  text = chunkText(text);
-  text = findCompoundsAndFlattenArray(text);
-  const resultsAsTextArr = refineLookups(text);
-  debug("resultsAsTextArr", resultsAsTextArr)
+  const text = normalizeRawText(rawText);
+  const chunkedText = splitText(text);
+  const flatTextArr = findCompoundsAndFlattenArray(chunkedText);
+  // debug(JSON.stringify(flatTextArr))
+  // debug(flatTextArr)
+  const [resultsAsTextArr, wordCount] = refineLookups(flatTextArr);
+  // debug(resultsAsTextArr)
   const [totalWordCount, separateLemmasCount, levelStats] = getLevelStats(resultsAsTextArr);
-
   const resultsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
-  // debug("resultsHTML", resultsHTML)
+  // const repeatsAsHTML = buildRepeatList(wordCount);
+  // return [resultsAsHTML, repeatsAsHTML, wordCount];
   const repeatsHTML = buildRepeatList(totalWordCount);
   const levelStatsHTML = buildLevelStats(separateLemmasCount, levelStats);
   return [resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount];
 }
 
 
-function chunkText(text){
-  let textArr = split(text);
-  // debug(JSON.stringify(textArr))
-  textArr = tokenize(textArr);
-  return textArr;
-}
-
-function split(text) {
-  text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");   // protect preferred A.M. / P.M.
-  text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");  // separate 7pm > 7 pm
-  text = text.replaceAll("\n", " EOL ")                     // catch newlines
-  text = text.replaceAll(CURSOR.text, " CRSR ")             // catch cursor position
-  text = text.replaceAll(/([#\$£]\d)/g, "___$1");           // ensure currency symbols stay with number
-  text = text.trim();
-  return text.split(/\___|\b/);                             // use triple underscore as extra breakpoint
-}
-
-
-function tokenize(textArr){
-  textArr = tokenize1(textArr);   // identify main tokens
-  textArr = tokenize2(textArr);   // confirm identification + prepare for grouping
-  textArr = tokenize3(textArr);   // fine-tune position of splits
-  textArr = tokenize4(textArr);   // split into phrases (preparing for compound identification)
-  return textArr;
-}
-
-function tokenize1(textArr) {
-  // Pass 1: identify possible tokens
-  let tmpArr = [];
-  for (let el of textArr){
-    if (!el.length) continue;
-    let token = "**";
-    if (/^\s+$/.test(el))              token = "s";  // space
-    else if (el === "-")               token = "s";  // hyphen
-    else if (el === "'")               token = "a";  // apostrophe
-    else if (/\d/.test(el))            token = "d";  // digit
-    else if (/[#$£]/.test(el))         token = "$";  // pre-digit punctuation (i.e. money etc.)
-    else if (/[%¢]/.test(el))          token = "%";  // post-digit punctuation (i.e. money etc.)
-    else if (/[\+\-=@\*<>&]/.test(el)) token = "y";  // symbols
-    else if (el === ".")               token = "@";  // punctuation digit (i.e. occurs in digits)
-    else if (el === ",")               token = "@";
-    else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";  // punctuation
-    else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
-    // else if (el.indexOf("EOL") >= 0)   token = "p";
-    else if (el.indexOf("EOL") >= 0) [el, token] =  [EOL.text, "m"];     // "m" = metacharacter (TBA)
-    else if (el.indexOf("CRSR") >= 0) [el, token] = [CURSOR.text, "m"];  // ** CURSOR handling still  tba
-    else if (/--/.test(el)) token = "p";             // m-dash
-    else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";  // dash (i.e. punctuation)
-    else if (/[a-zA-Z]/.test(el))      token = "w";  // word
-    tmpArr.push([el, token]);
-  }
-  return tmpArr;
-}
-
-function tokenize2(textArr){
-  // Pass 2: use context to identify tokens & assign suitability to compound search
-  const max = textArr.length - 1;
-  for (let i=0; i <= max; i++){
-    const prev = (i > 0) ? textArr[i-1] : [null,"-"];
-    const next = (i < max) ? textArr[i+1] : [null,"-"];
-    const curr = textArr[i];
-    // ** create patterns of elements for easy identification
-    const c_n = curr[1] + next[1];
-    const p_c_n = prev[1]+c_n;
-    let entry = [];
-    if (p_c_n === "waw")        entry.push("+", "c");  // contractions
-    else if (c_n === "$d")      entry.push("+", "d");  // currency signs
-    else if (c_n === "d%")      entry.push("+", "d");  // post-digit punctuation
-    else if (c_n === "d@")      entry.push("+", "d");  // decimal point / thousand separator
-    else if (p_c_n === "d@d")   entry.push("+", "d");  // decimal point / thousand separator
-    // else if (prev[0] === "EOL") entry.push("-");
-    else if (prev[0] === EOL.text) entry.push("-");
-    else if (prev[0] === CURSOR.text) entry.push("-");
-    curr.push(...entry);
-  }
-  return textArr;
-}
-
-function tokenize3(textArr){
-  // Pass 3: Merge specified chunks
-  const TOKEN = 0;    // word or punctuation
-  const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
-  const CMD = 2;      // + = combine with next; - = delete
-  const newTYPE = 3;  // if combining, what is new type
-
-  let tmpArr = [];
-  let acc = [];
-  for (let el of textArr){
-    if (el[CMD] === "-") continue;
-    const accumulatorEmpty = !!acc.length;
-    const combineWithNext = !!el[CMD];
-    if (combineWithNext) {
-      if (accumulatorEmpty) acc = [acc[TOKEN]+el[TOKEN], el[newTYPE]];
-      else acc = [el[TOKEN], el[newTYPE]];
-    }
-    else {
-      if (accumulatorEmpty){
-        acc = [acc[TOKEN]+el[TOKEN], acc[TYPE]];
-        tmpArr.push(acc);
-        acc = [];
-      }
-      else tmpArr.push([el[TOKEN], el[TYPE]]);
-    }
-  }
-  return tmpArr;
-}
-
-function tokenize4(textArr){
-  // Pass 4: Mark punctuation-delimited chunks
-  const TOKEN = 0;    // word or punctuation
-  const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
-
-  tmpArr = [];
-  chunk = [];
-  const inPhraseTypes = "wsc";
-  inPhrase = false;
-  for (let el of textArr){
-    const isWORDorSPACE = inPhraseTypes.includes(el[TYPE]);
-    const newEl = [el[TOKEN], el[TYPE]];
-    if (!inPhrase && isWORDorSPACE) {
-      // START PHRASE
-      inPhrase = true;
-      chunk = [newEl];
-    }
-    else if (inPhrase && !isWORDorSPACE){
-      // STOP PHRASE
-      inPhrase = false;
-      chunk.push(newEl);
-      tmpArr.push(chunk);
-    }
-    else {
-      // CONTINUE PHRASE
-      chunk.push(newEl);
-    }
-  }
-  const firstEl = [textArr[0]];
-  if (!inPhraseTypes.includes(firstEl[TYPE])) tmpArr = [firstEl, ...tmpArr];
-  return tmpArr;
-}
-
-function findCompoundsAndFlattenArray(chunks) {
-  // ** for each word (token[1]==="w"), search within punctuation-delimited chunk for compound match
-  const TOKEN = 0;    // word or punctuation
-  const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
-
-  let flatArray = [];
-  for (const chunk of chunks) {
-    for (let word = 0; word <= chunk.length - 1; word++) {
-      let match = [];
-      if (chunk[word][TYPE] === "w") {
-        let flattenedTail = chunk.slice(word).reduce((acc, entry)=>{
-          acc.push((entry[TYPE]==="w") ? entry[TOKEN].toLowerCase() : "");
-          return acc;
-        }, []).join("");
-        for (const compound in V.currentDb.compounds) {
-          if (flattenedTail.startsWith(compound)) {
-            match = [V.currentDb.compounds[compound]]
-            break;
-          }
-        }
-      }
-      flatArray.push([...chunk[word], match]);
-    }
-  }
-  return flatArray;
-}
-
 function getLevelStats(textArr) {
   const firstAppearanceOfWord = [];
   const subsequentAppearances = [];
   for (const entry of textArr) {
-    if (entry[1] === "w") {         // TODO deal with other types
-      const [word, type, [[id, reps]]] = entry;
+    const isMetaCharacter = entry.length < 2;
+    if (!isMetaCharacter) {
+      let type = "";
+      const [word, rawWord, [[id, reps]]] = entry;
       if (id < 0) {
         const isNotWord = getOfflistEntry(id)[2] !== "offlist";
         if (isNotWord) continue;
@@ -987,6 +823,7 @@ function getLevelStats(textArr) {
     }
   }
   const separateLemmasCount = firstAppearanceOfWord.length;
+  // const repetitions = subsequentAppearances.length;
   const totalWordCount = separateLemmasCount + subsequentAppearances.length;
   let lemmasBylevel = {};
   for (const [word, id, geptLevel, awlLevel] of firstAppearanceOfWord) {
@@ -1021,22 +858,124 @@ function displayRepeatsList(listOfRepeats, levelStatsHTML) {
   HTM.repeatsList.innerHTML = levelStatsHTML + listOfRepeats;
 }
 
+function splitText(rawText) {
+  // console.log("split text:", rawText)
+  /* To narrow down the hunt for compound words,
+  the normalized text is first split into
+  independent chunks by punctuation (which compounds can't cross)
+  i.e. period, comma, brackets, ? ! (semi-)colons
+  then divided on spaces. Creates an array of phrases > words.
+      Each word is a sub array:
+      1) normalized word
+      2) word with caps + punctuation for display
+  */
+  // ## text format = [processed word for lookup + tagging, raw word for display]
+  const raw_chunks = splitTextIntoPhrases(rawText);
+  let arrayOfPhrases = [];
+  let cursorFound = false;
+  let wordToAdd;
+  for (const phrase of raw_chunks) {
+    let arrayOfWords = [];
+    for (let [word_i, word] of phrase.split(/\s+/).entries()) {
+      if (word.indexOf(EOL.text) >= 0) {
+        wordToAdd = [EOL.text, EOL.HTMLtext];
+      } else {
+        if (!cursorFound) {
+          // # Save position of cursor externally so it can be reinserted after text parsing
+          const char_i = word.indexOf(CURSOR.text);
+          if (char_i >= 0) {
+            V.cursorPosInTextArr = [word_i, char_i];
+            word = word.replace(CURSOR.text, "");
+            cursorFound = true;
+          }
+        }
+        let normalizedWord = word.replace(C.punctuation, "").toLowerCase();
+        wordToAdd = [normalizedWord, word];
+      }
+      arrayOfWords.push(wordToAdd);
+    }
+    arrayOfPhrases.push(arrayOfWords);
+  }
+  return arrayOfPhrases;
+}
 
 function normalizeRawText(text) {
   return text
-    // .replace(/[\u2018\u2019']/g, " '")    // replace curly single quotes
-    .replace(/[\u2018\u2019']/g, "'")    // replace curly single quotes
+    .replace(/[\u2018\u2019']/g, " '")    // replace curly single quotes
     .replace(/[\u201C\u201D]/g, '"')      // replace curly double  quotes
     .replace(/…/g, "...")
     .replace(/(\r\n|\r|\n)/g, "\n")       // encode EOLs
     .replace(/\n{2,}/g, "\n")
     .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+    // .replace(/\n{2,}/g, ` ${EOL.text} `)  // encode EOLs
     .replace(/–/g, " -- ")                // pasted in em-dashes
     .replace(/—/g, " - ")
     .replace(/(\w)\/(\w)/g, "$1 / $2")    // insert spaces either side of slash
     .replace(/\s{2,}/gm, " ");            //
 }
 
+function splitTextIntoPhrases(text) {
+  const tmp = text;
+  // ** used ^^ as replacement markers to keep separate from @EOL@, @CSR@ etc.
+  text = text.trim();
+  text = text.replace(/\.{3}/g, "___"); // ** to protect ellipses (...)
+  text = text.replace(/(p|a)\.(m)\./gi, "$1_$2_.");  // ** to protect wordlist version of A.M / P.M.
+  // ** separate out digits
+  // ** should catch any of: 10, 99%, 10.5, 6,001, 99.5%, 42.1%, $14.95, 20p, 2,000.50th, years etc.
+  text = text.replace(/(\b\d{4}s?\b|([$£€¥₹]?((\d{1,3}(,\d{3})*(\.\d+)?)|\d+)([%¢c]|st|nd|rd|th)?))/g, "^^$1^^");
+  // ** break at punctuation (include with digit)
+  // text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
+  text = text.replace(/(\^\^|[^\d][.\,;():?!])\s*/gi, "$1^^");
+  // text = text.replace(/(\^\^)\s*/gi, "$1^^");
+  // text = text.replace(/([^\d][.,;():?!"']+)\s*/gi, "$1^^");
+  // text = text.replace(/([^\s][.,;():?!"']+\w)\s*/gi, "^^$1");
+  text = text.replace(/\^{4,}/g, "^^");
+  text = text.replace(/_\./g, "_"); // ** also to protect wordlist version of A.M. / P.M.
+  text = text.split(/\s?\^\^\s?/);
+  text = text.filter(el => el !== '');
+  return text;
+}
+
+function findCompoundsAndFlattenArray(chunks) {
+  let flatArray = [];
+  for (const chunk of chunks) {
+    /* for each word, checks normalized words to end of chunk in search of compound match
+    then adds this as a match
+    "tail" is the sequence of words in a chunk (punctuation delimited block) as an array.
+    The function iterates through it, removing the first word each time
+    */
+    for (let word_i = 0; word_i <= chunk.length - 1; word_i++) {
+      let tail = [];
+      for (let j = word_i; j < chunk.length; j++) {
+        tail.push(chunk[j][0])
+      }
+      let matches = [];
+      const flattenedTail = tail.join("").replace(/-/g, "");
+      for (const compound in V.currentDb.compounds) {
+        if (flattenedTail.startsWith(compound)) {
+          const id = V.currentDb.compounds[compound];
+          // ** This cludge is to stop 'a.m.' matching with anything that begins 'am...'
+          const isValidMatch = (compound.length === 2) ?  flattenedTail.length === 2 : true;
+          // debug("^^", compound, flattenedTail, isValidMatch, V.isExactMatch)
+          if (isValidMatch) {
+            matches.push(id);
+            break;
+          }
+          //   matches.push(id);
+          // // ** Restore this compound needs to be corrected in-place
+          // // const correctedCompound = normalizeCompounds(id, tail, chunk, word_i);
+          // // chunk[word_i][1] = correctedCompound;
+          //   break;
+        }
+      }
+      chunk[word_i].push(matches);
+    }
+    // ** required so that all wordArrs have matches ready for the next stage
+    chunk[chunk.length - 1].push([]);
+    flatArray.push(...chunk);
+  }
+  return flatArray;
+}
 
 function normalizeCompounds(id, tail, chunk, word_i) {
   // ** replaces the current compound with the 'correct' wordlist version, preserving initial capitalization & surrounding punctuation
@@ -1065,37 +1004,41 @@ function refineLookups(textArr) {
     WordStats records the number of times a word is repeated: {word-id: count}
   */
   let processedTextArr = [];
-  // for (let [word, type, matchedCompoundsArr] of textArr) {
-  for (let entry of textArr) {
-    let [word, type, matchedCompoundsArr] = entry;
-    const rawWord = word.toLowerCase();
-    // rawWord = rawWord.replace(/_/g, ".");  // ** preserve wordlist rendering of A.M. / P.M.
+  let wordCount = 0;
+  for (let [word, rawWord, matchedCompoundsArr] of textArr) {
+    rawWord = rawWord.replace(/_/g, ".");  // ** preserve wordlist rendering of A.M. / P.M.
     let secondPassMatchedIDs = [];
     // if (!word) continue;
-    if (word === EOL.text) {
-      processedTextArr.push([word, type]);
+    if (!word) {
+      // debug(word, rawWord, matchedCompoundsArr)
+      // processedTextArr.push([rawWord]);
     }
-    else if (type === "w") {    // TODO make sure other types dealt with
-      // for (const id of lookupWord(word, type, matchedCompoundsArr)) {
-      for (const id of lookupWord(...entry)) {
-        // if (!id) continue;
+    if (word === EOL.text) {
+      processedTextArr.push([word]);
+    }
+    else {
+      wordCount++;
+      for (const id of lookupWord(word, rawWord, matchedCompoundsArr)) {
+        if (!id) continue;
         // ** by this point, the type of all words in offlistDb have been recorded there
         // ** pure & inflected lemmas are clear by being in currentDb.db
         // ** compounds have been merged seamlessly into single-word matches
         if (word === "i" && rawWord.includes("I")) word = "I";
         const compoundAlreadyMatched = (matchedCompoundsArr.length && isInOfflistDb(id));
-        // const isNotBeVerb = (id === V.idOfAM && rawWord.toLowerCase().includes(".m."));
+        const isNotBeVerb = (id === V.idOfAM && rawWord.toLowerCase().includes(".m."));
+        // debug(word, rawWord, id, ...matchedCompoundsArr)
         if (compoundAlreadyMatched) continue;
-        // if (isNotBeVerb) continue;
+        if (isNotBeVerb) continue;
         const matchedEntry = getEntryById(id);
-        // if (getPoS(matchedEntry) === "contraction") wordCount--;
+        if (getPoS(matchedEntry) === "contraction") wordCount--;
         secondPassMatchedIDs = pushMatch(secondPassMatchedIDs, id);
+        // debug(word, rawWord, id, ...secondPassMatchedIDs, (id === V.idOfAM && rawWord.toLowerCase().includes(".m.")))
       }
+      processedTextArr.push([word, rawWord, secondPassMatchedIDs]);
     }
-    processedTextArr.push([word, type, secondPassMatchedIDs]);
   }
   // ** precessedTextArr = [word, rawWord, [ [id, no. of reps], ...]]
-  return processedTextArr;
+  return [processedTextArr, wordCount];
 }
 
 
@@ -1137,17 +1080,23 @@ function addNewEntryToOfflistDb(entry) {
 }
 
 
-function lookupWord(word, type, matchedCompoundsArr) {
-  // ** Assumes word is lowercase
+function lookupWord(word, rawWord, matchedCompoundsArr) {
   // ** first, account for non-ascii, hyphenated words & contractions (which are listes with apostrophe to disambiguate from abbreviations, e.g. 'm = contraction, m = meter/mile)
+  if (LOOKUP.symbols.includes(rawWord)) word = rawWord;
+  else word = word.replace("-", "");
   let localMatchedIDarr;
-  localMatchedIDarr = getIdsByLemma(word);
-  localMatchedIDarr = checkDerivations(word, localMatchedIDarr);
-  if (isEmpty(localMatchedIDarr) && isEmpty(matchedCompoundsArr)) {
-    localMatchedIDarr = [markOfflist(word, "offlist")];
-    const offlistID = parseInt(localMatchedIDarr[0]);
-    const variantMatches = checkAllowedVariants(word, offlistID);
-    debug("variant matches", word, variantMatches)
+  [localMatchedIDarr, word] = checkContractions(word, rawWord);
+  if (isEmpty(localMatchedIDarr)) {
+    localMatchedIDarr = getIdsByLemma(word);
+    localMatchedIDarr = checkDerivations(word, localMatchedIDarr);
+    // debug(JSON.stringify(localMatchedIDarr), word, matchedCompoundsArr)
+    if (isEmpty(localMatchedIDarr)) localMatchedIDarr = checkNegativePrefix(word, rawWord);
+    if (isEmpty(localMatchedIDarr) && isEmpty(matchedCompoundsArr)) {
+      // localMatchedIDarr = [markOfflist(rawWord, "offlist")];
+      localMatchedIDarr = [markOfflist(word, "offlist")];
+      const offlistID = parseInt(localMatchedIDarr[0]);
+      checkAllowedVariants(word, rawWord, offlistID);
+    }
   }
   localMatchedIDarr = matchedCompoundsArr.concat(localMatchedIDarr);
   return localMatchedIDarr;
@@ -1157,7 +1106,7 @@ function idSuccessfullyMatched(idArr) {
   return idArr.some(id => id > 0);
 }
 
-function checkNegativePrefix(word) {
+function checkNegativePrefix(word, rawWord) {
   let matchedIDarr = [];
   const negativePrefixInfo = testForNegativePrefix(word);
   // debug(word,"derivations pass", matchedIDarr, isNoMatch, negativePrefixInfo)
@@ -1193,14 +1142,14 @@ function translateToOfflistDbID(id) {
   return (id < 0) ? -id : id;
 }
 
-function checkAllowedVariants(word, offlistID = 0) {
+function checkAllowedVariants(word, rawWord, offlistID = 0) {
   const shouldUpdateOfflistDb = (offlistID !== 0);
   let matchedIDarr = checkVariantWords(word);
   if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantSuffixes(word);
   if (isEmpty(matchedIDarr)) matchedIDarr = checkAbbreviations(word);
   if (isEmpty(matchedIDarr)) matchedIDarr = checkGenderedNouns(word);
   if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantSpellings(word);
-  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantHyphens(word);
+  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantHyphens(word, rawWord);
   if (!isEmpty(matchedIDarr)) {
     const offlistEntry = [offlistID, word, "variant", matchedIDarr, ""];
     // const offlistEntry = [offlistID, rawWord, "variant", matchedIDarr, ""];
@@ -1280,7 +1229,7 @@ function checkVariantSuffixes(word) {
 }
 
 
-function checkVariantHyphens(word) {
+function checkVariantHyphens(word, rawWord) {
   let matchIDarr = [];
   if (word.length > 4 && word.includes("-")) {
     const deHyphenatedWord = word.replace("-", "");
@@ -1350,9 +1299,9 @@ function checkDerivations(word, preMatchedIDarr = []) {
 
   let localMatches = [];
   for (const guess of [
-    // checkDigits,
-    // checkNonAscii,   // deal with this during initial chunking phase
-    // checkSymbols,
+    checkDigits,
+    checkNonAscii,
+    checkSymbols,
     // checkContractions,
     checkNames,
     checkArticle,
@@ -1366,7 +1315,6 @@ function checkDerivations(word, preMatchedIDarr = []) {
     checkComparatives,
     // checkFinalS,
     checkRegularAdverbs,
-    checkNegativePrefix,
   ]) {
     const result = guess(word);
     // debug("@", word, result, (result) ? !isEmpty(result) : "nowt")
@@ -1392,6 +1340,40 @@ function checkDerivations(word, preMatchedIDarr = []) {
   return dedupeSimpleArray(preMatchedIDarr);
 }
 
+// function runChecks(word, matches) {
+//   matches = checkDigits(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkNonAscii(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkSymbols(word);
+//   if (!isEmpty(matches)) return matches;
+//   // checkContractions,
+//   matches = checkNames(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkArticle(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkIrregularNegatives(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkIrregularVerbs(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkIrregularPlurals(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkForeignPlurals(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkVing(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkVpp(word);
+//   // debug(word, matches, (!!matches), isEmpty(matches))
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkSuperlatives(word);
+//   if (!isEmpty(matches)) return matches;
+//   matches = checkComparatives(word);
+//   if (!isEmpty(matches)) return matches;
+//   // checkFinalS,
+//   matches = checkRegularAdverbs(word);
+//   if (!isEmpty(matches)) return matches;
+//   else return [];
+// }
 
 function dedupeSimpleArray(arr) {
   if (typeof arr !== "object") arr = [arr];
@@ -1411,38 +1393,38 @@ function dedupeById(arr, field = 0) {
   return dedupedArr;
 }
 
-// function checkDigits(word) {
-//   let result;
-//   if (word.match(/(\d+|\d+,\d+|\d+\.\d+|\d+,\d+\.d+)/i)) {
-//     result = markOfflist(word, "digit");
-//   }
-//   return result;
-// }
+function checkDigits(word) {
+  let result;
+  if (word.match(/(\d+|\d+,\d+|\d+\.\d+|\d+,\d+\.d+)/i)) {
+    result = markOfflist(word, "digit");
+  }
+  return result;
+}
 
-// function checkNonAscii(word) {
-//   let result;
-//   if (!word.match(/[a-z]/i)) {
-//     result = markOfflist(word, "unknown");
-//   }
-//   return result;
-// }
+function checkNonAscii(word) {
+  let result;
+  if (!word.match(/[a-z]/i)) {
+    result = markOfflist(word, "unknown");
+  }
+  return result;
+}
 
-// function checkSymbols(word) {
-//   let result;
-//   if (LOOKUP.symbols.includes(word)) {
-//     result = markOfflist(word, "symbol");
-//   }
-//   return result;
-// }
+function checkSymbols(word) {
+  let result;
+  if (LOOKUP.symbols.includes(word)) {
+    result = markOfflist(word, "symbol");
+  }
+  return result;
+}
 
-// function checkContractions(word, rawWord) {
-//   let result = [];
-//   if (rawWord.startsWith("'") && LOOKUP.contractions.includes(word)) {
-//     word = "'" + word;
-//     result = [markOfflist(word, "contraction")];
-//   }
-//   return [result, word];
-// }
+function checkContractions(word, rawWord) {
+  let result = [];
+  if (rawWord.startsWith("'") && LOOKUP.contractions.includes(word)) {
+    word = "'" + word;
+    result = [markOfflist(word, "contraction")];
+  }
+  return [result, word];
+}
 
 function checkNames(word) {
   let result;
@@ -1599,35 +1581,34 @@ function buildMarkupAsHTML(textArr) {
   let isEOL = false;
   let wasPunctuation = false;
   let wordIndex = 0;
-  for (let [rawWord, type, matches] of textArr) {
-    [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(rawWord, htmlString, wasEOL);
+  for (let [word, rawWord, matches] of textArr) {
+    [isEOL, wasEOL, htmlString] = renderEOLsAsHTML(word, htmlString, wasEOL);
     // if (isEOL || !word || !matches[0]) continue;
-    // if (isEOL || !matches[0]) continue;
-    if (isEOL) continue;
-    // TODO rebuild this to use types for contractions / digits / symbols etc.
-    if (type === "w") {
-      // ** duplicateCount = running total; totalRepeats = total
-      let matchCount = 0;
-      let listOfMatches = [];
-      for (let [id, duplicateCount] of matches) {
-        let match = getEntryById(id);
-        listOfMatches.push([rawWord, id, getLevelNum(match)]);
-        matchCount++;
-        wasEOL = false;
-      }
-      wordIndex++;
-      const groupedWord = getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord);
-      htmlString += groupedWord;
+    if (isEOL || !matches[0]) continue;
+    const isPunctuation = (!word) ? "([".includes(rawWord) : false;
+    const isContraction = getEntryById(matches[0][0])[2] == "contraction";
+    // const leaveSpace = (isContraction || isFirstWord || wasEOL) ? "" : " ";
+    const leaveSpace = (isContraction || isFirstWord || wasEOL || wasPunctuation) ? "" : " ";
+    wasPunctuation = isPunctuation;
+    // const leaveSpace = (isContraction || isFirstWord || wasEOL || !word) ? "" : " ";
+    isFirstWord = false;
+    // ** duplicateCount = running total; totalRepeats = total
+    let matchCount = 0;
+    let listOfMatches = [];
+    for (let [id, duplicateCount] of matches) {
+      let match = getEntryById(id);
+      listOfMatches.push([word, id, getLevelNum(match)]);
+      matchCount++;
+      wasEOL = false;
     }
-    else if (type === "m") console.log("Need to deal with:", [rawWord, type, matches]);
-    else htmlString += rawWord;
-
+    wordIndex++;
+    const groupedWord = getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpace);
+    htmlString += groupedWord;
   }
   return htmlString;
 }
 
-function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord) {
-  const word = rawWord.toLowerCase();
+function getGroupedWordAsHTML(listOfMatches, wordIndex, word, rawWord, leaveSpace) {
   /*
   This, together with getSortedMatchesInfo() parses a complicated word-type system:
   in currentDb:
@@ -1667,7 +1648,9 @@ function getGroupedWordAsHTML(listOfMatches, wordIndex, rawWord) {
   let showAsMultiple = "";
   if (isMultipleMatch) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
   const classes = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
-  const displayWord = `<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  // debug(firstLemma, levelClass, V.levelLimitActiveClasses, V.levelLimitActiveClasses.includes(levelClass), limit, classes)
+  // const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  const displayWord = `${leaveSpace}<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   return displayWord;
 }
 
@@ -2061,9 +2044,8 @@ function displayDbNameInTab2(msg) {
 
 function getIdsByLemma(word) {
   // ** returns empty array or array of matched IDs [4254, 4255]
-  // if (typeof word !== "string" || !word) return [];
+  if (typeof word !== "string" || !word) return [];
   word = word.toLowerCase();
-  if (word === "i") word = "I";
   const searchResults = V.currentDb.db
     .filter(el => getLemma(el).toLowerCase() === word)
     .map(el => getId(el));
@@ -2087,6 +2069,31 @@ function findBaseForm(word, subs) {
   // debug(word, localMatches)
   return localMatches;
 }
+
+// function findBaseForm(word, subs, isSuffix = true) {
+//   // ** Uses lookup tables to apply spelling rules to return underlying base HTM.form candidates
+//   let localMatches = [];
+//   const candidates = new Set();
+//   // const affix_lookups = (isSuffix) ? "_suffix" : "_prefix";
+//   // const toSuffix = -(subs[affix_lookups].length);
+//   const toSuffix = -(subs["_suffix"].length);
+//   for (const ending in subs) {
+//     const i = -(ending.length);
+//     const affix = subs[word.slice(i)];
+//     if (affix != undefined) {
+//       const candidate = word.slice(0, i) + affix;
+//       debug(word, ending, affix, candidate)
+//       candidates.add(candidate);
+//     }
+//   }
+//   candidates.add(word.slice(0, toSuffix));
+//   for (const candidate of candidates) {
+//     const tmp_match = getIdsByLemma(candidate);
+//     // if (tmp_match.length) localMatches.push(...tmp_match);
+//     if (!isEmpty(tmp_match)) localMatches.push(...tmp_match);
+//   }
+//   return localMatches;
+// }
 
 
 function clearTab2() {

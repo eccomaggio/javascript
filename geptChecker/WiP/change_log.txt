@@ -68,3 +68,22 @@ OFFLIST kerb(noun)	curb
 plough	plow
 sceptical	skeptical
 sulphur	sulfur
+
+
+CONVERSION TO NEW TOKENIZER system:
+
+converting:
+processText()
+	refineLookups() - done
+		lookupWord() - done
+			getIdsByLemma() - done
+			checkDerivations() - done (+ sub-checks)
+			checkAllowedVariants() - done (+ sub-checks)
+	getLevelStats() - done
+	buildMarkupAsHTML()
+
+
+need to add in contraction / digit / symbol / unknown etc.
+need to work out a new way of identifying variants (from id lookup  OR rewrite type tag to 'v'
+create a new 'central switching room' based on entry.type in buildMarkupAsHTML()
+
