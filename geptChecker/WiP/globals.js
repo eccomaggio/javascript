@@ -150,11 +150,13 @@ const CURSOR = {
   tag: "span",
   id: "cursorPosHere",
   HTMLtext: "<span id='cursorPosHere'></span>",
-  text: "@CRSR@",
+  // text: "@CRSR@",
+  text: "CRSR",
 }
 
 const EOL = {
-  text: "@EOL@",
+  // text: "@EOL@",
+  text: "EOL",
   HTMLtext: "<hr>",
   tagName: "hr",
 }

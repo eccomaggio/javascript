@@ -356,6 +356,12 @@
       color: darkgray;
     }
 
+    /* symbols */
+    /* #t2_final_info .word-detail, */
+    .level-s {
+      color: darkgray;
+    }
+
     td.level-o,
     td.level-h,
     td.level-i {
