@@ -557,6 +557,8 @@
       color: var(--medium);
     }
 
+    #reset_btn,
+    .warning,
     .error {
       color: red;
     }
@@ -640,6 +642,10 @@
       color: var(--dark);
       /* font-size: smaller; */
       font-size: 95%;
+    }
+
+    .all-repeats {
+      font-weight: bold;
     }
 
     .debug {

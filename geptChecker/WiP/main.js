@@ -62,7 +62,8 @@ function addMenuListeners() {
   HTM.selectFontSize.addEventListener("change", changeFont);
   HTM.backupButton.addEventListener("click", backupShow);
   HTM.backupDialog.addEventListener("mouseleave", backupDialogClose);
-  HTM.backupSave.addEventListener("click", backupSave);
+  // HTM.backupSave.addEventListener("click", backupSave);
+  HTM.backupSave2.addEventListener("click", backupSave);
   for (const id of C.backupIDs) {
     document.getElementById(id).addEventListener("click", backupLoad);
   }
@@ -131,7 +132,7 @@ function backupShow(e) {
     const lsContent = localStorage.getItem(id);
     let content = (lsContent) ? lsContent.trim() : "";
     if (content) {
-      if (localStorage.getItem("mostRecent") == id) content = "<span class='error'>Most Recent: </span>" + content;
+      if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
       backup.innerHTML = content;
       backup.disabled = false;
     } else {
@@ -225,16 +226,17 @@ function backupSave() {
   if (currentText !== localStorage.getItem(shortTerm)) {
     // localStorage.setItem(shortTerm, currentText);
     appStateSaveItem(shortTerm, currentText);
-    HTM.backupSave.innerText = "text saved";
-    HTM.backupSave.classList.add("error");
-  } else {
-    HTM.backupSave.innerText = "already saved";
-    HTM.backupSave.classList.add("error");
+    // HTM.backupSave.innerText = "text saved";
+    // HTM.backupSave.classList.add("error");
   }
-  setTimeout(() => {
-    HTM.backupSave.innerText = "save backup";
-    HTM.backupSave.classList.remove("error");
-  }, 1000);
+  // else {
+  //   HTM.backupSave.innerText = "already saved";
+  //   HTM.backupSave.classList.add("error");
+  // }
+  // setTimeout(() => {
+  //   HTM.backupSave.innerText = "save backup";
+  //   HTM.backupSave.classList.remove("error");
+  // }, 1000);
 }
 
 
@@ -506,7 +508,7 @@ function highlightAwlWord(level_arr, word) {
 function formatResultsAsHTML(results) {
   // if (!results.length) {
   if (isEmpty(results)) {
-    return "<span class='error'><b>Search returned no results.</b></span>"
+    return "<span class='warning'><b>Search returned no results.</b></span>"
   }
   let output = "";
   let previousInitial = "";
@@ -619,7 +621,8 @@ function hoverEffects(e) {
   const parentCList = [].slice.apply(el.parentElement.classList);
   if (parentCList.includes("duplicate")) classList = parentCList;
   if (classList.includes("duplicate")) {
-    const relatedWords = classList.filter(name => name.slice(0, 4) === "all_")[0]
+    // const relatedWords = classList.filter(name => name.slice(0, 4) === "all_")[0]
+    const relatedWords = classList.filter(name => name.startsWith("all_"))[0];
     const dupes = document.getElementsByClassName(relatedWords);
     toggleHighlight(dupes);
   }
@@ -637,9 +640,10 @@ function displayEntryInfo(refs) {
     const [id, word, tokenType] = ref.split(":");
     const isVariant = tokenType === "wv";
     const entry = getEntryById(id);
+    // debug(...entry)
     const [levelArr, levelClass] = getLevelDetails(entry);
-    const lemma = buildDisplayLemma(entry, id, word, tokenType);
-    const level = buildDisplayLevel(entry, id, levelArr, tokenType);
+    const lemma = buildHTMLlemma(entry, id, word, tokenType);
+    const level = buildHTMLlevel(entry, id, levelArr, tokenType);
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
     html += `<div class="word-detail ${levelClass}">${level}<span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
@@ -648,7 +652,7 @@ function displayEntryInfo(refs) {
 }
 
 
-function buildDisplayLemma(entry, id, word, tokenType) {
+function buildHTMLlemma(entry, id, word, tokenType) {
   const lemma = getLemma(entry);
   let displayLemma = "";
   if (getPoS(entry) === "unknown") return displayLemma;
@@ -662,7 +666,7 @@ function buildDisplayLemma(entry, id, word, tokenType) {
   return displayLemma;
 }
 
-function buildDisplayLevel(entry, id, level_arr, tokenType) {
+function buildHTMLlevel(entry, id, level_arr, tokenType) {
   let level;
   // ** If word is offlist, use its classification (digit/name, etc.) as level
   if (!tokenType === "wv" && isInOfflistDb(id)) {
@@ -715,7 +719,7 @@ function updateInputDiv(e) {
   V.isExactMatch = true;
   // debug(Date.now())
   V.tallyOfRepeats = {};
-  V.repeats = new Set();
+  V.setOfLemmaID = new Set();
   let revisedText = getRevisedText().trim();
   if (revisedText && revisedText !== CURSOR.text) {
     const [
@@ -749,7 +753,9 @@ function displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCoun
   displayRepeatsList(repeatsHTML, levelStatsHTML);
   displayWorkingText(resultsHTML);
   // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
-  document.getElementById("level-details").addEventListener("toggle", setLevelState);
+  const levelDetailsTag = document.getElementById("level-details");
+  if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", setLevelState);
+  // document.getElementById("level-details").addEventListener("toggle", setLevelState);
   document.getElementById("repeat-details").addEventListener("toggle", setRepeatState);
 }
 
@@ -782,15 +788,15 @@ function processText(rawText) {
   debug("resultsAsTextArr", resultsAsTextArr)
   // BUG WHY is EOL being doubled?? e.g. ['EOL', 'm'] ['EOL', 'm', Array(0), 0]
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(resultsAsTextArr);
-  const resultsHTML = buildMarkupAsHTML(resultsAsTextArr) + "<span> </span>";
-  debug("resultsHTML", resultsHTML)
-  const repeatsHTML = buildRepeatList(totalWordCount);
-  const levelStatsHTML = buildAllLevelStats(separateLemmasCount, levelStats);
+  const resultsHTML = buildHTMLtext(resultsAsTextArr) + "<span> </span>";
+  // debug("resultsHTML", resultsHTML)
+  const repeatsHTML = buildHTMLrepeatList(totalWordCount);
+  const levelStatsHTML = buildHTMLlevelStats(separateLemmasCount, levelStats);
   return [resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount];
 }
 
 
-function chunkText(text){
+function chunkText(text) {
   let textArr = split(text);
   // debug(JSON.stringify(textArr))
   textArr = tokenize(textArr);
@@ -808,7 +814,7 @@ function split(text) {
 }
 
 
-function tokenize(textArr){
+function tokenize(textArr) {
   textArr = tokenize1(textArr);   // identify main tokens
   // debug("token1", JSON.stringify(textArr))
   textArr = tokenize2(textArr);   // confirm identification + prepare for grouping
@@ -820,18 +826,18 @@ function tokenize(textArr){
 function tokenize1(textArr) {
   // Pass 1: identify possible tokens
   let tmpArr = [];
-  for (let el of textArr){
+  for (let el of textArr) {
     if (!el.length) continue;
     let token = "**";
-    if (/^\s+$/.test(el))              token = "s";  // space
-    else if (el === "-")               token = "s";  // hyphen
-    else if (el === "'")               token = "a";  // apostrophe
-    else if (/\d/.test(el))            token = "d";  // digit
-    else if (/[#$£]/.test(el))         token = "$";  // pre-digit punctuation (i.e. money etc.)
-    else if (/[%¢]/.test(el))          token = "%";  // post-digit punctuation (i.e. money etc.)
+    if (/^\s+$/.test(el)) token = "s";  // space
+    else if (el === "-") token = "s";  // hyphen
+    else if (el === "'") token = "a";  // apostrophe
+    else if (/\d/.test(el)) token = "d";  // digit
+    else if (/[#$£]/.test(el)) token = "$";  // pre-digit punctuation (i.e. money etc.)
+    else if (/[%¢]/.test(el)) token = "%";  // post-digit punctuation (i.e. money etc.)
     else if (/[\+\-=@\*<>&]/.test(el)) token = "y";  // symbols
-    else if (el === ".")               token = "@";  // punctuation digit (i.e. occurs in digits)
-    else if (el === ",")               token = "@";
+    else if (el === ".") token = "@";  // punctuation digit (i.e. occurs in digits)
+    else if (el === ",") token = "@";
     else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";  // punctuation
     else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
     // else if (el.indexOf("EOL") >= 0) [el, token] =  [EOL.text, "m"];     // "m" = metacharacter (TBA)
@@ -840,28 +846,28 @@ function tokenize1(textArr) {
     else if (el.indexOf(CURSOR.text) >= 0) [el, token] = ["", "mc"];     // "m" = metacharacter (TBA)
     else if (/--/.test(el)) token = "p";             // m-dash
     else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";  // dash (i.e. punctuation)
-    else if (/[a-zA-Z]/.test(el))      token = "w";  // word
+    else if (/[a-zA-Z]/.test(el)) token = "w";  // word
     tmpArr.push([el, token]);
   }
   return tmpArr;
 }
 
-function tokenize2(textArr){
+function tokenize2(textArr) {
   // Pass 2: use context to identify tokens & assign suitability to compound search
   const max = textArr.length - 1;
-  for (let i=0; i <= max; i++){
-    const prev = (i > 0) ? textArr[i-1] : [null,"-"];
-    const next = (i < max) ? textArr[i+1] : [null,"-"];
+  for (let i = 0; i <= max; i++) {
+    const prev = (i > 0) ? textArr[i - 1] : [null, "-"];
+    const next = (i < max) ? textArr[i + 1] : [null, "-"];
     const curr = textArr[i];
     // ** create patterns of elements for easy identification
     const c_n = curr[1] + next[1];
-    const p_c_n = prev[1]+c_n;
+    const p_c_n = prev[1] + c_n;
     let entry = [];
-    if (p_c_n === "waw")        entry.push("+", "c");  // contractions
-    else if (c_n === "$d")      entry.push("+", "d");  // currency signs
-    else if (c_n === "d%")      entry.push("+", "d");  // post-digit punctuation
-    else if (c_n === "d@")      entry.push("+", "d");  // decimal point / thousand separator
-    else if (p_c_n === "d@d")   entry.push("+", "d");  // decimal point / thousand separator
+    if (p_c_n === "waw") entry.push("+", "c");  // contractions
+    else if (c_n === "$d") entry.push("+", "d");  // currency signs
+    else if (c_n === "d%") entry.push("+", "d");  // post-digit punctuation
+    else if (c_n === "d@") entry.push("+", "d");  // decimal point / thousand separator
+    else if (p_c_n === "d@d") entry.push("+", "d");  // decimal point / thousand separator
     // else if (prev[0] === "EOL") entry.push("-");
     else if (prev[0] === EOL.text) entry.push("-");
     // else if (prev[0] === CURSOR.text) entry.push("-");
@@ -870,7 +876,7 @@ function tokenize2(textArr){
   return textArr;
 }
 
-function tokenize3(textArr){
+function tokenize3(textArr) {
   // Pass 3: Merge specified chunks
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
@@ -879,17 +885,17 @@ function tokenize3(textArr){
 
   let tmpArr = [];
   let acc = [];
-  for (let el of textArr){
+  for (let el of textArr) {
     if (el[CMD] === "-") continue;
     const accumulatorEmpty = !!acc.length;
     const combineWithNext = !!el[CMD];
     if (combineWithNext) {
-      if (accumulatorEmpty) acc = [acc[TOKEN]+el[TOKEN], el[newTYPE]];
+      if (accumulatorEmpty) acc = [acc[TOKEN] + el[TOKEN], el[newTYPE]];
       else acc = [el[TOKEN], el[newTYPE]];
     }
     else {
-      if (accumulatorEmpty){
-        acc = [acc[TOKEN]+el[TOKEN], acc[TYPE]];
+      if (accumulatorEmpty) {
+        acc = [acc[TOKEN] + el[TOKEN], acc[TYPE]];
         tmpArr.push(acc);
         acc = [];
       }
@@ -900,7 +906,7 @@ function tokenize3(textArr){
   return tmpArr;
 }
 
-function tokenize4(textArr){
+function tokenize4(textArr) {
   // Pass 4: Mark punctuation-delimited chunks
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
@@ -912,7 +918,7 @@ function tokenize4(textArr){
   // Necessary to avoid losing type=p tokens before 1st word (chunks start with type=p/s/c tokens only)
   let firstWordOrSpaceNotYetFound = true;
   let preWordChunk = [];
-  for (let el of textArr){
+  for (let el of textArr) {
     const isWORDorSPACE = inPhraseTypes.includes(el[TYPE]);
     if (isWORDorSPACE) firstWordOrSpaceNotYetFound = false;
     const newEl = [el[TOKEN], el[TYPE]];
@@ -921,7 +927,7 @@ function tokenize4(textArr){
       inPhrase = true;
       chunk = [newEl];
     }
-    else if (inPhrase && !isWORDorSPACE){
+    else if (inPhrase && !isWORDorSPACE) {
       // STOP PHRASE
       inPhrase = false;
       chunk.push(newEl);
@@ -947,7 +953,7 @@ function findCompoundsAndFlattenArray(chunks) {
     for (let word = 0; word <= chunk.length - 1; word++) {
       let match = [];
       if (chunk[word][TYPE].startsWith("w")) {
-        let flattenedTail = chunk.slice(word).reduce((acc, entry)=>{
+        let flattenedTail = chunk.slice(word).reduce((acc, entry) => {
           acc.push((entry[TYPE].startsWith("w")) ? entry[TOKEN].toLowerCase() : "");
           return acc;
         }, []).join("");
@@ -974,12 +980,12 @@ function getAllLevelStats(textArr) {
       const firstID = idArr[0];
       // debug(word, type, idArr, reps)
       if (type === "wo") level = -1;
-      if (reps === 1) {
-        const [level, awlLevel] = (firstID > 0) ? getLevel(getEntryById(firstID)).slice(0,2) : [-1, -1];
+      if (reps === 0) {
+        const [level, awlLevel] = (firstID > 0) ? getLevel(getEntryById(firstID)).slice(0, 2) : [-1, -1];
         const info = [word, firstID, level, awlLevel];
         firstAppearanceOfWord.push(info)
       }
-      else subsequentAppearances.push([word,firstID])
+      else subsequentAppearances.push([word, firstID])
     }
   }
   const separateLemmasCount = firstAppearanceOfWord.length;
@@ -1052,13 +1058,14 @@ function normalizeRawText(text) {
 // }
 
 function lookupAllWords(textArr) {
+  // Provide lookups for all non-punctuation tokens + log repetitions
   const expansions = {
     c: "contraction",
     d: "digit",
     y: "symbol",
   };
   let processedTextArr = [];
-  V.tallyOfWordReps = {};
+  V.tallyOfIDreps = {};
   let repeatCount = 0;
   for (let entry of textArr) {
     let [word, type, runningMatchesArr] = entry;
@@ -1071,22 +1078,22 @@ function lookupAllWords(textArr) {
         type = revisedType;
         runningMatchesArr = localMatches;
       }
-      repeatCount = updateTallyOfWordReps(runningMatchesArr);
+      repeatCount = updateTallyOfIDreps(runningMatchesArr);
     }
     else if (["c", "d", "y"].includes(type)) {
       runningMatchesArr = [markOfflist(word, expansions[type])];
-      repeatCount = updateTallyOfWordReps(runningMatchesArr);
+      // repeatCount = updateTallyOfIDreps(runningMatchesArr);
     }
     processedTextArr.push([word, type, runningMatchesArr, repeatCount]);
   }
   return processedTextArr;
 }
 
-function updateTallyOfWordReps(idArr) {
+function updateTallyOfIDreps(idArr) {
   for (const id of idArr) {
-    V.tallyOfWordReps[id] = V.tallyOfWordReps[id] + 1 || 0;
+    V.tallyOfIDreps[id] = V.tallyOfIDreps[id] + 1 || 0;
   }
-  return V.tallyOfWordReps[idArr[0]];
+  return V.tallyOfIDreps[idArr[0]];
 }
 
 
@@ -1129,7 +1136,8 @@ function addNewEntryToOfflistDb(entry) {
 }
 
 
-function lookupWord(word, type, matchedCompoundsArr=[]) {
+function lookupWord(word, type, matchedCompoundsArr = []) {
+  word = word.toLowerCase();
   // wd = derived word; wv = variant word; wo = offlist word
   // ** Assumes word is lowercase
   // ** first, account for non-ascii, hyphenated words & contractions (which are listes with apostrophe to disambiguate from abbreviations, e.g. 'm = contraction, m = meter/mile)
@@ -1143,7 +1151,7 @@ function lookupWord(word, type, matchedCompoundsArr=[]) {
   localMatchedIDarr = checkAllowedVariants(word);
   if (!isEmpty(localMatchedIDarr)) return ["wv", matchedCompoundsArr.concat(localMatchedIDarr)];
   if (!isEmpty(matchedCompoundsArr)) return ["wc", matchedCompoundsArr];
-  else return ["wo", [markOfflist(word, "offlist")]];
+  else return ["wo", [markOfflist(word.toLowerCase(), "offlist")]];
 }
 
 
@@ -1575,7 +1583,7 @@ function getEntryById(id) {
   return result;
 }
 
-function buildMarkupAsHTML(textArr) {
+function buildHTMLtext(textArr) {
   let htmlString = "";
   let wordIndex = 0;
   for (let [word, type, matchIDarr, reps] of textArr) {
@@ -1594,7 +1602,7 @@ function buildMarkupAsHTML(textArr) {
         wasEOL = false;
       }
       wordIndex++;
-      const groupedWord = getGroupedWordAsHTML(lemmaIdLevelArr, wordIndex, type, reps);
+      const groupedWord = buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps);
       htmlString += groupedWord;
     }
     else htmlString += word;
@@ -1602,22 +1610,38 @@ function buildMarkupAsHTML(textArr) {
   return htmlString;
 }
 
-function getGroupedWordAsHTML(lemmaIdLevelArr, wordIndex, type, reps) {
+function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   let word = lemmaIdLevelArr[0][0];
   // debug(lemmaIdLevelArr, wordIndex, word)
-  const [sortedByLevel, levelsAreIdentical] = getSortedMatchesInfo(lemmaIdLevelArr);
+  const [
+    sortedByLevel,
+    levelsAreIdentical
+  ] = getSortedMatchesInfo(lemmaIdLevelArr);
   // debug(sortedByLevel, levelsAreIdentical)
-  const [firstLemma, firstID, firstLevel] = sortedByLevel[0];
+  const [
+    firstLemma,
+    firstID,
+    firstLevel
+  ] = sortedByLevel[0];
   const firstMatch = getEntryById(firstID);
-  let variantClass = "";
+  let variantClass = (type === "wv") ? " variant": "";
   let variantRefLink = "";
-  if (type === "wv") variantClass = " variant";
-  V.repeats.add(firstLemma + ":" + firstID);
-  const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(firstMatch));
-  const [levelArr, levelClass] = getLevelDetails(firstMatch);
+  // if (type === "wv") variantClass = " variant";
+  if (type.startsWith("w")) V.setOfLemmaID.add(firstLemma.toLowerCase() + ":" + firstID);
+  // const ignoreRepeats = LOOKUP.repeatableWords.includes(getLemma(firstMatch));
+  const ignoreThisRep = LOOKUP.repeatableWords.includes(firstLemma.toLowerCase());
+  const [
+    levelArr,
+    levelClass
+  ] = getLevelDetails(firstMatch);
   const limit = (V.levelLimitStr && V.levelLimitActiveClassesArr.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
-  const [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor] = getDuplicateDetails(firstID, ignoreRepeats);
-  debug(reps, ":",relatedWordsClass, duplicateClass, duplicateCountInfo, anchor)
+  const [
+    relatedWordsClass,
+    duplicateClass,
+    duplicateCountInfo,
+    anchor
+  ] = getDuplicateDetails(firstID, ignoreThisRep);
+  // debug(firstLemma, reps, ":",relatedWordsClass, duplicateClass, duplicateCountInfo, anchor)
   word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTMLentities(word));
   const localWord = highlightAwlWord(levelArr, word);
   const listOfLinks = lemmaIdLevelArr.map(el => [`${el[1]}:${el[0].trim()}:${type}`]).join(" ");
@@ -1778,19 +1802,18 @@ function insertCursorInHTML(matchCount, wordIndex, rawWord) {
 }
 
 function getDuplicateDetails(id, ignoreRepeats) {
-  const totalRepeats = V.tallyOfWordReps[id];
+  const totalReps = V.tallyOfIDreps[id];
   let duplicateClass = "";
   let duplicateCountInfo = "";
   let anchor = "";
   const relatedWordsClass = `all_${id}`;
-  // BUG what is this V.tallyofrepeats & why doesn't duplicate count work properly?
-  if (totalRepeats > 1 && !ignoreRepeats) {
+  if (totalReps > 0 && !ignoreRepeats) {
     let tmp = V.tallyOfRepeats[id];
     if (!tmp) {
       V.tallyOfRepeats[id] = 1;
     } else V.tallyOfRepeats[id] += 1;
     duplicateClass = " duplicate";
-    duplicateCountInfo = ' data-reps="' + totalRepeats + '"';
+    duplicateCountInfo = ' data-reps="' + totalReps + '"';
     anchor = ` id='${relatedWordsClass}_${V.tallyOfRepeats[id]}'`;
   }
   return [" " + relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
@@ -1824,10 +1847,11 @@ function getLevelPrefix(entry) {
 }
 
 
-function buildAllLevelStats(separateLemmasCount, levelStats) {
-  if (!separateLemmasCount || isKids()) return "";
-  let levelStatsHTMLstr = `<summary><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
-  for (const [levelID, levelText, total, percent] of levelStats.sort((a,b)=>a[0]-b[0])){
+function buildHTMLlevelStats(separateLemmasCount, levelStats) {
+  let levelStatsHTMLstr = "";
+  if (!separateLemmasCount || isKids()) return levelStatsHTMLstr;
+  levelStatsHTMLstr = `<summary><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
+  for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
     if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
     else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
   }
@@ -1837,11 +1861,63 @@ function buildAllLevelStats(separateLemmasCount, levelStats) {
 }
 
 
-function buildRepeatList(wordCount) {
-  let countReps = 0;
+// function buildHTMLrepeatList(wordCount) {
+//   let countReps = 0;
+//   let listOfRepeats = "";
+//   if (!wordCount) {
+//     V.tallyOfWordReps = {};
+//   } else {
+//     /* List of repeated lemmas
+//     in line with display policy, if two lemmas are identical,
+//     the id with the lowest level is linked/displayed
+//     This fits with buildMarkupAsHTML()
+//     same lemma, different rawWord: only first is displayed (i.e. 'learned (learns)')
+//     */
+//     const repeatsList = [...V.repeats].sort();
+//     let idList = [];
+//     for (const el of repeatsList) {
+//       const [word, id] = el.split(":");
+//       if (idList.includes(id)) continue;
+//       else idList.push(id);
+//       const entry = getEntryById(id);
+//       const level_arr = getLevel(entry);
+//       const isRepeated = V.tallyOfWordReps[id] > 1;
+//       const isRepeatable = !LOOKUP.repeatableWords.includes(word);
+//       const isWord = !LOOKUP.symbols.includes(word);
+//       if (isRepeated && isRepeatable && isWord) {
+//         countReps++;
+//         let anchors = "";
+//         for (let repetition = 1; repetition <= V.tallyOfWordReps[id]; repetition++) {
+//           let display = repetition;
+//           let displayClass = 'class="anchors" ';
+//           if (repetition === 1) {
+//             display = highlightAwlWord(level_arr, word);
+//             displayClass = `class="level-${getLevelPrefix(entry)}" `;
+//           }
+//           anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${repetition}'); return false;">${display}</a>`;
+//         }
+//         listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(entry)}'>${anchors}</p>`;
+//       }
+//     }
+//     let repeatsHeader;
+//     if (countReps) {
+//       const toggleOpen = (V.current.repeat_state) ? " open" : "";
+//       repeatsHeader = `<details id="repeat-details"${toggleOpen}><summary id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}</strong></summary>`;
+//       listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id='repeats'>${listOfRepeats}</div></details>`;
+//     } else {
+//       listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words.</strong></p>";
+//     }
+//   }
+//   return listOfRepeats
+// }
+
+
+function buildHTMLrepeatList(wordCount) {
+  let countAllReps = 0;
+  // let countOfRepeatedLemmas = 0;
   let listOfRepeats = "";
   if (!wordCount) {
-    V.tallyOfWordReps = {};
+    V.tallyOfIDreps = {}; // ????? not necessary??
   } else {
     /* List of repeated lemmas
     in line with display policy, if two lemmas are identical,
@@ -1849,39 +1925,43 @@ function buildRepeatList(wordCount) {
     This fits with buildMarkupAsHTML()
     same lemma, different rawWord: only first is displayed (i.e. 'learned (learns)')
     */
-    const repeatsList = [...V.repeats].sort();
+    const repeatsList = [...V.setOfLemmaID].sort();
     let idList = [];
     for (const el of repeatsList) {
       const [word, id] = el.split(":");
       if (idList.includes(id)) continue;
       else idList.push(id);
       const entry = getEntryById(id);
-      const level_arr = getLevel(entry);
-      const isRepeated = V.tallyOfWordReps[id] > 1;
+      // const level_arr = getLevel(entry);
+      const totalReps = V.tallyOfIDreps[id];
+      // const isRepeated = V.tallyOfIDreps[id] > 1;
       const isRepeatable = !LOOKUP.repeatableWords.includes(word);
-      const isWord = !LOOKUP.symbols.includes(word);
-      if (isRepeated && isRepeatable && isWord) {
-        countReps++;
+      // const isWord = !LOOKUP.symbols.includes(word);
+      // if (isRepeated && isRepeatable && isWord) {
+      if (totalReps > 0 && isRepeatable) {
+        countAllReps++;
         let anchors = "";
-        for (let repetition = 1; repetition <= V.tallyOfWordReps[id]; repetition++) {
-          let display = repetition;
+        for (let rep = 1; rep <= totalReps + 1; rep++) {
+          let display = rep;
           let displayClass = 'class="anchors" ';
-          if (repetition === 1) {
-            display = highlightAwlWord(level_arr, word);
+          if (rep === 1) {
+            display = highlightAwlWord(getLevel(entry), word);
             displayClass = `class="level-${getLevelPrefix(entry)}" `;
           }
-          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${repetition}'); return false;">${display}</a>`;
+          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${rep}'); return false;">${display}</a>`;
         }
         listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(entry)}'>${anchors}</p>`;
       }
     }
+    // debug(wordCount, countAllReps, ...repeatsList, V.tallyOfIDreps)
     let repeatsHeader;
-    if (countReps) {
+    const idForEventListener = "repeat-details";
+    if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
-      repeatsHeader = `<details id="repeat-details"${toggleOpen}><summary id='all_repeats'><strong>${countReps} repeated word${(countReps === 1) ? "" : "s"}</strong></summary>`;
+      repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id='all_repeats'>${countAllReps} repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
       listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id='repeats'>${listOfRepeats}</div></details>`;
     } else {
-      listOfRepeats = "<p id='all_repeats'><strong>There are no significant repeated words.</strong></p>";
+      listOfRepeats = `<p id='${idForEventListener}'><span id='all_repeats'>There are no significant repeated words.</span></p>`;
     }
   }
   return listOfRepeats
@@ -2236,7 +2316,7 @@ function setTab(tab) {
 function setTabHead() {
   let mode = (isFirstTab()) ? "none" : "block";
   HTM.backupButton.style.display = mode;
-  HTM.backupSave.style.display = mode;
+  // HTM.backupSave.style.display = mode;
 }
 
 function isFirstTab() {
@@ -2376,10 +2456,12 @@ function signalRefreshNeeded(mode) {
     V.refreshRequired = true;
     HTM.workingDiv.style.backgroundColor = "ivory";
     HTM.textTabTag.style.fontStyle = "italic";
+    HTM.backupSave2.style.display =  "block";
   }
   else {
     HTM.workingDiv.style.backgroundColor = "white";
     HTM.textTabTag.style.fontStyle = "normal";
+    HTM.backupSave2.style.display = "none";
     V.refreshRequired = false;
     // clearTimeout(V.timer);
     // V.timer = null;

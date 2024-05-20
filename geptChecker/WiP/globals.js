@@ -48,12 +48,13 @@ const HTM = {
   tabHead: document.getElementsByTagName("tab-head")[0],
   tabBody: document.getElementsByTagName("tab-body")[0],
   textTabTag: document.getElementById("t1_tab_tag"),
-  clearButton: document.getElementById("clear_button"),
-  resetButton: document.getElementById("reset_button"),
+  clearButton: document.getElementById("clear_btn"),
+  resetButton: document.getElementById("reset_btn"),
   settingsMenu: document.getElementById("dropdown"),
   backupButton: document.getElementById("backup-btn"),
   backupDialog: document.getElementById("backup-dlg"),
   backupSave: document.getElementById("backup-save"),
+  backupSave2: document.getElementById("backup-save2"),
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
@@ -115,8 +116,8 @@ let V = {
   // ## offlist word db uses negative ids (translate to positive index) so no 0
   offlistDb: [["unused"]],
   offlistIndex: 1,
-  tallyOfWordReps: {},
-  repeats: new Set(),
+  tallyOfIDreps: {},
+  setOfLemmaID: new Set(),
   tallyOfRepeats: {},
   currentDb: {},
   currentDbChoice: C.GEPT,
@@ -328,7 +329,7 @@ const LOOKUP = {
     ["cking", "c"],
     ["ing", "e"],
     ["ing", ""],
-    ],
+  ],
 
 
   // ## superlative adjs
@@ -349,7 +350,7 @@ const LOOKUP = {
     ["iest", "y"],
     ["est", "e"],
     ["est", ""],
-    ],
+  ],
 
   // ## comparative adjs & agent nouns? (good idea??)
   er_subs: [
@@ -369,7 +370,7 @@ const LOOKUP = {
     ["ier", "y"],
     ["er", "e"],
     ["er", ""],
-    ],
+  ],
 
   // ## regular past -ed endings
   ed_subs: [
@@ -676,6 +677,7 @@ const LOOKUP = {
     "him",
     "his",
     "I",
+    "i",
     "me",
     "mine",
     "my",
