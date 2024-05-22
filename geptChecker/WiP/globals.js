@@ -80,7 +80,6 @@ let C = {
   // INFO: removed hyphen & bar (- |):w
 
   NBSP: String.fromCharCode(160),
-  // backupIDs: ["backup_0", "backup_1"],
   backupIDs: ["long_term", "short_term"],
   awl_level_offset: 37,
   NOTE_SEP: "|",
@@ -93,8 +92,6 @@ let C = {
     level_state: 1,
     repeat_state: 1,
   },
-  // SAVE_DB_STATE: "db_state",
-  // SAVE_ACTIVE_TAB_INDEX: "tab_state",
   DEFAULT_tab: 0,
   MATCHES: {
     exact: ["^", "$"],
@@ -107,9 +104,9 @@ let C = {
   Kids: 2,
   LEVEL_LIMIT_CLASS: "wrong",
   LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
+  SLICE: "___",
 }
 
-// C.DEFAULT_db = C.GEPT;
 
 // ## Global variables
 let V = {
@@ -118,7 +115,6 @@ let V = {
   offlistIndex: 1,
   tallyOfIDreps: {},
   setOfLemmaID: new Set(),
-  tallyOfRepeats: {},
   currentDb: {},
   currentDbChoice: C.GEPT,
   OFFLIST: 0,
@@ -129,7 +125,6 @@ let V = {
   cursorOffset: 0,
   oldCursorOffset: 0,
   cursorOffsetNoMarks: 0,
-  // isInMark: false,
   cursorIncrement: 0,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
   current: {
@@ -151,21 +146,19 @@ const CURSOR = {
   tag: "span",
   id: "cursorPosHere",
   HTMLtext: "<span id='cursorPosHere'></span>",
-  // text: "@CRSR@",
-  text: "CRSR",
+  simpleText: "CRSR",
+  text: C.SLICE + "CRSR" + C.SLICE,
 }
 
 const EOL = {
-  // text: "@EOL@",
-  text: "EOL",
   HTMLtext: "<hr>",
   tagName: "hr",
+  simpleText: "EOL",
+  text: C.SLICE + "EOL" + C.SLICE,
 }
 
 
-
 if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
-
 
 const LOOKUP = {
 
@@ -178,14 +171,6 @@ const LOOKUP = {
     pos: "PoS",
     results: "Results",
   },
-
-  // display_levels: {
-  //   e: "初",
-  //   i: "中",
-  //   h: "高",
-  //   o: "",
-  //   c: ""
-  // }
 
 
   // ## These correlate with the numbers in the dBs
@@ -672,6 +657,7 @@ const LOOKUP = {
     "be",
     "are",
     "have",
+    "had",
     "do",
     "he",
     "him",

@@ -4,11 +4,11 @@
       vertical-align: super;
       font-size: smaller;
     }
-    mark {
+    /* mark {
       background: none;
       opacity: 0.4;
       cursor: not-allowed;
-    }
+    } */
 
     #left-top {
       flex-direction: column;

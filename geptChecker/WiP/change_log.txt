@@ -38,52 +38,18 @@ change 'in-place' to show multiple senses ONLY as red squiggly underline; resolv
 
 20-03-2024 added corrections to wordlist creation: streamlined process a little & Americanized/corrected AWL source file .tsv's
 
-TODO:
+many changes (untracked here, but on GIT)
 
-wordlistTool: implement a check for British spellings in input & flag as "change to preferred US spelling/term + correct term". This is because the GEPT wordlist now (still slightly unreliably) records UK spelling variants.
-Use a dynamic system rather than hardwired list (as there are inconsistencies in the GEPT list):
-Implement these checks:
-
-ae > e
--ll > l
--ence > ense
--e > nowt
--our > or
--re > er
--ize > ise
--yze > yse
-
-
-aeroplane	airplane
-OFFLIST artefact	artifact
-cheque	check
-OFFLIST chequerboard	checkerboard
-OFFLIST chequered	checkered
-OFFLIST cosy	cozy
-doughnut	donut - deprecated in list
-draught	draft
-gaol	jail
-grey	gray
-OFFLIST kerb(noun)	curb
-plough	plow
-sceptical	skeptical
-sulphur	sulfur
-
-
-CONVERSION TO NEW TOKENIZER system:
-
-converting:
-processText()
-	refineLookups() - done
-		lookupWord() - done
-			getIdsByLemma() - done
-			checkDerivations() - done (+ sub-checks)
-			checkAllowedVariants() - done (+ sub-checks)
-	getLevelStats() - done
-	buildMarkupAsHTML()
-
-
-need to add in contraction / digit / symbol / unknown etc.
-need to work out a new way of identifying variants (from id lookup  OR rewrite type tag to 'v'
-create a new 'central switching room' based on entry.type in buildMarkupAsHTML()
+HELP:
+CAPTURING / INSERTING CURSOR
+automatically moved with every keyup with updateCursorPos()
+updateInputDiv()
+	processText()
+		getRevisedText()
+			insertCursorPlaceholder() inserts as CURSOR.simpleText
+			chunkText() + tokenize() then insert as ["", "mc"]
+		buildHTMLtext()
+	displayProcessedText()
+		displayWorkingText()
+			setCursorPos()
 
