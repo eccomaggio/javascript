@@ -368,6 +368,11 @@
       font-weight: normal;
     }
 
+    .unprocessed {
+      color: black;
+      /* font-weight: bold; */
+    }
+
     .word-detail {
       /* color: white; */
       background-color: var(--light);
@@ -653,15 +658,9 @@
       color: cornflowerblue;
     }
 
-    /* #refresh_button::after {
-      content: '\0000a0\0000a0';
-    } */
 
     .in-list-header {
-      /* list-style-type: none; */
       font-weight: bold;
-      /* color: var(--medium); */
-      /* text-decoration: underline; */
       font-style: italic;
     }
 
@@ -680,11 +679,6 @@
       vertical-align: super;
       font-size: smaller;
     }
-    /* mark {
-      background: none;
-      opacity: 0.4;
-      cursor: not-allowed;
-    } */
 
     #left-top {
       flex-direction: column;
@@ -694,9 +688,6 @@
       background-color: yellow;
     }
 
-    /* #t2_raw_text {
-      display: inline-block;
-    } */
 
     #t2_raw_text br, #t2_final_text br {
       display: block;
@@ -711,12 +702,10 @@
 
     /* #t2_raw_text p, #t2_final_text p { */
     #t2_raw_text, #t2_final_text {
-      /* margin: 0 1.5em 0 0; */
       margin-top: 1.5em;
       margin-bottom: 0;
       margin-right: 0.5em;
       margin-left: 0.5em;
-      /* background-color: beige; */
     }
 
     /* ## PAGE COMMON ELEMENTS #################################### */

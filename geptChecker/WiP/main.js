@@ -314,14 +314,7 @@ function getFormData(e) {
     else {
       const strVal = value.trim();
       if (strVal) data[key].push(strVal);
-      // data[key].push(value.trim());
     }
-    // data[key].push((Number.isInteger(digit)) ? digit : value.trim());
-    // if (Number.isInteger(digit)) {
-    //   data[key].push(digit);
-    // } else if (value.trim()) {
-    //   data[key].push(value.trim());
-    // }
   }
   return data;
 }
@@ -377,14 +370,14 @@ function refineSearch(find) {
     const word = stripOutRegex(find.term);
     let matchedIDarr = checkDerivations(word);
     matchedIDarr.push(lazyCheckAgainstCompounds(word))
-    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word, word);
+    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word);
     if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkAllowedVariants(word);
     if (idSuccessfullyMatched(matchedIDarr)) results = [getEntryById(...matchedIDarr)];
   }
   if (Number.isInteger(find.level[0])) {
     let tmp_matches = [];
     for (const level of find.level) {
-      for (entry of results) {
+      for (const entry of results) {
         if (getLevel(entry)[C.GEPT_LEVEL] === level) tmp_matches.push(entry);
       }
     }
@@ -420,7 +413,7 @@ function refineSearch(find) {
 }
 
 function lazyCheckAgainstCompounds(word) {
-  tmpWord = word.replace(/-'\./g, "").split(" ").join("");
+  const tmpWord = word.replace(/-'\./g, "").split(" ").join("");
   let result = [];
   for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
     if (tmpWord === compound.slice(0, tmpWord.length)) {
@@ -576,7 +569,6 @@ function displayEntryInfo(refs) {
   let html = "";
   for (const ref of refs.split(" ")) {
     const [id, word, tokenType] = ref.split(":");
-    const isVariant = tokenType === "wv";
     const entry = getEntryById(id);
     const [levelArr, levelClass] = getLevelDetails(entry);
     const lemma = buildHTMLlemma(entry, id, word, tokenType);
@@ -606,7 +598,7 @@ function buildHTMLlemma(entry, id, word, tokenType) {
 function buildHTMLlevel(entry, id, level_arr, tokenType) {
   let level;
   // ** If word is offlist, use its classification (digit/name, etc.) as level
-  if (!tokenType === "wv" && isInOfflistDb(id)) {
+  if (tokenType !== "wv" && isInOfflistDb(id)) {
     level = getPoS(entry);
   }
   else if (["d", "y", "c", "wo"].includes(tokenType)) level = "";
@@ -738,10 +730,10 @@ function split(text) {
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
   const re = new RegExp("(\\w+)(" + CURSOR.text + ")(\\w+)", "g");  // catch cursor
   text = text.replaceAll(re, "$1$3$2");                             // move cursor to end of word (to preserve word for lookup)
-  text = text.replaceAll("\n",EOL.text);                        // catch newlines
+  text = text.replaceAll("\n",EOL.text);                            // catch newlines
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
   text = text.trim();
-  return text.split(/\___|\b/);                             // use triple underscore as extra breakpoint
+  return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
 }
 
 
@@ -759,22 +751,22 @@ function tokenize1(textArr) {
   for (let el of textArr) {
     if (!el.length) continue;
     let token = "**";
-    if (/^\s+$/.test(el)) token = "s";  // space
-    else if (el === "-") token = "s";  // hyphen
-    else if (el === "'") token = "a";  // apostrophe
-    else if (/\d/.test(el)) token = "d";  // digit
-    else if (/[#$£]/.test(el)) token = "$";  // pre-digit punctuation (i.e. money etc.)
-    else if (/[%¢]/.test(el)) token = "%";  // post-digit punctuation (i.e. money etc.)
+    if (/^\s+$/.test(el)) token = "s";               // space
+    else if (el === "-") token = "s";                // hyphen
+    else if (el === "'") token = "a";                // apostrophe
+    else if (/\d/.test(el)) token = "d";             // digit
+    else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
+    else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
     else if (/[\+\-=@\*<>&]/.test(el)) token = "y";  // symbols
-    else if (el === ".") token = "@";  // punctuation digit (i.e. occurs in digits)
+    else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
     else if (el === ",") token = "@";
-    else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";  // punctuation
+    else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";                // punctuation
     else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
-    else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"]; // "m" = metacharacter (TBA)
-    else if (el.indexOf(CURSOR.simpleText) >= 0) [el, token] = ["", "mc"];     // "m" = metacharacter (TBA)
-    else if (/--/.test(el)) token = "p";             // m-dash
-    else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";  // dash (i.e. punctuation)
-    else if (/[a-zA-Z]/.test(el)) token = "w";  // word
+    else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // "m" = metacharacter (TBA)
+    else if (el.indexOf(CURSOR.simpleText) >= 0) [el, token] = ["", "mc"]; // "m" = metacharacter (TBA)
+    else if (/--/.test(el)) token = "p";                                   // m-dash
+    else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";           // dash (i.e. punctuation)
+    else if (/[a-zA-Z]/.test(el)) token = "w";                             // word
     tmpArr.push([el, token]);
   }
   return tmpArr;
@@ -839,10 +831,10 @@ function tokenize4(textArr) {
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
 
-  tmpArr = [];
-  chunk = [];
+  let tmpArr = [];
+  let chunk = [];
   const inPhraseTypes = "wsc";
-  inPhrase = false;
+  let inPhrase = false;
   // Necessary to avoid losing type=p tokens before 1st word (chunks start with type=p/s/c tokens only)
   let firstWordOrSpaceNotYetFound = true;
   let preWordChunk = [];
@@ -904,11 +896,12 @@ function getAllLevelStats(textArr) {
   for (const entry of textArr) {
     if (entry[1].startsWith("w")) {
       let level;
+      let awlLevel;
       const [word, type, idArr, reps] = entry;
       const firstID = idArr[0];
       if (type === "wo") level = -1;
       if (reps === 0) {
-        const [level, awlLevel] = (firstID > 0) ? getLevel(getEntryById(firstID)).slice(0, 2) : [-1, -1];
+        [level, awlLevel] = (firstID > 0) ? getLevel(getEntryById(firstID)).slice(0, 2) : [-1, -1];
         const info = [word, firstID, level, awlLevel];
         firstAppearanceOfWord.push(info)
       }
@@ -1427,7 +1420,7 @@ function buildHTMLtext(textArr) {
         let match = getEntryById(id);
         lemmaIdLevelArr.push([word, id, getLevelNum(match)]);
         matchCount++;
-        wasEOL = false;
+        // wasEOL = false;
       }
       wordIndex++;
       const groupedWord = buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps);
@@ -1451,7 +1444,7 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   ] = sortedByLevel[0];
   const firstMatch = getEntryById(firstID);
   let variantClass = (type === "wv") ? " variant": "";
-  let variantRefLink = "";
+  // let variantRefLink = "";
   if (type.startsWith("w")) V.setOfLemmaID.add(firstLemma.toLowerCase() + ":" + firstID);
   const ignoreThisRep = LOOKUP.repeatableWords.includes(firstLemma.toLowerCase());
   const [
@@ -1517,15 +1510,22 @@ function visibleLevelLimitInfo(el) {
 
 function visibleLevelLimitApply(className, removeClass = true) {
   const classesToChange = (isEmpty(V.levelLimitActiveClassesArr)) ? C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(className)) : V.levelLimitActiveClassesArr;
-  let tmp = [];
+  // let tmp = [];
   for (const level of classesToChange) {
     const targetElements = document.getElementsByClassName(level);
-    tmp.push(targetElements.length);
-    for (let i = 0; i < targetElements.length; i++) {
+    // tmp.push(targetElements.length);
+    // for (let i = 0; i < targetElements.length; i++) {
+    //   if (removeClass) {
+    //     targetElements[i].classList.remove(C.LEVEL_LIMIT_CLASS);
+    //   } else {
+    //     targetElements[i].classList.add(C.LEVEL_LIMIT_CLASS);
+    //   }
+    // }
+    for (const el of targetElements) {
       if (removeClass) {
-        targetElements[i].classList.remove(C.LEVEL_LIMIT_CLASS);
+        el.classList.remove(C.LEVEL_LIMIT_CLASS);
       } else {
-        targetElements[i].classList.add(C.LEVEL_LIMIT_CLASS);
+        el.classList.add(C.LEVEL_LIMIT_CLASS);
       }
     }
   }
@@ -2075,7 +2075,6 @@ function insertCursorPlaceholder(el, index) {
 function getCursorInfoInEl(element) {
   let preCursorOffset = 0;
   let preCursorOffsetNoMarks = 0;
-  let isInMark = false;
   let sel = window.getSelection();
   if (sel.rangeCount > 0) {
     // ** Create a range stretching from beginning of div to cursor
@@ -2112,7 +2111,7 @@ function getCopyWithoutMarks(range) {
 
 function removeTags(node, tagName = "mark") {
   const divTextCopy = node.cloneNode(true);
-  const marks = divTextCopy.querySelectorAll(tagName);
+  // const marks = divTextCopy.querySelectorAll(tagName);
   return divTextCopy;
 }
 
@@ -2164,6 +2163,12 @@ function updateCursorPos(e) {
     V.cursorOffset,
     V.cursorOffsetNoMarks,
   ] = getCursorInfoInEl(HTM.workingDiv);
+  if (V.refreshRequired) {
+    const tags = document.querySelectorAll(":hover");
+    const currTag = tags[tags.length - 1];
+    debug(e.currentTarget.tagName, e.currentTarget.classList, currTag.tagName, currTag.classList)
+    currTag.setAttribute("class", "unprocessed");
+  }
   getCursorIncrement(keypress)
 }
 
