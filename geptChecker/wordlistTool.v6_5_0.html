@@ -231,6 +231,10 @@
       font-size: var(--font-size);
     }
 
+    /* #help-all {
+      list-style: square;
+    } */
+
 
 
     #t1_results_text,
@@ -706,6 +710,14 @@
       list-style-type: "- ";
     }
 
+    .backup-show {
+      opacity: 0.5;
+    }
+
+    .backup-show:hover {
+      opacity: 1;
+    }
+
     /* from upgrade.css ############################## */
 
     span[data-reps]::after {
@@ -752,6 +764,15 @@
     .noBold {
       font-weight: normal;
     }
+
+    /* .show {
+      display: block;
+      list-style: disc;
+    }
+
+    .hide {
+      display: none;
+    } */
 
     /* .spacer {
       width: 5vw;
@@ -1045,8 +1066,8 @@
             <button id="backup_1" onclick="loadBackup('backup_1')"></button> -->
             <!-- <button id="backup_0"></button>
             <button id="backup_1"></button> -->
-            <button id="long_term"></button>
-            <button id="short_term"></button>
+            <button id="long_term" class="backup-show"></button>
+            <button id="short_term" class="backup-show"></button>
           </div>
         </dialog>
         <!-- <div class="spacer">&nbsp;</div>
@@ -1104,7 +1125,8 @@
             <fieldset id="t1_theme" style="display: none;">
               <legend id="t1_theme_legend">Theme:</legend>
               <div id="t1_theme_values">
-                <select name="theme" id="t1_theme_select" onchange="this.dataset.chosen=this.value;" data-chosen="-1">
+                <!-- <select name="theme" id="t1_theme_select" onchange="this.dataset.chosen=this.value;" data-chosen="-1"> -->
+                <select name="theme" id="t1_theme_select" data-chosen="-1">
                   <option value="-1" selected="" class="default">any</option>
 
                   <option value="3">Animals &amp; insects (動物/昆蟲)</option>
@@ -1240,21 +1262,22 @@
         <div id="right-bot">
           <div id="t2_final_legend"></div>
           <div id="t2_help">
-            <details class='instructions' id="help-details">
+            <details class="instructions" id="help-details">
               <summary class='in-list-header'>HELP</summary>
               <ul id="help-all">
-                <li id="help-gept">
-                  <span class='level-e'>elem (A2)</span>,
-                  <span class='level-i'>int (B1)</span>,
-                  <span class='level-h'>hi-int (B2)</span>
+                <li id="help-gept">GEPT:
+                  <span class="level-e">elem (A2)</span>,
+                  <span class="level-i">int (B1)</span>,
+                  <span class="level-h">hi-int (B2)</span>
                 </li>
-                <li id="help-kids"><span class='level-k'>on-list</span></li>
-                <li id="help-offlist"><span class='level-o' id='l-o'>off-list</span></li>
+                <li id="help-kids"><span class="level-k">on-list</span></li>
+                <li id="help-offlist"><span class="level-o" id="l-o">off-list</span></li>
                 <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
-                <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid</li>
-                <li id="help-awl"><span class='awl-word'>dotted underline</span> = AWL word</li>
+                <li id="help-variants"><span class="variant">wavy underline</span> = form to avoid</li>
+                <li id="help-multi"><span class="multi-diff">double underline</span> = multiple levels</li>
+                <li id="help-awl"><span class="awl-word">dotted underline</span> = AWL word</li>
                 <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
-                <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above;<br>click again to remove</li>
+                <li id="help-refresh">To <span class="wrong">strike through <b>unwanted</b> levels</span>, click a level above;<br>click again to remove</li>
               </ul>
             </details>
           </div>
@@ -1470,6 +1493,7 @@ const HTM = {
   K_theme: document.getElementById("t1_theme"),
   B_AWL: document.getElementById("t1_awl"),
   form: document.getElementById("t1_form"),
+  kidsTheme: document.getElementById("t1_theme_select"),
   inputLemma: document.getElementById("t1_term_i"),
   resultsLegend: document.getElementById("t1_results_legend"),
   resultsText: document.getElementById("t1_results_text"),
@@ -2617,6 +2641,7 @@ function updateDropdownMenuOptions() {
 function addListeners() {
   addTabListeners();
   addMenuListeners();
+  addHTMLlisteners();
   addDetailListeners();
   addWordInputListeners();
   addEditingListeners();
@@ -2657,6 +2682,10 @@ function addMenuListeners() {
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
   // HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
   // HTM.helpDetails.addEventListener("toggle", setHelpState);
+}
+
+function addHTMLlisteners() {
+  HTM.kidsTheme.addEventListener("change", updateKidstheme);
 }
 
 function addDetailListeners() {
@@ -2876,6 +2905,14 @@ function prepareSearch(e) {
 
 function markStringAsError(str) {
   return `<span class='error'>${str}</span>`;
+}
+
+function updateKidstheme(e) {
+  const selection = e.target;
+  debug(selection.tagName, selection.value)
+  selection.dataset.chosen = selection.value;
+  prepareSearch();
+  // HTM.form.submit();
 }
 
 function getFormData(e) {
@@ -3214,7 +3251,8 @@ function normalizePastedText(e) {
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
-  V.refreshRequired = true;
+  // V.refreshRequired = true;
+  signalRefreshNeeded("on");
   updateInputDiv(e);
 }
 
@@ -3232,10 +3270,13 @@ function catchKeyboardCopyEvent(e) {
 function updateInputDiv(e) {
   if (!V.refreshRequired) return;
   signalRefreshNeeded("off");
-  V.isExactMatch = true;
-  V.setOfLemmaID = new Set();
   let revisedText = getRevisedText().trim();
-  if (revisedText && revisedText !== CURSOR.text) {
+  if (revisedText === CURSOR.text) revisedText = "";
+  // debug(revisedText, !!revisedText, revisedText === CURSOR.text)
+  if (revisedText) {
+    // signalRefreshNeeded("off");
+    V.isExactMatch = true;
+    V.setOfLemmaID = new Set();
     const [
       resultsHTML,
       repeatsHTML,
@@ -3245,6 +3286,7 @@ function updateInputDiv(e) {
     displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
     HTM.finalInfoDiv.innerText = "";
     backupSave();
+  signalRefreshNeeded("off");
     setCursorPos(document.getElementById(CURSOR.id));
   }
 }
@@ -3280,7 +3322,7 @@ function displayWorkingText(html) {
 
 function processText(rawText) {
   signalRefreshNeeded("off");
-  V.idOfAM = getIdsByLemma("am")[0];
+  // V.idOfAM = getIdsByLemma("am")[0];
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -4237,7 +4279,7 @@ function getLevelPrefix(entry) {
 function buildHTMLlevelStats(separateLemmasCount, levelStats) {
   let levelStatsHTMLstr = "";
   if (!separateLemmasCount || isKids()) return levelStatsHTMLstr;
-  levelStatsHTMLstr = `<summary><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
+  levelStatsHTMLstr = `<summary class="all-repeats">Level statistics:<em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
   for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
     if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
     else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
@@ -4289,10 +4331,10 @@ function buildHTMLrepeatList(wordCount) {
     const idForEventListener = "repeat-details";
     if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
-      repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id='all_repeats'>${countAllReps} repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
+      repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id="all_repeats" class="all-repeats">${countAllReps} significant repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
       listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id='repeats'>${listOfRepeats}</div></details>`;
     } else {
-      listOfRepeats = `<p id='${idForEventListener}'><span id='all_repeats'>There are no significant repeated words.</span></p>`;
+      listOfRepeats = `<p id="${idForEventListener}"><span id="all_repeats" class="all-repeats">There are no significant repeated words.</span></p>`;
     }
   }
   return listOfRepeats
@@ -4327,9 +4369,9 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
-  document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:block;" : "display:none;");
-  document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:block;" : "display:none;");
-  document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:block;" : "display:none;");
+  document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:list-item;" : "display:none;");
+  document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:list-item;" : "display:none;");
+  document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:list-item;" : "display:none;");
 }
 
 function getIdsByLemma(word) {
@@ -4754,7 +4796,6 @@ function updateCursorPos(e) {
   if (V.refreshRequired) {
     const tags = document.querySelectorAll(":hover");
     const currTag = tags[tags.length - 1];
-    debug(e.currentTarget.tagName, e.currentTarget.classList, currTag.tagName, currTag.classList)
     currTag.setAttribute("class", "unprocessed");
   }
   getCursorIncrement(keypress)

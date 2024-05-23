@@ -197,6 +197,10 @@
       font-size: var(--font-size);
     }
 
+    /* #help-all {
+      list-style: square;
+    } */
+
 
 
     #t1_results_text,
@@ -672,6 +676,14 @@
       list-style-type: "- ";
     }
 
+    .backup-show {
+      opacity: 0.5;
+    }
+
+    .backup-show:hover {
+      opacity: 1;
+    }
+
     /* from upgrade.css ############################## */
 
     span[data-reps]::after {
@@ -718,6 +730,15 @@
     .noBold {
       font-weight: normal;
     }
+
+    /* .show {
+      display: block;
+      list-style: disc;
+    }
+
+    .hide {
+      display: none;
+    } */
 
     /* .spacer {
       width: 5vw;

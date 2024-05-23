@@ -78,8 +78,8 @@
             <button id="backup_1" onclick="loadBackup('backup_1')"></button> -->
             <!-- <button id="backup_0"></button>
             <button id="backup_1"></button> -->
-            <button id="long_term"></button>
-            <button id="short_term"></button>
+            <button id="long_term" class="backup-show"></button>
+            <button id="short_term" class="backup-show"></button>
           </div>
         </dialog>
         <!-- <div class="spacer">&nbsp;</div>
@@ -137,7 +137,8 @@
             <fieldset id="t1_theme" style="display: none;">
               <legend id="t1_theme_legend">Theme:</legend>
               <div id="t1_theme_values">
-                <select name="theme" id="t1_theme_select" onchange="this.dataset.chosen=this.value;" data-chosen="-1">
+                <!-- <select name="theme" id="t1_theme_select" onchange="this.dataset.chosen=this.value;" data-chosen="-1"> -->
+                <select name="theme" id="t1_theme_select" data-chosen="-1">
                   <option value="-1" selected="" class="default">any</option>
 
                   <option value="3">Animals &amp; insects (動物/昆蟲)</option>
@@ -273,21 +274,22 @@
         <div id="right-bot">
           <div id="t2_final_legend"></div>
           <div id="t2_help">
-            <details class='instructions' id="help-details">
+            <details class="instructions" id="help-details">
               <summary class='in-list-header'>HELP</summary>
               <ul id="help-all">
-                <li id="help-gept">
-                  <span class='level-e'>elem (A2)</span>,
-                  <span class='level-i'>int (B1)</span>,
-                  <span class='level-h'>hi-int (B2)</span>
+                <li id="help-gept">GEPT:
+                  <span class="level-e">elem (A2)</span>,
+                  <span class="level-i">int (B1)</span>,
+                  <span class="level-h">hi-int (B2)</span>
                 </li>
-                <li id="help-kids"><span class='level-k'>on-list</span></li>
-                <li id="help-offlist"><span class='level-o' id='l-o'>off-list</span></li>
+                <li id="help-kids"><span class="level-k">on-list</span></li>
+                <li id="help-offlist"><span class="level-o" id="l-o">off-list</span></li>
                 <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
-                <li id="help-variants"><span class='variant'>wavy underline</span> = form to avoid</li>
-                <li id="help-awl"><span class='awl-word'>dotted underline</span> = AWL word</li>
+                <li id="help-variants"><span class="variant">wavy underline</span> = form to avoid</li>
+                <li id="help-multi"><span class="multi-diff">double underline</span> = multiple levels</li>
+                <li id="help-awl"><span class="awl-word">dotted underline</span> = AWL word</li>
                 <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
-                <li id="help-refresh">To <span class='wrong'>strike through <b>unwanted</b> levels</span>, click a level above;<br>click again to remove</li>
+                <li id="help-refresh">To <span class="wrong">strike through <b>unwanted</b> levels</span>, click a level above;<br>click again to remove</li>
               </ul>
             </details>
           </div>

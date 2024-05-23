@@ -29,6 +29,7 @@ function updateDropdownMenuOptions() {
 function addListeners() {
   addTabListeners();
   addMenuListeners();
+  addHTMLlisteners();
   addDetailListeners();
   addWordInputListeners();
   addEditingListeners();
@@ -69,6 +70,10 @@ function addMenuListeners() {
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
   // HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
   // HTM.helpDetails.addEventListener("toggle", setHelpState);
+}
+
+function addHTMLlisteners() {
+  HTM.kidsTheme.addEventListener("change", updateKidstheme);
 }
 
 function addDetailListeners() {
@@ -288,6 +293,14 @@ function prepareSearch(e) {
 
 function markStringAsError(str) {
   return `<span class='error'>${str}</span>`;
+}
+
+function updateKidstheme(e) {
+  const selection = e.target;
+  debug(selection.tagName, selection.value)
+  selection.dataset.chosen = selection.value;
+  prepareSearch();
+  // HTM.form.submit();
 }
 
 function getFormData(e) {
@@ -626,7 +639,8 @@ function normalizePastedText(e) {
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
-  V.refreshRequired = true;
+  // V.refreshRequired = true;
+  signalRefreshNeeded("on");
   updateInputDiv(e);
 }
 
@@ -644,10 +658,13 @@ function catchKeyboardCopyEvent(e) {
 function updateInputDiv(e) {
   if (!V.refreshRequired) return;
   signalRefreshNeeded("off");
-  V.isExactMatch = true;
-  V.setOfLemmaID = new Set();
   let revisedText = getRevisedText().trim();
-  if (revisedText && revisedText !== CURSOR.text) {
+  if (revisedText === CURSOR.text) revisedText = "";
+  // debug(revisedText, !!revisedText, revisedText === CURSOR.text)
+  if (revisedText) {
+    // signalRefreshNeeded("off");
+    V.isExactMatch = true;
+    V.setOfLemmaID = new Set();
     const [
       resultsHTML,
       repeatsHTML,
@@ -657,6 +674,7 @@ function updateInputDiv(e) {
     displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
     HTM.finalInfoDiv.innerText = "";
     backupSave();
+  signalRefreshNeeded("off");
     setCursorPos(document.getElementById(CURSOR.id));
   }
 }
@@ -692,7 +710,7 @@ function displayWorkingText(html) {
 
 function processText(rawText) {
   signalRefreshNeeded("off");
-  V.idOfAM = getIdsByLemma("am")[0];
+  // V.idOfAM = getIdsByLemma("am")[0];
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -1649,7 +1667,7 @@ function getLevelPrefix(entry) {
 function buildHTMLlevelStats(separateLemmasCount, levelStats) {
   let levelStatsHTMLstr = "";
   if (!separateLemmasCount || isKids()) return levelStatsHTMLstr;
-  levelStatsHTMLstr = `<summary><strong>Level statistics:</strong><em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
+  levelStatsHTMLstr = `<summary class="all-repeats">Level statistics:<em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
   for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
     if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
     else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
@@ -1701,10 +1719,10 @@ function buildHTMLrepeatList(wordCount) {
     const idForEventListener = "repeat-details";
     if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
-      repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id='all_repeats'>${countAllReps} repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
+      repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id="all_repeats" class="all-repeats">${countAllReps} significant repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
       listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id='repeats'>${listOfRepeats}</div></details>`;
     } else {
-      listOfRepeats = `<p id='${idForEventListener}'><span id='all_repeats'>There are no significant repeated words.</span></p>`;
+      listOfRepeats = `<p id="${idForEventListener}"><span id="all_repeats" class="all-repeats">There are no significant repeated words.</span></p>`;
     }
   }
   return listOfRepeats
@@ -1739,9 +1757,9 @@ function displayDbNameInTab1() {
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
   HTM.finalLegend.innerHTML = `Checking <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
-  document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:block;" : "display:none;");
-  document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:block;" : "display:none;");
-  document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:block;" : "display:none;");
+  document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:list-item;" : "display:none;");
+  document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:list-item;" : "display:none;");
+  document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:list-item;" : "display:none;");
 }
 
 function getIdsByLemma(word) {
@@ -2166,7 +2184,6 @@ function updateCursorPos(e) {
   if (V.refreshRequired) {
     const tags = document.querySelectorAll(":hover");
     const currTag = tags[tags.length - 1];
-    debug(e.currentTarget.tagName, e.currentTarget.classList, currTag.tagName, currTag.classList)
     currTag.setAttribute("class", "unprocessed");
   }
   getCursorIncrement(keypress)

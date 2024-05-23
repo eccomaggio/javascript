@@ -37,6 +37,7 @@ const HTM = {
   K_theme: document.getElementById("t1_theme"),
   B_AWL: document.getElementById("t1_awl"),
   form: document.getElementById("t1_form"),
+  kidsTheme: document.getElementById("t1_theme_select"),
   inputLemma: document.getElementById("t1_term_i"),
   resultsLegend: document.getElementById("t1_results_legend"),
   resultsText: document.getElementById("t1_results_text"),
