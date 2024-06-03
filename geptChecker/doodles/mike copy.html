@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mike's Conundrum Solver</title>
+  <style>
+    :root {
+      --accent: darkseagreen;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      font-family: monospace;
+    }
+    #input-container {
+      display: flex;
+      flex-direction: column;
+      font-size: inherit;
+      margin-bottom: 2rem;
+    }
+
+    #input {
+      font-size: inherit;
+      color: var(--accent);
+    }
+
+    label {
+      font-family: Arial, Helvetica, sans-serif;
+      /* font-weight: bold; */
+    }
+
+    #output-container {
+      display: flex;
+      flex-direction: row;
+      font-size: inherit;
+      line-height: 150%;
+    }
+
+    label, button {
+      margin: 0.5rem 0;
+      font-weight: bold;
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 0;
+    }
+
+    #input {
+
+    }
+
+    #main, #before, #after {
+      /* font-family: monospace; */
+      width: max-content;
+    }
+    #before, #after {
+      color: var(--accent);
+    }
+
+    #main {
+      color: black;
+    }
+
+    #before {
+      text-align: right;
+    }
+
+  </style>
+</head>
+
+
+
+
+<body>
+    <form id="input-container" onsubmit="submitForm()">
+      <label id="input-label" for="input">Input text</label>
+      <textarea id="input" name="input" rows="5" cols="50"></textarea>
+      <button>Submit</button>
+    </form>
+
+    <div id="output-container">
+      <div id="before"></div>
+      <div id="main"></div>
+      <div id="after"></div>
+    </div>
+
+
+
+
+  <script>
+    // const form = document.querySelector("form");
+    const input = document.getElementById("input");
+    const main = document.getElementById("main");
+    const before = document.getElementById("before");
+    const after = document.getElementById("after");
+
+
+    function submitForm(e) {
+      event.preventDefault();
+      let text = input.value;
+      text = text.toLowerCase().replaceAll(/[^a-z]/g, "");
+
+      let block = [];
+      const step = 50;
+      const margin = 10;
+      input.cols = step;
+
+      let i = 0;
+      while (i < text.length) {
+        block.push(text.slice(i, i+step));
+        i = i + step;
+      }
+      block.forEach((el, i) => {
+        const beforeText = (i > 0) ? block[i-1].slice(step - margin) : "";
+        const afterText = (i < block.length - 1) ? block[i+1].slice(0, margin) : "";
+        before.innerHTML += beforeText + "<br>";
+        main.innerHTML += block[i] + "<br>";
+        after.innerHTML += afterText + "<br>";
+      });
+    }
+  </script>
+</body>
+</html>

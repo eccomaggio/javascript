@@ -333,37 +333,45 @@
     .level-u {
       color: var(--offlist);
       font-style: italic;
+      font-weight: bold;
     }
 
     .level-h {
       color: var(--high);
+      /* font-weight: bold; */
     }
 
     .level-i {
       color: var(--int);
-      font-weight: bold;
+      /* font-weight: bold; */
     }
 
-    .level-e,
-    .level-k {
+    .level-e {
       color: var(--elem);
+      /* font-weight: bold; */
     }
 
-    /* contractions / numbers (digits) */
+    .level-k {
+      color: var(--int);
+    }
+
+    .level-e, .level-i, .level-h, .level-k {
+      /* font-weight: bold; */
+      font-weight: normal;
+    }
+
+    /* contractions / numbers (digits) / symbols */
     .level-c,
-    .level-d {
-      color: var(--misc);
+    .level-d,
+    .level-s {
+      /* color: var(--misc); */
+      color: var(--lowlight);
     }
 
     /* awl list in general (in levelStats) */
     .level-a {
-      color: darkgray;
-    }
-
-    /* symbols */
-    /* #t2_final_info .word-detail, */
-    .level-s {
-      color: darkgray;
+      /* color: darkgray; */
+      color: var(--lowlight);
     }
 
     td.level-o,
@@ -395,6 +403,21 @@
       text-align: center;
       z-index: 2;
       margin-bottom: 5px;
+    }
+
+    .dot {
+      height: var(--radius);
+      width: var(--radius);
+      background-color: white;
+      border-radius: 50%;
+      display: inline-block;
+      line-height: 1.5;
+      vertical-align: middle;
+      text-align: center;
+      /* font-size: larger; */
+      font-size: normal;
+      font-family: sans-serif;
+      color: black;
     }
 
     #t2_final_info > div {
@@ -430,7 +453,7 @@
 
     .multi-diff {
       text-decoration: darkgray underline double;
-      background-color: whitesmoke;
+      /* background-color: whitesmoke; */
       -webkit-text-decoration: darkgray underline double;
     }
 

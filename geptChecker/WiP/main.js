@@ -585,9 +585,14 @@ function displayEntryInfo(refs) {
     const entry = getEntryById(id);
     const [levelArr, levelClass] = getLevelDetails(entry);
     const lemma = buildHTMLlemma(entry, id, word, tokenType);
-    const level = buildHTMLlevel(entry, id, levelArr, tokenType);
+    let level = buildHTMLlevel(entry, id, levelArr, tokenType);
+    if (level) {
+      const levelDot = buildHTMLlevelDot(entry);
+      level = `<div>${levelDot} ${level}</div>`;
+    }
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
+    notes = notes.replace(" ;", "");
     html += `<div class="word-detail ${levelClass}">${level}<span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
   }
   return html;
@@ -623,6 +628,15 @@ function buildHTMLlevel(entry, id, level_arr, tokenType) {
   }
   if (level) level = `<em>${level}</em><br>`;
   return level;
+}
+
+function buildHTMLlevelDot(entry) {
+  let html = "";
+  if (!isKids()) {
+    const levelNum = getLevelNum(entry);
+    html = (levelNum <= 2) ? `<span class="dot">${["E", "I", "H"][levelNum]}</span>` : "";
+  }
+  return html;
 }
 
 function getExpandedPoS(entry) {
@@ -710,7 +724,6 @@ function displayWorkingText(html) {
 
 function processText(rawText) {
   signalRefreshNeeded("off");
-  // V.idOfAM = getIdsByLemma("am")[0];
   /*
   Cursor-related info:
   convertToHTML( ):
@@ -721,16 +734,17 @@ function processText(rawText) {
       1. updates V_SUPP.cursorPosInTextArr
       2. removes it (so word can be processed normally)
   */
-  // ## reset V.wordStats
   if (typeof rawText === "object") return;
   let text;
   text = normalizeRawText(rawText);
   text = chunkText(text);
-  text = findCompoundsAndFlattenArray(text);
-  const resultsAsTextArr = lookupAllWords(text);
+  text = identifyCompoundWords(text);
+  let resultsAsTextArr = lookupAllWords(text);
+  text = "";
   // debug("resultsAsTextArr", resultsAsTextArr)
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(resultsAsTextArr);
-  const resultsHTML = buildHTMLtext(resultsAsTextArr) + "<span> </span>";
+  const resultsHTML = buildHTMLtext(resultsAsTextArr);
+  resultsAsTextArr = "";
   const repeatsHTML = buildHTMLrepeatList(totalWordCount);
   const levelStatsHTML = buildHTMLlevelStats(separateLemmasCount, levelStats);
   return [resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount];
@@ -780,8 +794,8 @@ function tokenize1(textArr) {
     else if (el === ",") token = "@";
     else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";                // punctuation
     else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
-    else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // "m" = metacharacter (TBA)
-    else if (el.indexOf(CURSOR.simpleText) >= 0) [el, token] = ["", "mc"]; // "m" = metacharacter (TBA)
+    else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // metacharacter newline
+    else if (el.indexOf(CURSOR.simpleText) >= 0) [el, token] = ["", "mc"]; // metacharacter cursor
     else if (/--/.test(el)) token = "p";                                   // m-dash
     else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";           // dash (i.e. punctuation)
     else if (/[a-zA-Z]/.test(el)) token = "w";                             // word
@@ -851,37 +865,44 @@ function tokenize4(textArr) {
 
   let tmpArr = [];
   let chunk = [];
-  const inPhraseTypes = "wsc";
+  let textIsUnsaved;
+  // const inPhraseTypes = "wsc";
   let inPhrase = false;
   // Necessary to avoid losing type=p tokens before 1st word (chunks start with type=p/s/c tokens only)
   let firstWordOrSpaceNotYetFound = true;
   let preWordChunk = [];
+  const lastEl = textArr[textArr.length - 1];
   for (let el of textArr) {
-    const isWORDorSPACE = inPhraseTypes.includes(el[TYPE]);
+    // const isWORDorSPACE =inPhraseTypes.includes(el[TYPE]);
+    const isWORDorSPACE = "wsc".includes(el[TYPE]);
     if (isWORDorSPACE) firstWordOrSpaceNotYetFound = false;
     const newEl = [el[TOKEN], el[TYPE]];
     if (!inPhrase && isWORDorSPACE) {
       // START PHRASE
-      inPhrase = true;
       chunk = [newEl];
+      inPhrase = true;
+      textIsUnsaved = true;
     }
     else if (inPhrase && !isWORDorSPACE) {
       // STOP PHRASE
-      inPhrase = false;
       chunk.push(newEl);
       tmpArr.push(chunk);
+      inPhrase = false;
+      textIsUnsaved = false;
     }
     else {
       if (!inPhrase && !isWORDorSPACE && firstWordOrSpaceNotYetFound) preWordChunk.push(newEl);
       // CONTINUE PHRASE
       chunk.push(newEl);
+      textIsUnsaved = true;
     }
   }
+  if (textIsUnsaved) tmpArr.push(chunk);
   tmpArr = [preWordChunk, ...tmpArr];
   return tmpArr;
 }
 
-function findCompoundsAndFlattenArray(chunks) {
+function identifyCompoundWords(chunks) {
   // ** for each word (token[1]==="w"), search within punctuation-delimited chunk for compound match
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
@@ -1446,6 +1467,7 @@ function buildHTMLtext(textArr) {
     }
     else htmlString += word;
   }
+  // return htmlString + "<span> </span>";
   return htmlString;
 }
 

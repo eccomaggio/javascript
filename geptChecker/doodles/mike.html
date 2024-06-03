@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mike's Conundrum Solver</title>
+  <style>
+    :root {
+      --accent: darkseagreen;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      font-family: monospace;
+    }
+    #input-container {
+      display: flex;
+      flex-direction: column;
+      font-size: inherit;
+      margin-bottom: 2rem;
+    }
+
+    #input {
+      font-size: inherit;
+      color: var(--accent);
+    }
+
+    label {
+      font-family: Arial, Helvetica, sans-serif;
+      /* font-weight: bold; */
+    }
+
+    #output-container {
+      display: flex;
+      flex-direction: row;
+      font-size: inherit;
+      line-height: 150%;
+    }
+
+    label, button {
+      margin: 0.5rem 0;
+      font-weight: bold;
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 0;
+    }
+
+    #input {
+
+    }
+
+    #main, #before, #after {
+      /* font-family: monospace; */
+      width: max-content;
+    }
+    #before, #after {
+      color: var(--accent);
+    }
+
+    #main {
+      color: black;
+      white-space: nowrap;
+    }
+
+    #before {
+      text-align: right;
+    }
+
+    mark {
+      /* background-color: darkseagreen; */
+      background-color: color-mix(in srgb, orange, transparent 40%);
+      /* background-color: color-mix(in srgb, darkseagreen, transparent 20%); */
+      /* color: white; */
+    }
+
+  </style>
+</head>
+
+
+
+
+<body>
+
+  <form id="input-container" onsubmit="submitForm()">
+    <ul>
+      <li>Paste your text into the 'input text' box and press 'submit'.</li>
+      <li>It will appear below as unbroken lines of lowercase letters.</li>
+      <li>You can highlight any number of words you see in the text by selecting with your cursor.</li>
+      <li>Remove a highlight by clicking in it.</li>
+    </ul>
+    <label id="input-label" for="input">Input text</label>
+    <textarea id="input" name="input" rows="5" cols="50"></textarea>
+    <button id="button">Submit</button>
+  </form>
+
+  <div id="output-container">
+    <div id="before"></div>
+    <div id="main"></div>
+    <div id="after"></div>
+  </div>
+
+
+
+
+  <script>
+    "use strict";
+
+    const C = {
+      form: document.querySelector("form"),
+      input: document.getElementById("input"),
+      button: document.getElementById("button"),
+      main: document.getElementById("main"),
+      before: document.getElementById("before"),
+      after: document.getElementById("after"),
+      step: 50,
+      margin: 10,
+    }
+
+
+    function submitForm(e) {
+      event.preventDefault();
+      let text = normalizeText(C.input.value);
+      displayText(text);
+      C.button.innerText = "Remove highlights";
+    }
+
+    function normalizeText(text) {
+      return text.toLowerCase().replaceAll(/[^a-z]/g, "");
+    }
+
+
+    function displayText(text) {
+      let block = [];
+      C.input.cols = C.step;
+      let i = 0;
+      while (i < text.length) {
+        block.push(text.slice(i, i + C.step));
+        i = i + C.step;
+      }
+      C.before.innerHTML = "";
+      C.main.innerHTML = "";
+      C.after.innerHTML = "";
+      block.forEach((el, i) => {
+        const beforeText = (i > 0) ? block[i-1].slice(C.step - C.margin) : "";
+        const afterText = (i < block.length - 1) ? block[i+1].slice(0, C.margin) : "";
+        C.before.innerHTML += beforeText + "<br>";
+        C.main.innerHTML += block[i] + "<br>";
+        C.after.innerHTML += afterText + "<br>";
+      });
+    }
+
+
+    function toggleMark(e) {
+      const selection = window.getSelection().getRangeAt(0);
+      const parent = e.target;
+      console.log(parent.tagName)
+      if (parent.tagName.toLowerCase() === "mark") {
+        replaceMarkWrapper(selection, parent);
+        return;
+      }
+      else if (selection.isCollapsed) return;
+      else addMarkWrapper(selection);
+    }
+
+    function replaceMarkWrapper(selection, parent) {
+      const contents = parent.innerText;
+      const plainText = document.createTextNode(contents);
+      parent.after(plainText);
+      parent.remove();
+      return;
+    }
+
+    function addMarkWrapper(selection) {
+      const selectedText = selection.extractContents();
+      const mark = document.createElement("mark");
+      mark.appendChild(selectedText);
+      selection.insertNode(mark);
+      let text = main.innerHTML;
+      let text1 = text.replaceAll(" ","");
+      C.main.innerHTML = text1;
+      return;
+    }
+
+    function init() {
+      C.main.setAttribute("style", "width: " + C.step + "ch;")
+      // C.main.addEventListener("click", toggleMark);
+      C.main.addEventListener("pointerup", toggleMark);
+    }
+
+    init();
+
+  </script>
+</body>
+</html>
