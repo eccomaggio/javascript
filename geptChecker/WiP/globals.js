@@ -79,6 +79,8 @@ let C = {
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |):w
+  // HTMLescape: { "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" },
+  // HTMLunEscape: { "&lt;" : "<", "&gt;" : ">", "&amp;" : "&", "&quot;" : "\"" },
 
   NBSP: String.fromCharCode(160),
   backupIDs: ["long_term", "short_term"],

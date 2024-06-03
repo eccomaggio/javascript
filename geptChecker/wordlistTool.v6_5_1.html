@@ -1563,6 +1563,8 @@ let C = {
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |):w
+  // HTMLescape: { "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" },
+  // HTMLunEscape: { "&lt;" : "<", "&gt;" : ">", "&amp;" : "&", "&quot;" : "\"" },
 
   NBSP: String.fromCharCode(160),
   backupIDs: ["long_term", "short_term"],
@@ -3430,6 +3432,8 @@ function tokenize1(textArr) {
     else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
     else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
     else if (/[\+\-=@\*<>&]/.test(el)) token = "y";  // symbols
+    // else if (el.indexOf("<") >= 0) [el, token] = [el.replaceAll("<", "&lt;")];
+    // else if (el.indexOf(">") >= 0) [el, token] = [el.replaceAll(">", "&gt;")];
     else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
     else if (el === ",") token = "@";
     else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";                // punctuation
@@ -3498,50 +3502,73 @@ function tokenize3(textArr) {
   return tmpArr;
 }
 
+// function tokenize4(textArr) {
+//   // Pass 4: Mark punctuation-delimited chunks
+//   const TOKEN = 0;    // word or punctuation
+//   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+
+//   let tmpArr = [];
+//   let chunk = [];
+//   let textIsUnsaved;
+//   // const inPhraseTypes = "wsc";
+//   let inPhrase = false;
+//   // Necessary to avoid losing type=p tokens before 1st word (chunks start with type=p/s/c tokens only)
+//   let firstWordOrSpaceNotYetFound = true;
+//   let preWordChunk = [];
+//   const lastEl = textArr[textArr.length - 1];
+//   for (let el of textArr) {
+//     // const isWORDorSPACE =inPhraseTypes.includes(el[TYPE]);
+//     const isWORDorSPACE = "wsc".includes(el[TYPE]);
+//     if (isWORDorSPACE) firstWordOrSpaceNotYetFound = false;
+//     const newEl = [el[TOKEN], el[TYPE]];
+//     if (!inPhrase && isWORDorSPACE) {
+//       // START PHRASE
+//       chunk = [newEl];
+//       inPhrase = true;
+//       textIsUnsaved = true;
+//     }
+//     else if (inPhrase && !isWORDorSPACE) {
+//       // STOP PHRASE
+//       chunk.push(newEl);
+//       tmpArr.push(chunk);
+//       inPhrase = false;
+//       textIsUnsaved = false;
+//     }
+//     else {
+//       if (!inPhrase && !isWORDorSPACE && firstWordOrSpaceNotYetFound) preWordChunk.push(newEl);
+//       // CONTINUE PHRASE
+//       chunk.push(newEl);
+//       textIsUnsaved = true;
+//     }
+//   }
+//   if (textIsUnsaved) tmpArr.push(chunk);
+//   tmpArr = [preWordChunk, ...tmpArr];
+//   return tmpArr;
+// }
+
 function tokenize4(textArr) {
   // Pass 4: Mark punctuation-delimited chunks
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+  const inPhraseTypes = "wsc";
 
   let tmpArr = [];
   let chunk = [];
-  let textIsUnsaved;
-  // const inPhraseTypes = "wsc";
-  let inPhrase = false;
-  // Necessary to avoid losing type=p tokens before 1st word (chunks start with type=p/s/c tokens only)
-  let firstWordOrSpaceNotYetFound = true;
-  let preWordChunk = [];
-  const lastEl = textArr[textArr.length - 1];
+  let prevWasInPhrase, currIsInPhrase;
   for (let el of textArr) {
-    // const isWORDorSPACE =inPhraseTypes.includes(el[TYPE]);
-    const isWORDorSPACE = "wsc".includes(el[TYPE]);
-    if (isWORDorSPACE) firstWordOrSpaceNotYetFound = false;
-    const newEl = [el[TOKEN], el[TYPE]];
-    if (!inPhrase && isWORDorSPACE) {
-      // START PHRASE
-      chunk = [newEl];
-      inPhrase = true;
-      textIsUnsaved = true;
-    }
-    else if (inPhrase && !isWORDorSPACE) {
-      // STOP PHRASE
-      chunk.push(newEl);
+    currIsInPhrase = inPhraseTypes.includes(el[TYPE]);
+    const isStartOfNewPhrase = !prevWasInPhrase && currIsInPhrase;
+    if (isStartOfNewPhrase) {
       tmpArr.push(chunk);
-      inPhrase = false;
-      textIsUnsaved = false;
+      chunk = [];
     }
-    else {
-      if (!inPhrase && !isWORDorSPACE && firstWordOrSpaceNotYetFound) preWordChunk.push(newEl);
-      // CONTINUE PHRASE
-      chunk.push(newEl);
-      textIsUnsaved = true;
-    }
+    chunk.push(el);
+    prevWasInPhrase = currIsInPhrase;
   }
-  if (textIsUnsaved) tmpArr.push(chunk);
-  tmpArr = [preWordChunk, ...tmpArr];
+  tmpArr.push(chunk);
+  // for (let i of tmpArr) debug(i.map(el=>el[TOKEN]).join(""))
   return tmpArr;
 }
-
 function identifyCompoundWords(chunks) {
   // ** for each word (token[1]==="w"), search within punctuation-delimited chunk for compound match
   const TOKEN = 0;    // word or punctuation
@@ -4086,6 +4113,8 @@ function buildHTMLtext(textArr) {
   let htmlString = "";
   let wordIndex = 0;
   for (let [word, type, matchIDarr, reps] of textArr) {
+    // debug(word, word === "<")
+    // word = escapeHTML(word);
     if (type.startsWith("m")) {
       if (type === "me") htmlString += EOL.HTMLtext;
       else htmlString += CURSOR.HTMLtext;
@@ -4099,7 +4128,6 @@ function buildHTMLtext(textArr) {
         let match = getEntryById(id);
         lemmaIdLevelArr.push([word, id, getLevelNum(match)]);
         matchCount++;
-        // wasEOL = false;
       }
       wordIndex++;
       const groupedWord = buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps);
@@ -4107,8 +4135,15 @@ function buildHTMLtext(textArr) {
     }
     else htmlString += word;
   }
-  // return htmlString + "<span> </span>";
   return htmlString;
+}
+
+function escapeHTML(word) {
+  word = word.replaceAll("<", "&lt;");
+  word = word.replaceAll(">", "&gt;");
+  // if (word === "<") word = "&lt;";
+  // else if (word === ">") word = "&gt;";
+  return word;
 }
 
 function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
@@ -4140,7 +4175,9 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   ] = getDuplicateDetails(firstID, ignoreThisRep, reps);
   word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTMLentities(word));
   const localWord = highlightAwlWord(levelArr, word);
-  const listOfLinks = lemmaIdLevelArr.map(el => [`${el[1]}:${el[0].trim()}:${type}`]).join(" ");
+  let listOfLinks = lemmaIdLevelArr.map(el => [`${el[1]}:${el[0].trim()}:${type}`]).join(" ");
+  listOfLinks = escapeHTML(listOfLinks);
+  // debug(">>", listOfLinks)
   let showAsMultiple = "";
   if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
   const classes = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
