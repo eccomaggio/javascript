@@ -447,7 +447,8 @@
 
     #t2_final_info > div.level-c,
     #t2_final_info > div.level-d {
-      background-color: var(--misc);
+      /* background-color: var(--misc); */
+      background-color: var(--lowlight);
     }
 
 

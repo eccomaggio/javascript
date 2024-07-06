@@ -395,7 +395,6 @@ function refineSearch(find) {
       }
     }
     results = tmp_matches;
-
   }
   if (!isEmpty(find.pos)) {
     results = results.filter(el => getPoS(el)).filter(el => getPoS(el).search(find.pos) != -1);
@@ -579,6 +578,7 @@ function hoverEffects(e) {
 
 
 function displayEntryInfo(refs) {
+  debug(refs)
   let html = "";
   for (const ref of refs.split(" ")) {
     const [id, word, tokenType] = ref.split(":");
@@ -592,7 +592,7 @@ function displayEntryInfo(refs) {
     }
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
-    notes = notes.replace(" ;", "");
+    notes = notes.split(";").filter(el => !!el.trim()).join(";");
     html += `<div class="word-detail ${levelClass}">${level}<span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
   }
   return html;
@@ -669,31 +669,54 @@ function catchKeyboardCopyEvent(e) {
 }
 
 
+// function updateInputDiv(e) {
+//   if (!V.refreshRequired) return;
+//   signalRefreshNeeded("off");
+//   let revisedText = getRevisedText().trim();
+//   if (revisedText === CURSOR.text) revisedText = "";
+//   // debug(revisedText, !!revisedText, revisedText === CURSOR.text)
+//   if (revisedText) {
+//     // signalRefreshNeeded("off");
+//     V.isExactMatch = true;
+//     V.setOfLemmaID = new Set();
+//     const [
+//       resultsHTML,
+//       repeatsHTML,
+//       levelStatsHTML,
+//       wordCount
+//     ] = processText(revisedText);
+//     displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
+//     HTM.finalInfoDiv.innerText = "";
+//     backupSave();
+//   signalRefreshNeeded("off");
+//     setCursorPos(document.getElementById(CURSOR.id));
+//   }
+// }
+
+
 function updateInputDiv(e) {
   if (!V.refreshRequired) return;
   signalRefreshNeeded("off");
   let revisedText = getRevisedText().trim();
   if (revisedText === CURSOR.text) revisedText = "";
-  // debug(revisedText, !!revisedText, revisedText === CURSOR.text)
   if (revisedText) {
-    // signalRefreshNeeded("off");
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
+    const resultsAsTextArr = lookups(revisedText);
+    debug(resultsAsTextArr)
+    revisedText = null;
     const [
       resultsHTML,
       repeatsHTML,
       levelStatsHTML,
       wordCount
-    ] = processText(revisedText);
+    ] = buildHTML(resultsAsTextArr);
     displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
-    HTM.finalInfoDiv.innerText = "";
     backupSave();
-  signalRefreshNeeded("off");
+    signalRefreshNeeded("off");
     setCursorPos(document.getElementById(CURSOR.id));
   }
 }
-
-
 function getRevisedText() {
   let revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
   return revisedText;
@@ -715,6 +738,7 @@ function displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCoun
   if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", setLevelState);
   // document.getElementById("level-details").addEventListener("toggle", setLevelState);
   document.getElementById("repeat-details").addEventListener("toggle", setRepeatState);
+  // HTM.finalInfoDiv.innerText = "";
 }
 
 function displayWorkingText(html) {
@@ -722,26 +746,19 @@ function displayWorkingText(html) {
   // setCursorPos(document.getElementById(CURSOR.id));
 }
 
-function processText(rawText) {
-  signalRefreshNeeded("off");
-  /*
-  Cursor-related info:
-  convertToHTML( ):
-    adds in CURSOR.HTMLtext according to V_SUPP.cursorPosInTextArr
 
-  splitText( ):
-    searches for CURSOR.text and if it finds it:
-      1. updates V_SUPP.cursorPosInTextArr
-      2. removes it (so word can be processed normally)
-  */
+function lookups(rawText) {
+  signalRefreshNeeded("off");
   if (typeof rawText === "object") return;
   let text;
   text = normalizeRawText(rawText);
   text = chunkText(text);
-  text = identifyCompoundWords(text);
+  text = lookupCompoundWords(text);
   let resultsAsTextArr = lookupAllWords(text);
-  text = "";
-  // debug("resultsAsTextArr", resultsAsTextArr)
+  return resultsAsTextArr;
+}
+
+function buildHTML(resultsAsTextArr) {
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(resultsAsTextArr);
   const resultsHTML = buildHTMLtext(resultsAsTextArr);
   resultsAsTextArr = "";
@@ -789,12 +806,12 @@ function tokenize1(textArr) {
     else if (/\d/.test(el)) token = "d";             // digit
     else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
     else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
-    else if (/[\+\-=@\*<>&]/.test(el)) token = "y";  // symbols
+    else if (/[+\-=@*<>&]/.test(el)) token = "y";  // symbols
     // else if (el.indexOf("<") >= 0) [el, token] = [el.replaceAll("<", "&lt;")];
     // else if (el.indexOf(">") >= 0) [el, token] = [el.replaceAll(">", "&gt;")];
     else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
     else if (el === ",") token = "@";
-    else if (/["',\.\/\?\!\(\[\)\]]/.test(el)) token = "p";                // punctuation
+    else if (/["',./?!()[\]]/.test(el)) token = "p";                // punctuation
     else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
     else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // metacharacter newline
     else if (el.indexOf(CURSOR.simpleText) >= 0) [el, token] = ["", "mc"]; // metacharacter cursor
@@ -860,49 +877,6 @@ function tokenize3(textArr) {
   return tmpArr;
 }
 
-// function tokenize4(textArr) {
-//   // Pass 4: Mark punctuation-delimited chunks
-//   const TOKEN = 0;    // word or punctuation
-//   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
-
-//   let tmpArr = [];
-//   let chunk = [];
-//   let textIsUnsaved;
-//   // const inPhraseTypes = "wsc";
-//   let inPhrase = false;
-//   // Necessary to avoid losing type=p tokens before 1st word (chunks start with type=p/s/c tokens only)
-//   let firstWordOrSpaceNotYetFound = true;
-//   let preWordChunk = [];
-//   const lastEl = textArr[textArr.length - 1];
-//   for (let el of textArr) {
-//     // const isWORDorSPACE =inPhraseTypes.includes(el[TYPE]);
-//     const isWORDorSPACE = "wsc".includes(el[TYPE]);
-//     if (isWORDorSPACE) firstWordOrSpaceNotYetFound = false;
-//     const newEl = [el[TOKEN], el[TYPE]];
-//     if (!inPhrase && isWORDorSPACE) {
-//       // START PHRASE
-//       chunk = [newEl];
-//       inPhrase = true;
-//       textIsUnsaved = true;
-//     }
-//     else if (inPhrase && !isWORDorSPACE) {
-//       // STOP PHRASE
-//       chunk.push(newEl);
-//       tmpArr.push(chunk);
-//       inPhrase = false;
-//       textIsUnsaved = false;
-//     }
-//     else {
-//       if (!inPhrase && !isWORDorSPACE && firstWordOrSpaceNotYetFound) preWordChunk.push(newEl);
-//       // CONTINUE PHRASE
-//       chunk.push(newEl);
-//       textIsUnsaved = true;
-//     }
-//   }
-//   if (textIsUnsaved) tmpArr.push(chunk);
-//   tmpArr = [preWordChunk, ...tmpArr];
-//   return tmpArr;
-// }
 
 function tokenize4(textArr) {
   // Pass 4: Mark punctuation-delimited chunks
@@ -927,7 +901,9 @@ function tokenize4(textArr) {
   // for (let i of tmpArr) debug(i.map(el=>el[TOKEN]).join(""))
   return tmpArr;
 }
-function identifyCompoundWords(chunks) {
+
+
+function lookupCompoundWords(chunks) {
   // ** for each word (token[1]==="w"), search within punctuation-delimited chunk for compound match
   const TOKEN = 0;    // word or punctuation
   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
@@ -1484,7 +1460,8 @@ function buildHTMLtext(textArr) {
       let lemmaIdLevelArr = [];
       for (let id of matchIDarr) {
         let match = getEntryById(id);
-        lemmaIdLevelArr.push([word, id, getLevelNum(match)]);
+        // lemmaIdLevelArr.push([word, id, getLevelNum(match)]);
+        lemmaIdLevelArr.push([escapeHTML(word), id, getLevelNum(match)]);
         matchCount++;
       }
       wordIndex++;
@@ -1496,13 +1473,25 @@ function buildHTMLtext(textArr) {
   return htmlString;
 }
 
-function escapeHTML(word) {
-  word = word.replaceAll("<", "&lt;");
-  word = word.replaceAll(">", "&gt;");
-  // if (word === "<") word = "&lt;";
-  // else if (word === ">") word = "&gt;";
-  return word;
-}
+// function escapeHTML(word) {
+//   // word = word.replaceAll("<", "&amp;lt;");
+//   // word = word.replaceAll(">", "&amp;gt;");
+//   word = word.replaceAll("<", "&lt;");
+//   word = word.replaceAll(">", "&gt;");
+//   // if (word === "<") word = "&lt;";
+//   // else if (word === ">") word = "&gt;";
+//   return word;
+// }
+
+// function doubleEscapeHTML(word) {
+//   word = word.replaceAll("<", "&amp;lt;");
+//   word = word.replaceAll(">", "&amp;gt;");
+//   // word = word.replaceAll("<", "&lt;");
+//   // word = word.replaceAll(">", "&gt;");
+//   // if (word === "<") word = "&lt;";
+//   // else if (word === ">") word = "&gt;";
+//   return word;
+// }
 
 function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   let word = lemmaIdLevelArr[0][0];
@@ -1531,7 +1520,9 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
     duplicateCountInfo,
     anchor
   ] = getDuplicateDetails(firstID, ignoreThisRep, reps);
-  word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTMLentities(word));
+  word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, word);
+  // word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTMLentities(word));
+  // word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTML(word));
   const localWord = highlightAwlWord(levelArr, word);
   let listOfLinks = lemmaIdLevelArr.map(el => [`${el[1]}:${el[0].trim()}:${type}`]).join(" ");
   // listOfLinks = escapeHTML(listOfLinks);
@@ -1539,7 +1530,9 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   let showAsMultiple = "";
   if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
   const classes = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
-  const displayWord = `<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  const displayWord = `<span data-entry="${escapeHTML(listOfLinks)}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  // const displayWord = `<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  debug(listOfLinks, escapeHTML(listOfLinks))
   return displayWord;
 }
 
@@ -1705,10 +1698,19 @@ function getLevelNum(entry) {
 }
 
 
-function escapeHTMLentities(text) {
-  return text.replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+function escapeHTML(text) {
+  // return encodeURIComponent(text);
+  if (/[<>&"]/.test(text)) {
+    // text = text.replaceAll(/&/g, "&amp;");
+    text = text.replaceAll(/</g, "&lt;");
+    text = text.replaceAll(/>/g, "&gt;");
+    // text = text.replaceAll(/"/g, "&quot;");
+  }
+  return text;
+}
+
+function unEscapeHTML(encodedText) {
+  return decodeURIComponent(encodedText);
 }
 
 
@@ -1739,9 +1741,10 @@ function buildHTMLrepeatList(wordCount) {
   let countAllReps = 0;
   // let countOfRepeatedLemmas = 0;
   let listOfRepeats = "";
-  if (!wordCount) {
-    V.tallyOfIDreps = {}; // ????? not necessary??
-  } else {
+  // if (!wordCount) {
+  //   V.tallyOfIDreps = {}; // ????? not necessary??
+  // } else {
+  if (wordCount) {
     /* List of repeated lemmas
     in line with display policy, if two lemmas are identical,
     the id with the lowest level is linked/displayed
@@ -1777,7 +1780,7 @@ function buildHTMLrepeatList(wordCount) {
     if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
       repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id="all_repeats" class="all-repeats">${countAllReps} significant repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
-      listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id='repeats'>${listOfRepeats}</div></details>`;
+      listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id="repeats">${listOfRepeats}</div></details>`;
     } else {
       listOfRepeats = `<p id="${idForEventListener}"><span id="all_repeats" class="all-repeats">There are no significant repeated words.</span></p>`;
     }

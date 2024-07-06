@@ -257,6 +257,10 @@ def minimize_pos(pos):
         # return " ".join([pov_lookup[item] for item in pos.split(" ")])
         return "".join([pov_lookup[item] for item in pos.split(" ")])
 
+def createNotes(gloss, notes):
+    tmp = [x for x in [gloss, notes] if x]
+    return "; ".join(tmp)
+
 def normalize_cols(list):
     ur_lemma = 0
     ur_pos = 1
@@ -285,7 +289,8 @@ def normalize_cols(list):
             Pos.GEPT_ONLY.value
           ],
           # e[ur_gloss] + "; " + e[ur_notes] + "|"
-          e[ur_gloss].strip() + "; " + e[ur_notes].strip()
+        #   e[ur_gloss].strip() + "; " + e[ur_notes].strip()
+          createNotes(e[ur_gloss].strip(), e[ur_notes].strip())
         ]
       normalized.append(normalized_entry)
     return normalized
