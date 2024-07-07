@@ -1532,7 +1532,7 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   const classes = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
   const displayWord = `<span data-entry="${escapeHTML(listOfLinks)}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
   // const displayWord = `<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
-  debug(listOfLinks, escapeHTML(listOfLinks))
+  // debug(listOfLinks, escapeHTML(listOfLinks))
   return displayWord;
 }
 
