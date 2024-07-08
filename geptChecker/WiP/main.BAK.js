@@ -134,8 +134,7 @@ function backupShow(e) {
     const lsContent = localStorage.getItem(id);
     let content = (lsContent) ? lsContent.trim() : "";
     if (content) {
-      // if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
-      if (localStorage.getItem("mostRecent") == id) content = tag("span", ["class=warning"],["Most Recent: "]).stringify() + content;
+      if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
       backup.innerHTML = content;
       backup.disabled = false;
     } else {
@@ -293,8 +292,7 @@ function prepareSearch(e) {
 }
 
 function markStringAsError(str) {
-  // return `<span class='error'>${str}</span>`;
-  return tag("span", ["class=error"], [str]).stringify();
+  return `<span class='error'>${str}</span>`;
 }
 
 function updateKidstheme(e) {
@@ -459,40 +457,38 @@ function getAwlSublist(level_arr) {
 }
 
 function highlightAwlWord(level_arr, word) {
-  // return (isBESTEP() && level_arr[1] >= 0) ? `<span class="awl-word">${word}</span>` : word;
-  return (isBESTEP() && level_arr[1] >= 0) ? tag("span", ["class=awl-word"], [word]) : word;
+  return (isBESTEP() && level_arr[1] >= 0) ? `<span class="awl-word">${word}</span>` : word;
 }
 
 function formatResultsAsHTML(results) {
   if (isEmpty(results)) {
-    return tag("span", ["class=warning"], ["Search returned no results."]).stringify();
+    return "<span class='warning'><b>Search returned no results.</b></span>"
   }
-  let output = [];
+  let output = "";
   let previousInitial = "";
   let currentInitial = "";
   let i = 0;
   for (const entry of results.sort(compareByLemma)) {
     currentInitial = (getLemma(entry)) ? getLemma(entry)[0].toLowerCase() : "";
     if (currentInitial !== previousInitial) {
-      output.push(formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
+      output += formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", "");
     }
     const level_arr = getLevel(entry);
     const awl_sublist = getAwlSublist(level_arr);
     const awlWord = highlightAwlWord(level_arr, getLemma(entry));
-    const lemma = tag("strong", [], [awlWord]);
+    const lemma = `<strong>${awlWord}</strong>`;
     const pos = `[${getExpandedPoS(entry)}]`;
     let level = V.level_subs[level_arr[0]];
     if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
     if (!level) continue;
     let [note, awl_note] = getNotes(entry);
-    const col2 = [lemma, tag("span", ["class=show-pos"], [pos]), " ", tag("span", ["class=show-level"], [level]), note, awl_note];
+    const col2 = `${lemma} <span class="show-pos">${pos}</span> <span class="show-level">${level}</span>${note}${awl_note}`;
     let class2 = (isKids()) ? "level-e" : `level-${level[0]}`;
-    output.push(formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
+    output += formatResultsAsTablerows(`${i + 1}`, col2, "", class2);
     previousInitial = currentInitial;
     i++;
   }
-  debug(output)
-  return tag("table", [], [...output]).stringify();
+  return "<table>" + output + "</table>";
 }
 
 function getId(entry) {
@@ -518,7 +514,7 @@ function getNotes(entry) {
   if (entry) {
     [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
     note = note ? `, ${note}` : "";
-    awl_note = (isBESTEP() && awl_note) ? tag("span", ["class=awl-note"], ["(headword: ", tag("span", ["class=awl-headword"], [awl_note])]) : "";
+    awl_note = (isBESTEP() && awl_note) ? ` <span class="awl-note">(headword: <span class="awl-headword">${awl_note}</span>)</span>` : "";
   }
   return [note, awl_note];
 }
@@ -528,13 +524,10 @@ function isCompound(entryOrID) {
   return result;
 }
 function formatResultsAsTablerows(col1, col2, class1, class2, row) {
-  class1 = (class1) ? `class=${class1}` : "";
-  class2 = (class2) ? `class=${class2}` : "";
-  row = (row) ? `class=${row}` : "";
-  return tag("tr", [], [
-    tag("td", [class1], [col1]),
-    tag("td", [class2], [...col2]),
-  ]);
+  class1 = (class1) ? ` class="${class1}"` : "";
+  class2 = (class2) ? ` class="${class2}"` : "";
+  row = (row) ? ` class="${row}"` : "";
+  return (`<tr${row}><td${class1}>${col1}</td><td${class2}>${col2}</td></tr>\n`)
 }
 
 function displayWordSearchResults(resultsAsHtmlString, resultCount = 0) {
@@ -585,9 +578,8 @@ function hoverEffects(e) {
 
 
 function displayEntryInfo(refs) {
-  // debug(refs)
-  // let html = "";
-  let html = [];
+  debug(refs)
+  let html = "";
   for (const ref of refs.split(" ")) {
     const [id, word, tokenType] = ref.split(":");
     const entry = getEntryById(id);
@@ -596,12 +588,12 @@ function displayEntryInfo(refs) {
     let level = buildHTMLlevel(entry, id, levelArr, tokenType);
     if (level) {
       const levelDot = buildHTMLlevelDot(entry);
-      level = tag("div", [], [levelDot, " ", level]);
+      level = `<div>${levelDot} ${level}</div>`;
     }
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
     notes = notes.split(";").filter(el => !!el.trim()).join(";");
-    html.push("div", [`class=word-detail ${levelClass}`], [level, tag("span", [], [lemma, pos, notes, awl_notes])]);
+    html += `<div class="word-detail ${levelClass}">${level}<span>${lemma}${pos}${notes}${awl_notes}</span></div>`;
   }
   return html;
 }
@@ -609,16 +601,16 @@ function displayEntryInfo(refs) {
 
 function buildHTMLlemma(entry, id, word, tokenType) {
   const lemma = getLemma(entry);
-  let displayLemma;
+  let displayLemma = "";
   if (getPoS(entry) === "unknown") return displayLemma;
   if (tokenType === "wv") {
-    displayLemma = root([ tag("em",[], "** Use "), tag("strong", [], lemma), tag("em", [], " instead of "), tag("br"), word, ]);
+    displayLemma = `<em>** Use</em> <strong>${lemma}</strong> <em>instead of</em><br>"${word}" `;
   } else if (tokenType === "wd") {
-    displayLemma = root([tag("strong", [], word), " < ", lemma]);
+    displayLemma = `<strong>${word}</strong> &lt; "${lemma}"`;
   } else {
-    displayLemma = root([tag("strong", [], lemma)]);
+    displayLemma = `<strong>${lemma}</strong>: `;
   }
-  return displayLemma.stringify();
+  return displayLemma;
 }
 
 function buildHTMLlevel(entry, id, level_arr, tokenType) {
@@ -634,7 +626,7 @@ function buildHTMLlevel(entry, id, level_arr, tokenType) {
       level += `; ${V.level_subs[level_arr[1]]}`;
     }
   }
-  if (level) level = root([tag("em",[], level), tag("br")]);
+  if (level) level = `<em>${level}</em><br>`;
   return level;
 }
 
@@ -642,7 +634,7 @@ function buildHTMLlevelDot(entry) {
   let html = "";
   if (!isKids()) {
     const levelNum = getLevelNum(entry);
-    html = (levelNum <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][levelNum]]).stringify() : "";
+    html = (levelNum <= 2) ? `<span class="dot">${["E", "I", "H"][levelNum]}</span>` : "";
   }
   return html;
 }
@@ -677,6 +669,30 @@ function catchKeyboardCopyEvent(e) {
 }
 
 
+// function updateInputDiv(e) {
+//   if (!V.refreshRequired) return;
+//   signalRefreshNeeded("off");
+//   let revisedText = getRevisedText().trim();
+//   if (revisedText === CURSOR.text) revisedText = "";
+//   // debug(revisedText, !!revisedText, revisedText === CURSOR.text)
+//   if (revisedText) {
+//     // signalRefreshNeeded("off");
+//     V.isExactMatch = true;
+//     V.setOfLemmaID = new Set();
+//     const [
+//       resultsHTML,
+//       repeatsHTML,
+//       levelStatsHTML,
+//       wordCount
+//     ] = processText(revisedText);
+//     displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
+//     HTM.finalInfoDiv.innerText = "";
+//     backupSave();
+//   signalRefreshNeeded("off");
+//     setCursorPos(document.getElementById(CURSOR.id));
+//   }
+// }
+
 
 function updateInputDiv(e) {
   if (!V.refreshRequired) return;
@@ -701,8 +717,6 @@ function updateInputDiv(e) {
     setCursorPos(document.getElementById(CURSOR.id));
   }
 }
-
-
 function getRevisedText() {
   let revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
   return revisedText;
@@ -955,7 +969,7 @@ function getAllLevelStats(textArr) {
       awlEntries++;
     }
   }
-  if (isBESTEP() && awlEntries > 1) levelStats.push(buildLevelStat(37, tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
+  if (isBESTEP() && awlEntries > 1) levelStats.push(buildLevelStat(37, "<b>AWL total</b>", awlCount, separateLemmasCount));
   return [totalWordCount, separateLemmasCount, levelStats];
 }
 
@@ -1446,8 +1460,8 @@ function buildHTMLtext(textArr) {
       let lemmaIdLevelArr = [];
       for (let id of matchIDarr) {
         let match = getEntryById(id);
-        lemmaIdLevelArr.push([word, id, getLevelNum(match)]);
-        // lemmaIdLevelArr.push([escapeHTML(word), id, getLevelNum(match)]);
+        // lemmaIdLevelArr.push([word, id, getLevelNum(match)]);
+        lemmaIdLevelArr.push([escapeHTML(word), id, getLevelNum(match)]);
         matchCount++;
       }
       wordIndex++;
@@ -1459,6 +1473,25 @@ function buildHTMLtext(textArr) {
   return htmlString;
 }
 
+// function escapeHTML(word) {
+//   // word = word.replaceAll("<", "&amp;lt;");
+//   // word = word.replaceAll(">", "&amp;gt;");
+//   word = word.replaceAll("<", "&lt;");
+//   word = word.replaceAll(">", "&gt;");
+//   // if (word === "<") word = "&lt;";
+//   // else if (word === ">") word = "&gt;";
+//   return word;
+// }
+
+// function doubleEscapeHTML(word) {
+//   word = word.replaceAll("<", "&amp;lt;");
+//   word = word.replaceAll(">", "&amp;gt;");
+//   // word = word.replaceAll("<", "&lt;");
+//   // word = word.replaceAll(">", "&gt;");
+//   // if (word === "<") word = "&lt;";
+//   // else if (word === ">") word = "&gt;";
+//   return word;
+// }
 
 function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
   let word = lemmaIdLevelArr[0][0];
@@ -1488,13 +1521,19 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
     anchor
   ] = getDuplicateDetails(firstID, ignoreThisRep, reps);
   word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, word);
+  // word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTMLentities(word));
+  // word = insertCursorInHTML(lemmaIdLevelArr.length, wordIndex, escapeHTML(word));
   const localWord = highlightAwlWord(levelArr, word);
   let listOfLinks = lemmaIdLevelArr.map(el => [`${el[1]}:${el[0].trim()}:${type}`]).join(" ");
+  // listOfLinks = escapeHTML(listOfLinks);
+  // debug(">>", listOfLinks)
   let showAsMultiple = "";
-  if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
-  const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
-  const displayWord = tag("span", [`data-entry=${listOfLinks}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
-  return displayWord.stringify();
+  if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? " multi-same" : " multi-diff";
+  const classes = `${levelClass}${relatedWordsClass}${duplicateClass}${showAsMultiple}${variantClass}${limit}`;
+  const displayWord = `<span data-entry="${escapeHTML(listOfLinks)}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  // const displayWord = `<span data-entry="${listOfLinks}" class="${classes}"${duplicateCountInfo}${anchor}>${localWord}</span>`;
+  // debug(listOfLinks, escapeHTML(listOfLinks))
+  return displayWord;
 }
 
 
@@ -1640,11 +1679,11 @@ function getDuplicateDetails(id, ignoreRepeats, reps) {
   let anchor = "";
   const relatedWordsClass = `all_${id}`;
   if (totalReps > 0 && !ignoreRepeats) {
-    duplicateClass = "duplicate";
-    duplicateCountInfo = `data-reps=${totalReps}`;
-    anchor = `id=${relatedWordsClass}_${reps + 1}`;
+    duplicateClass = " duplicate";
+    duplicateCountInfo = ' data-reps="' + totalReps + '"';
+    anchor = ` id='${relatedWordsClass}_${reps + 1}'`;
   }
-  return [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
+  return [" " + relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
 }
 
 
@@ -1685,41 +1724,26 @@ function getLevelPrefix(entry) {
 
 
 function buildHTMLlevelStats(separateLemmasCount, levelStats) {
-  /*
-  <details id="level-details"${toggleOpen}>
-    <summary class="all-repeats">
-      Level statistics:<em> (${separateLemmasCount} headwords)</em>
-    </summary>
-    <div class="level-stats-cols">
-      <p class="level..."></p>
-    </div>
-  </details>
-  */
-  let levelStatsHTML = "";
-  if (!separateLemmasCount || isKids()) return levelStatsHTML;
-  let tmpStats = [];
+  let levelStatsHTMLstr = "";
+  if (!separateLemmasCount || isKids()) return levelStatsHTMLstr;
+  levelStatsHTMLstr = `<summary class="all-repeats">Level statistics:<em> (${separateLemmasCount} headwords)</em></summary><div class="level-stats-cols">`
   for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
-    if (levelID < 3) tmpStats.push(tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
-    else if (isBESTEP()) tmpStats.push(tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
+    if (levelID < 3) levelStatsHTMLstr += `<p class="level-${levelText[0]}">${levelText}: ${total} (${percent})</p>`;
+    else if (isBESTEP()) levelStatsHTMLstr += `<p class="level-a">${levelText}: ${total} (${percent})</p>`;
   }
-  // debug(tmpStats)
   const toggleOpen = (V.current.level_state) ? " open" : "";
-  levelStatsHTML = root([tag("details", ["id=level-details", toggleOpen], [
-    tag("summary",["class=all-repeats"], [
-      "Level statistics:",
-      tag("em", [], [separateLemmasCount, " headwords"]),
-    ]),
-    tag("div", ["class=level-stats-cols"],[...tmpStats])
-    ])
-  ]);
-  return levelStatsHTML.stringify();
+  levelStatsHTMLstr = `<details id="level-details"${toggleOpen}>${levelStatsHTMLstr}</div></details>`;
+  return levelStatsHTMLstr;
 }
 
 
 function buildHTMLrepeatList(wordCount) {
   let countAllReps = 0;
-  let repeatsHeader;
-  let listOfRepeats = [];
+  // let countOfRepeatedLemmas = 0;
+  let listOfRepeats = "";
+  // if (!wordCount) {
+  //   V.tallyOfIDreps = {}; // ????? not necessary??
+  // } else {
   if (wordCount) {
     /* List of repeated lemmas
     in line with display policy, if two lemmas are identical,
@@ -1738,38 +1762,30 @@ function buildHTMLrepeatList(wordCount) {
       const isRepeatable = !LOOKUP.repeatableWords.includes(word);
       if (totalReps > 0 && isRepeatable) {
         countAllReps++;
-        let anchors = [];
+        let anchors = "";
         for (let rep = 1; rep <= totalReps + 1; rep++) {
           let display = rep;
-          let displayClass = "class=anchors";
+          let displayClass = 'class="anchors" ';
           if (rep === 1) {
             display = highlightAwlWord(getLevel(entry), word);
-            displayClass = `class=level-${getLevelPrefix(entry)}`;
+            displayClass = `class="level-${getLevelPrefix(entry)}" `;
           }
-          anchors.push(" ", tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`],[display]));
+          anchors += ` <a href="#" ${displayClass}onclick="jumpToDuplicate('all_${id}_${rep}'); return false;">${display}</a>`;
         }
-        listOfRepeats.push(tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry)}`], [...anchors]));
+        listOfRepeats += `<p data-entry="${id}" class='duplicate all_${id} level-${getLevelPrefix(entry)}'>${anchors}</p>`;
       }
     }
+    let repeatsHeader;
     const idForEventListener = "repeat-details";
     if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
-      repeatsHeader = tag("details", [`id=${idForEventListener}`,toggleOpen],[
-        tag("summary", ["id=all_repeats", "class=all-repeats"], [
-          countAllReps,
-          ` significant repeated word${(countAllReps === 1) ? "" : "s"}`,
-        ]),
-        tag("p",[],[
-          tag("em", [], ["Click on word / number to jump to that occurrence."])
-        ]),
-        tag("div", ["id=repeats"], [...listOfRepeats]),
-      ]);
+      repeatsHeader = `<details id="${idForEventListener}"${toggleOpen}><summary id="all_repeats" class="all-repeats">${countAllReps} significant repeated word${(countAllReps === 1) ? "" : "s"}</summary>`;
+      listOfRepeats = `${repeatsHeader}<p><em>Click on word / number to jump to that occurrence.</em></p><div id="repeats">${listOfRepeats}</div></details>`;
     } else {
-      repeatsHeader = tag("p", [`id=${idForEventListener}`], [
-        tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
+      listOfRepeats = `<p id="${idForEventListener}"><span id="all_repeats" class="all-repeats">There are no significant repeated words.</span></p>`;
     }
   }
-  return repeatsHeader.stringify();
+  return listOfRepeats
 }
 
 
@@ -1786,13 +1802,7 @@ function compareByLemma(a, b) {
 }
 
 function getWordCountForDisplay(wordCount) {
-  const numOfWords = (wordCount > 0) ? tag("span", ["class=text-right dark"], [
-    "c.",
-    wordCount,
-    " word",
-    pluralNoun(wordCount),
-    tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
-  ]) : "";
+  const numOfWords = (wordCount > 0) ? `<span class="text-right dark">(c.${wordCount} word${(pluralNoun(wordCount))}) <a href='#all_repeats' class='medium'>&#x25BC;</a></span>` : "";
   return numOfWords;
 }
 
@@ -1806,7 +1816,7 @@ function displayDbNameInTab1() {
 
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
-  HTM.finalLegend.innerHTML = root(["Checking ", tag("span", ["id=db_name2", "class=dbColor"], [V.currentDb.name]), msg]).stringify();
+  HTM.finalLegend.innerHTML = `Checking <span id='db_name2' class='dbColor'>${V.currentDb.name}</span>${msg}`;
   document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:list-item;" : "display:none;");
   document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:list-item;" : "display:none;");
   document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:list-item;" : "display:none;");

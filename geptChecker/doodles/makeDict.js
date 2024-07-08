@@ -56,6 +56,10 @@ function tag(name, attrs=[], content=[]){
   return new Tag(name, attrs, content);
 }
 
+function root(content){
+  return new Tag("root", [], content);
+}
+
 function attr(name, value){
   return new Attr(name, value);
 }
@@ -73,25 +77,72 @@ function attr(name, value){
 // }
 
 
+// class Tag {
+//   constructor(name, attrs=[], content=[]) {
+//     this.isEmpty = !attrs.length && !content.length;
+//     this.name = name;
+//     if (typeof attrs === "string") attrs = [attrs];
+//     // this.attrs = attrs.map(el => new Attr(...el.split("=")));
+//     this.attrs = attrs.map(el => {
+//       let tmp = el.split("=");
+//       return (tmp.length === 1) ? [tmp] : [tmp[0],escapeHTML(tmp[1])];
+//     });
+//     this.content = (typeof content === "string") ? [content] : content;
+//   }
+//   stringify() {
+//     if (this.isEmpty) return `<${this.name} />`;
+//     let tmpContent = "";
+//     for (const el of this.content){
+//       tmpContent += (typeof el === "string") ? escapeHTML(el) : el.stringify();
+//     }
+//     // ** <root> is used to render a chain of html/text tags; it is not itself rendered
+//     if (this.name === "root") return tmpContent;
+//     // const tmpAttrs = (this.attrs.length) ? " " + this.attrs.map(el => el.str()).join(" ") : "";
+//     let tmpAttrs = "";
+//     if (this.attrs.length){
+//       tmpAttrs = this.attrs.map(
+//         el => (el.length === 1)
+//         ? ` ${el}`
+//         : ` ${el[0]}="${el[1]}"`
+//       ).join("");
+//     }
+//     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;
+//   }
+// }
+
+// class Html {
+//   constructor(arrOfTagsAndText){
+//     this.content = arrOfTagsAndText;
+//   }
+//   stringify() {
+//     return this.content.map(el => (el.constructor.name === "Tag") ? el.stringify() : escapeHTML(el)).join("");
+//   }
+// }
+
+
 class Tag {
   constructor(name, attrs=[], content=[]) {
+    if (typeof content === "string") content = [content];
     this.isEmpty = !attrs.length && !content.length;
     this.name = name;
     if (typeof attrs === "string") attrs = [attrs];
-    // this.attrs = attrs.map(el => new Attr(...el.split("=")));
     this.attrs = attrs.map(el => {
       let tmp = el.split("=");
       return (tmp.length === 1) ? [tmp] : [tmp[0],escapeHTML(tmp[1])];
     });
-    this.content = (typeof content === "string") ? [content] : content;
+    // this.content = (typeof content === "string") ? [content] : content;
+    this.content = content.map(el => (typeof el === "string") ? escapeHTML(el) : el);
   }
   stringify() {
     if (this.isEmpty) return `<${this.name} />`;
     let tmpContent = "";
-    for (const el of this.content){
-      tmpContent += (typeof el === "string") ? escapeHTML(el) : el.stringify();
+    for (let el of this.content){
+      if (typeof el === "number" ) el = el.toString();
+      // tmpContent += (typeof el === "string") ? escapeHTML(el) : el.stringify();
+      tmpContent += (typeof el === "string") ? el : el.stringify();
     }
-    // const tmpAttrs = (this.attrs.length) ? " " + this.attrs.map(el => el.str()).join(" ") : "";
+    // ** <root> is used to render a chain of html/text tags; it is not itself rendered
+    if (this.name === "root") return tmpContent;
     let tmpAttrs = "";
     if (this.attrs.length){
       tmpAttrs = this.attrs.map(
@@ -105,7 +156,11 @@ class Tag {
 }
 
 
-const html = tag("div", "id=top",[
+
+
+
+
+const htmlTag = tag("div", "id=top",[
     tag("span",["class=default", "id=span1", "dataRef=>:0:0", "checked"],[ "hello" ]),
     " ",
     tag("em", [],"world"),
@@ -113,6 +168,35 @@ const html = tag("div", "id=top",[
     tag("br"),
     "and a new line..."
 ]);
+
+const lemma = "test";
+const word = "Testy"
+// const htmlChain = new Html([
+//   tag("em",[], "** Use "),
+//   tag("strong", [], lemma),
+//   tag("em", [], " instead of "),
+//   tag("br"),
+//   word,
+// ]);
+
+// const htmlChain = tag("root",[],[
+//   tag("em",[], "** Use "),
+//   tag("strong", [], lemma),
+//   tag("em", [], " instead of "),
+//   tag("br"),
+//   word,
+// ]);
+
+const htmlChain = root([
+  tag("em",[], "** Use "),
+  tag("strong", [], lemma),
+  tag("em", [], " instead of "),
+  tag("br"),
+  word,
+]);
+
+console.log(">>", htmlChain.stringify())
+
 
 const db = makeGEPTdb().map(entry => new Entry(...entry));
 const tokens = text.map(el => new Token(...el));
@@ -122,12 +206,12 @@ console.log(db)
 console.log(tokens)
 console.log("1st token =", db[tokens[0].matches[0]])
 
-console.log(html);
+console.log(htmlTag);
 const body = document.body;
 const para = document.createElement("p");
-para.innerHTML = html.stringify();
+para.innerHTML = htmlTag.stringify();
 body.prepend(para);
-console.log(html.stringify());
+console.log(htmlTag.stringify());
 
 
 
