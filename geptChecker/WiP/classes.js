@@ -1,6 +1,6 @@
 
 class Entry {
-    static currID = 0;
+  static currID = 0;
   // constructor(id, lemma, pos, levelArr, notes) {
   constructor(lemma, pos, levelArr, notes) {
     // this._id = id;
@@ -26,7 +26,7 @@ class Entry {
 }
 
 class Token {
-  constructor(lemma, type, matches=[], count=0) {
+  constructor(lemma, type, matches = [], count = 0) {
     this.lemma = lemma;
     this.type = type;
     this.matches = matches;
@@ -38,61 +38,62 @@ class Token {
 function escapeHTML(text) {
   if (!text) return "";
   // console.log("escape:", typeof text, text)
-  return text.replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"':" &quot;"}[char]));
+  return text.replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': " &quot;" }[char]));
 }
 
-function tag(name, attrs=[], content=[]){
+function tag(name, attrs = [], content = []) {
   return new Tag(name, attrs, content);
 }
 
-function root(content){
+function root(content=[]) {
+  // ** accepts content (Tags/strings/numbers) as one array OR as individual arguments
+  if (arguments.length === 1) {
+    const firstArg = arguments[0];
+    // if (typeof firstArg !== "object" || firstArg instanceof Tag) content = [firstArg];
+    // else content = firstArg;
+    if (Array.isArray(firstArg)) content = firstArg;
+    else content = [firstArg];
+  }
+  else if (arguments.length > 1) content = [...arguments];
   return new Tag("root", [], content);
 }
 
-function attr(name, value){
+function attr(name, value) {
   return new Attr(name, value);
 }
 
 
-// class Html {
-//   constructor(arrOfTagsAndText){
-//     this.content = arrOfTagsAndText;
-//   }
-//   stringify() {
-//     return this.content.map(el => (el.constructor.name === "Tag") ? el.stringify() : escapeHTML(el)).join("");
-//   }
-// }
-
-
 class Tag {
-  constructor(name, attrs=[], content=[]) {
+  constructor(name, attrs = [], content = []) {
     if (typeof content === "string") content = [content];
     this.isEmpty = !attrs.length && !content.length;
     this.name = name;
     if (typeof attrs === "string") attrs = [attrs];
     this.attrs = attrs.map(el => {
       let tmp = el.split("=");
-      return (tmp.length === 1) ? [tmp] : [tmp[0],escapeHTML(tmp[1])];
+      return (tmp.length === 1) ? [tmp] : [tmp[0], escapeHTML(tmp[1])];
     });
+    // console.log(content)
     // this.content = (typeof content === "string") ? [content] : content;
     this.content = content.map(el => (typeof el === "string") ? escapeHTML(el) : el);
   }
   stringify() {
     if (this.isEmpty) return `<${this.name} />`;
     let tmpContent = "";
-    for (let el of this.content){
-      if (typeof el === "number" ) el = el.toString();
+    for (let el of this.content) {
+      // debug(typeof el)
+      if (typeof el === "number") el = el.toString();
       // tmpContent += (typeof el === "string") ? escapeHTML(el) : el.stringify();
       tmpContent += (typeof el === "string") ? el : el.stringify();
     }
     // ** <root> is used to render a chain of html/text tags; it is not itself rendered
-    if (this.name === "root") return tmpContent;
+    if (this.name === "root") return [tmpContent];
     let tmpAttrs = "";
-    if (this.attrs.length){
+    if (this.attrs.length) {
       tmpAttrs = this.attrs.map(
         el => (el.length === 1)
-        ? ` ${el}`
-        : ` ${el[0]}="${el[1]}"`
+          ? ` ${el}`
+          : ` ${el[0]}="${el[1]}"`
       ).join("");
     }
     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;

@@ -135,7 +135,7 @@ function backupShow(e) {
     let content = (lsContent) ? lsContent.trim() : "";
     if (content) {
       // if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
-      if (localStorage.getItem("mostRecent") == id) content = tag("span", ["class=warning"],["Most Recent: "]).stringify() + content;
+      if (localStorage.getItem("mostRecent") == id) content = tag("span", ["class=warning"], ["Most Recent: "]).stringify() + content;
       backup.innerHTML = content;
       backup.disabled = false;
     } else {
@@ -481,7 +481,7 @@ function formatResultsAsHTML(results) {
     const awlWord = highlightAwlWord(level_arr, getLemma(entry));
     const lemma = tag("strong", [], [awlWord]);
     const pos = `[${getExpandedPoS(entry)}]`;
-    let level = V.level_subs[level_arr[0]];
+    let level = V.levelSubs[level_arr[0]];
     if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
     if (!level) continue;
     let [note, awl_note] = getNotes(entry);
@@ -491,7 +491,6 @@ function formatResultsAsHTML(results) {
     previousInitial = currentInitial;
     i++;
   }
-  debug(output)
   return tag("table", [], [...output]).stringify();
 }
 
@@ -560,6 +559,7 @@ function hoverEffects(e) {
   // ** 1) show information text for elements with a 'data-entry' attribute
   if (el.dataset.entry || el.parentElement.dataset.entry) {
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
+    // HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref).stringify();
     HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
     HTM.finalInfoDiv.style.display = "flex";
   }
@@ -585,25 +585,41 @@ function hoverEffects(e) {
 
 
 function displayEntryInfo(refs) {
-  // debug(refs)
-  // let html = "";
+  /*
+  <div id="t2_final_info" style="display: flex;">
+    <div class="word-detail level-e">
+      <div><span class="dot">E</span> <em>elem (A2)</em><br></div>
+      <span><strong>for</strong>: [preposition], 為了、給、(時間、距離)達;</span>
+    </div>
+    <div class="word-detail level-e">
+      <div><span class="dot">E</span> <em>elem (A2)</em><br></div>
+      <span><strong>for</strong>: [conjunction], 因為;</span>
+    </div>
+  </div>
+  */
   let html = [];
   for (const ref of refs.split(" ")) {
     const [id, word, tokenType] = ref.split(":");
     const entry = getEntryById(id);
     const [levelArr, levelClass] = getLevelDetails(entry);
     const lemma = buildHTMLlemma(entry, id, word, tokenType);
-    let level = buildHTMLlevel(entry, id, levelArr, tokenType);
-    if (level) {
-      const levelDot = buildHTMLlevelDot(entry);
-      level = tag("div", [], [levelDot, " ", level]);
-    }
+    const levelTagArr = buildHTMLlevel(entry, id, levelArr, tokenType);
+    const levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
+    // if (levelTagArr.length > 0) {
+    //   const levelDot = buildHTMLlevelDot(entry);
+    //   level = tag("div", [], [levelDot, " ", ...levelTagArr]);
+    // }
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotes(entry);
     notes = notes.split(";").filter(el => !!el.trim()).join(";");
-    html.push("div", [`class=word-detail ${levelClass}`], [level, tag("span", [], [lemma, pos, notes, awl_notes])]);
+    html.push(tag(
+      "div",
+      [`class=word-detail ${levelClass}`],
+      [levelTag, tag("span", [], [...lemma, pos, notes, awl_notes])]
+    ));
   }
-  return html;
+  html = root(html);
+  return html.stringify();
 }
 
 
@@ -612,29 +628,30 @@ function buildHTMLlemma(entry, id, word, tokenType) {
   let displayLemma;
   if (getPoS(entry) === "unknown") return displayLemma;
   if (tokenType === "wv") {
-    displayLemma = root([ tag("em",[], "** Use "), tag("strong", [], lemma), tag("em", [], " instead of "), tag("br"), word, ]);
+    displayLemma = [tag("em", [], "** Use "), tag("strong", [], lemma), tag("em", [], " instead of "), tag("br"), word];
   } else if (tokenType === "wd") {
-    displayLemma = root([tag("strong", [], word), " < ", lemma]);
+    displayLemma = [tag("strong", [], word), " < ", lemma];
   } else {
-    displayLemma = root([tag("strong", [], lemma)]);
+    displayLemma = [tag("strong", [], lemma)];
   }
-  return displayLemma.stringify();
+  return displayLemma;
 }
 
-function buildHTMLlevel(entry, id, level_arr, tokenType) {
-  let level;
+function buildHTMLlevel(entry, id, levelArr, tokenType) {
+  let levelStr;
   // ** If word is offlist, use its classification (digit/name, etc.) as level
   if (tokenType !== "wv" && isInOfflistDb(id)) {
-    level = getPoS(entry);
+    levelStr = getPoS(entry); // a string, e.g. "jn"
   }
-  else if (["d", "y", "c", "wo"].includes(tokenType)) level = "";
+  else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
   else {
-    level = V.level_subs[level_arr[0]];
-    if (getAwlSublist(level_arr) >= 0) {
-      level += `; ${V.level_subs[level_arr[1]]}`;
+    levelStr = V.levelSubs[levelArr[0]];
+    if (getAwlSublist(levelArr) >= 0) {
+      levelStr += `; ${V.levelSubs[levelArr[1]]}`;
     }
   }
-  if (level) level = root([tag("em",[], level), tag("br")]);
+  let level = [];
+  if (levelStr) level = [tag("em", [], level), tag("br")];
   return level;
 }
 
@@ -642,7 +659,7 @@ function buildHTMLlevelDot(entry) {
   let html = "";
   if (!isKids()) {
     const levelNum = getLevelNum(entry);
-    html = (levelNum <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][levelNum]]).stringify() : "";
+    html = (levelNum <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][levelNum]]) : "";
   }
   return html;
 }
@@ -687,7 +704,7 @@ function updateInputDiv(e) {
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
     const resultsAsTextArr = lookups(revisedText);
-    debug(resultsAsTextArr)
+    // debug(resultsAsTextArr)
     revisedText = null;
     const [
       resultsHTML,
@@ -765,7 +782,7 @@ function split(text) {
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
   const re = new RegExp("(\\w+)(" + CURSOR.text + ")(\\w+)", "g");  // catch cursor
   text = text.replaceAll(re, "$1$3$2");                             // move cursor to end of word (to preserve word for lookup)
-  text = text.replaceAll("\n",EOL.text);                            // catch newlines
+  text = text.replaceAll("\n", EOL.text);                            // catch newlines
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
   text = text.trim();
   return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
@@ -1472,7 +1489,7 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
     firstLevel
   ] = sortedByLevel[0];
   const firstMatch = getEntryById(firstID);
-  let variantClass = (type === "wv") ? " variant": "";
+  let variantClass = (type === "wv") ? " variant" : "";
   // let variantRefLink = "";
   if (type.startsWith("w")) V.setOfLemmaID.add(firstLemma.toLowerCase() + ":" + firstID);
   const ignoreThisRep = LOOKUP.repeatableWords.includes(firstLemma.toLowerCase());
@@ -1677,7 +1694,7 @@ function unEscapeHTML(encodedText) {
 
 function getLevelPrefix(entry) {
   const levelNum = getLevelNum(entry);
-  let level = V.level_subs[levelNum];
+  let level = V.levelSubs[levelNum];
   if (isKids() && levelNum < V.OFFLIST) level = "k";
   if (!level) level = "o";
   return level[0];
@@ -1705,12 +1722,12 @@ function buildHTMLlevelStats(separateLemmasCount, levelStats) {
   // debug(tmpStats)
   const toggleOpen = (V.current.level_state) ? " open" : "";
   levelStatsHTML = root([tag("details", ["id=level-details", toggleOpen], [
-    tag("summary",["class=all-repeats"], [
+    tag("summary", ["class=all-repeats"], [
       "Level statistics:",
       tag("em", [], [separateLemmasCount, " headwords"]),
     ]),
-    tag("div", ["class=level-stats-cols"],[...tmpStats])
-    ])
+    tag("div", ["class=level-stats-cols"], [...tmpStats])
+  ])
   ]);
   return levelStatsHTML.stringify();
 }
@@ -1746,7 +1763,7 @@ function buildHTMLrepeatList(wordCount) {
             display = highlightAwlWord(getLevel(entry), word);
             displayClass = `class=level-${getLevelPrefix(entry)}`;
           }
-          anchors.push(" ", tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`],[display]));
+          anchors.push(" ", tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
         }
         listOfRepeats.push(tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry)}`], [...anchors]));
       }
@@ -1754,12 +1771,12 @@ function buildHTMLrepeatList(wordCount) {
     const idForEventListener = "repeat-details";
     if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
-      repeatsHeader = tag("details", [`id=${idForEventListener}`,toggleOpen],[
+      repeatsHeader = tag("details", [`id=${idForEventListener}`, toggleOpen], [
         tag("summary", ["id=all_repeats", "class=all-repeats"], [
           countAllReps,
           ` significant repeated word${(countAllReps === 1) ? "" : "s"}`,
         ]),
-        tag("p",[],[
+        tag("p", [], [
           tag("em", [], ["Click on word / number to jump to that occurrence."])
         ]),
         tag("div", ["id=repeats"], [...listOfRepeats]),
@@ -1791,7 +1808,8 @@ function getWordCountForDisplay(wordCount) {
     wordCount,
     " word",
     pluralNoun(wordCount),
-    tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
+    // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
+    tag("a", ["href=#all_repeats", "class=medium"]),
   ]) : "";
   return numOfWords;
 }
@@ -1806,7 +1824,7 @@ function displayDbNameInTab1() {
 
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
-  HTM.finalLegend.innerHTML = root(["Checking ", tag("span", ["id=db_name2", "class=dbColor"], [V.currentDb.name]), msg]).stringify();
+  HTM.finalLegend.innerHTML = root("Checking ", tag("span", ["id=db_name2", "class=dbColor"], [V.currentDb.name]), " ", msg).stringify();
   document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:list-item;" : "display:none;");
   document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:list-item;" : "display:none;");
   document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:list-item;" : "display:none;");
@@ -2234,7 +2252,7 @@ function updateCursorPos(e) {
   if (V.refreshRequired) {
     const tags = document.querySelectorAll(":hover");
     const currTag = tags[tags.length - 1];
-    currTag.setAttribute("class", "unprocessed");
+    if (currTag) currTag.setAttribute("class", "unprocessed");
   }
   getCursorIncrement(keypress)
 }
@@ -2244,7 +2262,7 @@ function signalRefreshNeeded(mode) {
     V.refreshRequired = true;
     HTM.workingDiv.style.backgroundColor = "ivory";
     HTM.textTabTag.style.fontStyle = "italic";
-    HTM.backupSave2.style.display =  "block";
+    HTM.backupSave2.style.display = "block";
   }
   else {
     V.refreshRequired = false;

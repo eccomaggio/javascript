@@ -121,7 +121,7 @@ let V = {
   currentDb: {},
   currentDbChoice: C.GEPT,
   OFFLIST: 0,
-  level_subs: [],
+  levelSubs: [],
   currentTab: null,
   refreshRequired: false,
   timer: null,
@@ -1148,5 +1148,5 @@ const LOOKUP = {
 }
 
 V.OFFLIST = LOOKUP.level_headings.length;
-V.level_subs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
+V.levelSubs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
 

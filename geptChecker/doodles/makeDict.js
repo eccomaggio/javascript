@@ -57,6 +57,11 @@ function tag(name, attrs=[], content=[]){
 }
 
 function root(content){
+  if (arguments.length === 1) {
+    if (typeof arguments[0] !== "object") content = [arguments[0]];
+    else content = arguments[0];
+  }
+  else if (arguments.length > 1) content = [...arguments];
   return new Tag("root", [], content);
 }
 
@@ -187,31 +192,40 @@ const word = "Testy"
 //   word,
 // ]);
 
-const htmlChain = root([
+// const htmlChain = root([
+//   tag("em",[], "** Use "),
+//   tag("strong", [], lemma),
+//   tag("em", [], " instead of "),
+//   tag("br"),
+//   word,
+// ]);
+
+const htmlChain = root(
   tag("em",[], "** Use "),
   tag("strong", [], lemma),
   tag("em", [], " instead of "),
   tag("br"),
   word,
-]);
+);
+
 
 console.log(">>", htmlChain.stringify())
 
 
-const db = makeGEPTdb().map(entry => new Entry(...entry));
-const tokens = text.map(el => new Token(...el));
+// const db = makeGEPTdb().map(entry => new Entry(...entry));
+// const tokens = text.map(el => new Token(...el));
 
 
-console.log(db)
-console.log(tokens)
-console.log("1st token =", db[tokens[0].matches[0]])
+// console.log(db)
+// console.log(tokens)
+// console.log("1st token =", db[tokens[0].matches[0]])
 
-console.log(htmlTag);
-const body = document.body;
-const para = document.createElement("p");
-para.innerHTML = htmlTag.stringify();
-body.prepend(para);
-console.log(htmlTag.stringify());
+// console.log(htmlTag);
+// const body = document.body;
+// const para = document.createElement("p");
+// para.innerHTML = htmlTag.stringify();
+// body.prepend(para);
+// console.log(htmlTag.stringify());
 
 
 

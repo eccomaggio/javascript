@@ -478,7 +478,7 @@ function formatResultsAsHTML(results) {
     const awlWord = highlightAwlWord(level_arr, getLemma(entry));
     const lemma = `<strong>${awlWord}</strong>`;
     const pos = `[${getExpandedPoS(entry)}]`;
-    let level = V.level_subs[level_arr[0]];
+    let level = V.levelSubs[level_arr[0]];
     if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
     if (!level) continue;
     let [note, awl_note] = getNotes(entry);
@@ -621,9 +621,9 @@ function buildHTMLlevel(entry, id, level_arr, tokenType) {
   }
   else if (["d", "y", "c", "wo"].includes(tokenType)) level = "";
   else {
-    level = V.level_subs[level_arr[0]];
+    level = V.levelSubs[level_arr[0]];
     if (getAwlSublist(level_arr) >= 0) {
-      level += `; ${V.level_subs[level_arr[1]]}`;
+      level += `; ${V.levelSubs[level_arr[1]]}`;
     }
   }
   if (level) level = `<em>${level}</em><br>`;
@@ -779,7 +779,7 @@ function split(text) {
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
   const re = new RegExp("(\\w+)(" + CURSOR.text + ")(\\w+)", "g");  // catch cursor
   text = text.replaceAll(re, "$1$3$2");                             // move cursor to end of word (to preserve word for lookup)
-  text = text.replaceAll("\n",EOL.text);                            // catch newlines
+  text = text.replaceAll("\n", EOL.text);                            // catch newlines
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
   text = text.trim();
   return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
@@ -1505,7 +1505,7 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, type, reps) {
     firstLevel
   ] = sortedByLevel[0];
   const firstMatch = getEntryById(firstID);
-  let variantClass = (type === "wv") ? " variant": "";
+  let variantClass = (type === "wv") ? " variant" : "";
   // let variantRefLink = "";
   if (type.startsWith("w")) V.setOfLemmaID.add(firstLemma.toLowerCase() + ":" + firstID);
   const ignoreThisRep = LOOKUP.repeatableWords.includes(firstLemma.toLowerCase());
@@ -1716,7 +1716,7 @@ function unEscapeHTML(encodedText) {
 
 function getLevelPrefix(entry) {
   const levelNum = getLevelNum(entry);
-  let level = V.level_subs[levelNum];
+  let level = V.levelSubs[levelNum];
   if (isKids() && levelNum < V.OFFLIST) level = "k";
   if (!level) level = "o";
   return level[0];
@@ -2254,7 +2254,7 @@ function signalRefreshNeeded(mode) {
     V.refreshRequired = true;
     HTM.workingDiv.style.backgroundColor = "ivory";
     HTM.textTabTag.style.fontStyle = "italic";
-    HTM.backupSave2.style.display =  "block";
+    HTM.backupSave2.style.display = "block";
   }
   else {
     V.refreshRequired = false;
