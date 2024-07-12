@@ -1,9 +1,7 @@
 
 class Entry {
   static currID = 0;
-  // constructor(id, lemma, pos, levelArr, notes) {
   constructor(lemma, pos, levelArr, notes) {
-    // this._id = id;
     this._id = Entry.currID;
     Entry.incrementID();
     this._lemma = lemma;
@@ -16,12 +14,20 @@ class Entry {
   get lemma() { return this._lemma }
   get pos() { return this._pos }
   get levelArr() { return this._levelArr }
-  get levelNum() { return this._levelArr[0] }
+  get levelGEPT() { return this._levelArr[0] }
   get levelAWL() { return this._levelArr[1] }
   get levelStatus() { return this._levelArr[1] }
-  get notes() { return this._notes }
-  // get geptNotes() {}
-  // get awlNotes() {}
+
+  get notes() {
+    // return this._notes
+    let [note, awl_note] = ["", ""];
+    if (this._notes) {
+      [note, awl_note] = this._notes.trim().split(C.NOTE_SEP);
+    note = note.split(";").filter(el => String(el).trim()).join(";");
+    }
+    return [note, awl_note];
+  }
+
   static incrementID() { Entry.currID++ }
 }
 
@@ -46,7 +52,7 @@ function tag(name, attrs = [], content = []) {
 }
 
 function root(content=[]) {
-  // ** accepts content (Tags/strings/numbers) as one array OR as individual arguments
+  // ** GUARD#1 accept Tags/strings/numbers as single array OR as individual arguments
   if (arguments.length === 1) {
     const firstArg = arguments[0];
     // if (typeof firstArg !== "object" || firstArg instanceof Tag) content = [firstArg];
@@ -55,6 +61,12 @@ function root(content=[]) {
     else content = [firstArg];
   }
   else if (arguments.length > 1) content = [...arguments];
+  // ** GUARD#2 resolve any mistakenly included arrays
+  content = content.reduce((acc,el) => {
+    (Array.isArray(el)) ? acc.push(...el.flat(Infinity)) : acc.push(el);
+    return acc;
+  }, []);
+
   return new Tag("root", [], content);
 }
 

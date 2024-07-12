@@ -64,6 +64,43 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
 
 MAP OF PROJECT:
 
+TAB 1 WORKFLOW:
+HTM.inputLemma: addEventListener(debounce)
+-> wordSearch()
+	wordGetFormData()
+	wordCheckFormData()
+	wordBuildiSearchTerms()
+	wordRunSearch()
+		stripOutRegex()
+		checkDerivations()
+		lazyCheckAgainstCompounds()
+		checkNegativePrefix()
+		checkAllowedVariants()
+	wordFormatResultsAsHTML()
+	wordDisplayResults()
+
+
+
+
+TAB 2 WORKFLOW:
+
+HTM.workingDiv: addEventListener OR
+forceUpdateInputDiv()
+--> normalizePastedText(e)
+textMarkup()
+	textGetLatest()
+	lookups()
+		normalizeRawText()
+		chunkText()
+		lookupCompoundWords()
+		lookupAllWords()
+	buildHTML()
+		getAllLevelStats()
+		buildHTMLtext()
+		buildHTMLrepeatList()
+		buildLevelStats()
+
+
 CAPTURING / INSERTING CURSOR
 automatically moved with every keyup with updateCursorPos()
 updateInputDiv()
@@ -75,17 +112,3 @@ updateInputDiv()
 	displayProcessedText()
 		displayWorkingText()
 			setCursorPos()
-
-TAB 2 WORKFLOW:
-updateInputDiv()
-	getRevisedText().trim()
-	lookups()
-		normalizeRawText()
-		chunkText()
-		lookupCompoundWords()
-		lookupAllWords()
-	buildHTML()
-		getAllLevelStats()
-		buildHTMLtext()
-		buildHTMLrepeatList()
-		buildLevelStats()

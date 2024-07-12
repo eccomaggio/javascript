@@ -62,6 +62,15 @@ function root(content){
     else content = arguments[0];
   }
   else if (arguments.length > 1) content = [...arguments];
+  // content = content.reduce((acc,el) => {
+  //   if (Array.isArray(el)) acc.push(...el.flat(Infinity));
+  //   else acc.push(el);
+  //   return acc;
+  // }, []);
+  content = content.reduce((acc,el) => {
+    (Array.isArray(el)) ? acc.push(...el.flat(Infinity)) : acc.push(el);
+    return acc;
+  }, []);
   return new Tag("root", [], content);
 }
 
@@ -204,12 +213,14 @@ const htmlChain = root(
   tag("em",[], "** Use "),
   tag("strong", [], lemma),
   tag("em", [], " instead of "),
+  [tag("hr"),
+  tag("hr")],
   tag("br"),
   word,
 );
 
 
-console.log(">>", htmlChain.stringify())
+console.log(">>", typeof htmlChain, Array.isArray(htmlChain), htmlChain.stringify())
 
 
 // const db = makeGEPTdb().map(entry => new Entry(...entry));
@@ -221,10 +232,11 @@ console.log(">>", htmlChain.stringify())
 // console.log("1st token =", db[tokens[0].matches[0]])
 
 // console.log(htmlTag);
-// const body = document.body;
-// const para = document.createElement("p");
+const body = document.body;
+const para = document.createElement("p");
 // para.innerHTML = htmlTag.stringify();
-// body.prepend(para);
+para.innerHTML = htmlChain.stringify();
+body.prepend(para);
 // console.log(htmlTag.stringify());
 
 
