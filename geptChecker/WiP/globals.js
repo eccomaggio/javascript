@@ -114,7 +114,8 @@ let C = {
 // ## Global variables
 let V = {
   // ## offlist word db uses negative ids (translate to positive index) so no 0
-  offlistDb: [["unused"]],
+  // offlistDb: [["unused"]],
+  offlistDb: [new Entry("unused", "", [-1, -1, -1], "", 0)],
   offlistIndex: 1,
   tallyOfIDreps: {},
   setOfLemmaID: new Set(),

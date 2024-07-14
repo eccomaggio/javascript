@@ -56,11 +56,12 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
     "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
 ], ...
 
-    + according to position in level_headings
+    + according to position in level_headings (-1 = not on AWL list)
     ++ given by Pos enum:
       AWL_ONLY = 1
       GEPT_ONLY = 2
       AWL_AND_GEPT = 3
+			new: OFFLIST = -1
 
 MAP OF PROJECT:
 

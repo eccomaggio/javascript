@@ -1,13 +1,17 @@
 
 class Entry {
   static currID = 0;
-  constructor(lemma, pos, levelArr, notes) {
-    this._id = Entry.currID;
-    Entry.incrementID();
+  constructor(lemma, pos, levelArr, notes, id) {
+    if (id !== undefined) this._id = id;
+    else {
+      this._id = Entry.currID;
+      Entry.incrementID();
+    }
     this._lemma = lemma;
     this._pos = pos;
     this._levelArr = levelArr;
     this._notes = notes;
+    // this._compound =
   }
 
   get id() { return this._id }
@@ -70,9 +74,9 @@ function root(content=[]) {
   return new Tag("root", [], content);
 }
 
-function attr(name, value) {
-  return new Attr(name, value);
-}
+// function attr(name, value) {
+//   return new Attr(name, value);
+// }
 
 
 class Tag {

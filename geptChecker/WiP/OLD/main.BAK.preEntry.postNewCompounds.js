@@ -342,6 +342,7 @@ function wordCheckFormData(data) {
   */
   for (const el in data) {
     if (el === "match") continue;
+    // if (data[el].length) {
     if (!isEmpty(data[el])) {
       status = 0;
       break;
@@ -360,7 +361,9 @@ function wordCheckFormData(data) {
 }
 
 function wordBuildSearchTerms(data) {
+  // let term = data.term.join().split(" ")[0].toLowerCase();
   let lemma = data.term.join().toLowerCase();
+  // term.replace(/\s\-\.\'/g, "");
   const matchType = C.MATCHES[data.match];
   const searchTerms = {
     lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
@@ -373,7 +376,7 @@ function wordBuildSearchTerms(data) {
 }
 
 function wordRunSearch(searchTerms) {
-  let results = V.currentDb.db.filter(el => el.lemma.search(searchTerms.lemma) != -1);
+  let results = V.currentDb.db.filter(el => getLemma(el).search(searchTerms.lemma) != -1);
   if (isEmpty(results)) {
     const word = stripOutRegex(searchTerms.lemma);
     let matchedIDarr = checkDerivations(word);
@@ -386,13 +389,13 @@ function wordRunSearch(searchTerms) {
     let tmp_matches = [];
     for (const level of searchTerms.level) {
       for (const entry of results) {
-        if (entry.levelGEPT === level) tmp_matches.push(entry);
+        if (getLevel(entry)[C.GEPT_LEVEL] === level) tmp_matches.push(entry);
       }
     }
     results = tmp_matches;
   }
   if (!isEmpty(searchTerms.pos)) {
-    results = results.filter(el => el.pos).filter(el => el.pos.search(searchTerms.pos) != -1);
+    results = results.filter(el => getPoS(el)).filter(el => getPoS(el).search(searchTerms.pos) != -1);
   }
   if (isBESTEP() && !isEmpty(searchTerms?.awl)) {
     /*
@@ -406,16 +409,16 @@ function wordRunSearch(searchTerms) {
     200 = choose only words in GEPT list
     */
     if (searchTerms.awl == C.FIND_GEPT_ONLY) {
-      results = results.filter(el => el.levelStatus >= C.GEPT_ONLY);
+      results = results.filter(el => getLevel(el)[C.STATUS] >= C.GEPT_ONLY);
     }
     else if (searchTerms.awl == C.FIND_AWL_ONLY) {
-      results = results.filter(el => el.levelAWL > -1);
+      results = results.filter(el => getLevel(el)[C.AWL_LEVEL] > -1);
     }
     else {
-      results = results.filter(el => searchTerms.awl.indexOf(el.levelAWL) > -1);
+      results = results.filter(el => searchTerms.awl.indexOf(getLevel(el)[C.AWL_LEVEL]) > -1);
     }
   }
-  results = results.filter(result => result.id > 0);
+  results = results.filter(result => getId(result) > 0);
   return results;
 }
 
@@ -440,12 +443,19 @@ function stripOutRegex(term) {
   return raw_term;
 }
 
+// function getDerivedForms(term) {
+//   const raw_term = stripOutRegex(term);
+//   let matches = [];
+//   matches = checkDerivations(raw_term);
+//   return matches;
+// }
 
 function getAwlSublist(levelArr) {
   return (isBESTEP() && levelArr[1]) ? levelArr[1] - C.awl_level_offset : -1;
 }
 
 function highlightAwlWord(levelArr, word) {
+  // return (isBESTEP() && level_arr[1] >= 0) ? `<span class="awl-word">${word}</span>` : word;
   return (isBESTEP() && levelArr[1] >= 0) ? tag("span", ["class=awl-word"], [word]) : word;
 }
 
@@ -458,15 +468,16 @@ function wordFormatResultsAsHTML(results) {
   let currentInitial = "";
   let i = 0;
   for (const entry of results.sort(compareByLemma)) {
-    currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
+    currentInitial = (getLemma(entry)) ? getLemma(entry)[0].toLowerCase() : "";
     if (currentInitial !== previousInitial) {
       output.push(formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
     }
-    const awl_sublist = getAwlSublist(entry.levelArr);
-    const awlWord = highlightAwlWord(entry.levelArr, entry.lemma);
+    const level_arr = getLevel(entry);
+    const awl_sublist = getAwlSublist(level_arr);
+    const awlWord = highlightAwlWord(level_arr, getLemma(entry));
     const lemma = tag("strong", [], [awlWord]);
     const pos = `[${getExpandedPoS(entry)}]`;
-    let level = V.levelSubs[entry.levelGEPT];
+    let level = V.levelSubs[level_arr[0]];
     if (awl_sublist >= 0) level += `; AWL${awl_sublist}`;
     if (!level) continue;
     let [note, awl_note] = getNotesAsHTML(entry);
@@ -479,17 +490,62 @@ function wordFormatResultsAsHTML(results) {
   return tag("table", [], [...output]).stringify();
 }
 
+function getId(entry) {
+  return entry[0];
+
+}
+
+function getLemma(entry) {
+  return entry[1];
+}
+
+function getPoS(entry) {
+  return entry[2];
+}
+
+function getLevel(entry) {
+  return entry[3];
+}
+
+function getNotes(entry) {
+  let note = "";
+  let awl_note = "";
+  if (entry) {
+    [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
+    // note = note.split(";").filter(el => !!el.trim()).join(";");
+    note = note.split(";").filter(el => String(el).trim()).join(";");
+  }
+  return [note, awl_note];
+
+}
 
 function getNotesAsHTML(entry) {
   let note = "";
   let awl_note = "";
   if (entry) {
-    [note, awl_note] = entry.notes;
+    [note, awl_note] = getNotes(entry);
     note = note ? `, ${note}` : "";
     awl_note = (isBESTEP() && awl_note) ? tag("span", ["class=awl-note"], ["(headword: ", tag("span", ["class=awl-headword"], [awl_note])]) : "";
   }
   return [note, awl_note];
 }
+
+
+// function getNotesAsHTML(entry) {
+//   let note = "";
+//   let awl_note = "";
+//   if (entry) {
+//     [note, awl_note] = entry[4].trim().split(C.NOTE_SEP);
+//     note = note ? `, ${note}` : "";
+//     awl_note = (isBESTEP() && awl_note) ? tag("span", ["class=awl-note"], ["(headword: ", tag("span", ["class=awl-headword"], [awl_note])]) : "";
+//   }
+//   return [note, awl_note];
+// }
+
+// function isCompound(entryOrID) {
+//   const result = (Array.isArray(entryOrID)) ? entryOrID?.[5] : getEntryById(entryOrID)?.[5];
+//   return result;
+// }
 
 
 function formatResultsAsTablerows(col1, col2, class1, class2, row) {
@@ -525,6 +581,7 @@ function hoverEffects(e) {
   // ** 1) show information text for elements with a 'data-entry' attribute
   if (el.dataset.entry || el.parentElement.dataset.entry) {
     const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
+    // HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref).stringify();
     HTM.finalInfoDiv.innerHTML = displayEntryInfo(ref);
     HTM.finalInfoDiv.style.display = "flex";
   }
@@ -570,8 +627,13 @@ function displayEntryInfo(refs) {
     const lemma = buildHTMLlemma(entry, id, word, tokenType);
     const levelTagArr = buildHTMLlevel(entry, id, levelArr, tokenType);
     const levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
+    // if (levelTagArr.length > 0) {
+    //   const levelDot = buildHTMLlevelDot(entry);
+    //   level = tag("div", [], [levelDot, " ", ...levelTagArr]);
+    // }
     const pos = `[${getExpandedPoS(entry)}]`;
     let [notes, awl_notes] = getNotesAsHTML(entry);
+    // notes = notes.split(";").filter(el => !!el.trim()).join(";");
     html.push(tag(
       "div",
       [`class=word-detail ${levelClass}`],
@@ -584,14 +646,15 @@ function displayEntryInfo(refs) {
 
 
 function buildHTMLlemma(entry, id, word, tokenType) {
+  const lemma = getLemma(entry);
   let displayLemma;
-  if (entry.pos === "unknown") return displayLemma;
+  if (getPoS(entry) === "unknown") return displayLemma;
   if (tokenType === "wv") {
-    displayLemma = [tag("em", [], "** Use "), tag("strong", [], entry.lemma), tag("em", [], " instead of "), tag("br"), word];
+    displayLemma = [tag("em", [], "** Use "), tag("strong", [], lemma), tag("em", [], " instead of "), tag("br"), word];
   } else if (tokenType === "wd") {
-    displayLemma = [tag("strong", [], word), " < ", entry.lemma];
+    displayLemma = [tag("strong", [], word), " < ", lemma];
   } else {
-    displayLemma = [tag("strong", [], entry.lemma)];
+    displayLemma = [tag("strong", [], lemma)];
   }
   return displayLemma;
 }
@@ -600,7 +663,7 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
   let levelStr;
   // ** If word is offlist, use its classification (digit/name, etc.) as level
   if (tokenType !== "wv" && isInOfflistDb(id)) {
-    levelStr = entry.pos; // a string, e.g. "jn"
+    levelStr = getPoS(entry); // a string, e.g. "jn"
   }
   else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
   else {
@@ -617,14 +680,14 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
 function buildHTMLlevelDot(entry) {
   let html = "";
   if (!isKids()) {
-    const levelNum = entry.levelGEPT;
+    const levelNum = getLevelNum(entry);
     html = (levelNum <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][levelNum]]) : "";
   }
   return html;
 }
 
 function getExpandedPoS(entry) {
-  const pos_str = entry.pos;
+  const pos_str = getPoS(entry);
   if (isInOfflistDb(entry)) return pos_str;
   const pos = (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
   return pos;
@@ -637,6 +700,7 @@ function normalizePastedText(e) {
   let paste = (e.clipboardData || window.clipboardData).getData('text');
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
+  // V.refreshRequired = true;
   signalRefreshNeeded("on");
   textMarkup(e);
 }
@@ -661,6 +725,7 @@ function textMarkup(e) {
     V.setOfLemmaID = new Set();
     let taggedTextArr = textdivideIntoTokens(revisedText);
     revisedText = null;
+    // taggedTextArr = textFlattenAndLookupCompounds(taggedTextArr);
     taggedTextArr = textLookupCompounds(taggedTextArr);
     taggedTextArr = textLookupSimples(taggedTextArr);
     const [
@@ -675,6 +740,33 @@ function textMarkup(e) {
     setCursorPos(document.getElementById(CURSOR.id));
   }
 }
+
+// function textMarkup(e) {
+//   if (!V.refreshRequired) return;
+//   signalRefreshNeeded("off");
+//   let revisedText = textGetLatest().trim();
+//   if (revisedText === CURSOR.text) revisedText = "";
+//   if (revisedText) {
+//     V.isExactMatch = true;
+//     V.setOfLemmaID = new Set();
+//     const resultsAsTextArr = lookups(revisedText);
+
+//   taggedTextArr = lookupCompoundWords(taggedTextArr);
+//   let resultsAsTextArr = lookupSimpleWords(taggedTextArr);
+//     // debug(resultsAsTextArr)
+//     revisedText = null;
+//     const [
+//       resultsHTML,
+//       repeatsHTML,
+//       levelStatsHTML,
+//       wordCount
+//     ] = buildHTML(resultsAsTextArr);
+//     displayProcessedText(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
+//     backupSave();
+//     signalRefreshNeeded("off");
+//     setCursorPos(document.getElementById(CURSOR.id));
+//   }
+// }
 
 
 function textGetLatest() {
@@ -730,7 +822,7 @@ function split(text) {
   text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");           // protect preferred A.M. / P.M.
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
   const re = new RegExp("(\\w+)(" + CURSOR.text + ")(\\w+)", "g");  // catch cursor
-  text = text.replaceAll(re, "$1$3$2");                             // move cursor to word end (to preserve word for lookup)
+  text = text.replaceAll(re, "$1$3$2");                             // move cursor to end of word (to preserve word for lookup)
   text = text.replaceAll("\n", EOL.text);                            // catch newlines
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
   text = text.trim();
@@ -744,6 +836,7 @@ function tokenize(text) {
   textArr = tokenize1(textArr);   // identify main tokens
   textArr = tokenize2(textArr);   // confirm identification + prepare for grouping
   textArr = tokenize3(textArr);   // fine-tune position of splits
+  // textArr = tokenize4(textArr);   // split into phrases (preparing for compound identification)
   return textArr;
 }
 
@@ -760,6 +853,8 @@ function tokenize1(textArr) {
     else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
     else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
     else if (/[+\-=@*<>&]/.test(el)) token = "y";  // symbols
+    // else if (el.indexOf("<") >= 0) [el, token] = [el.replaceAll("<", "&lt;")];
+    // else if (el.indexOf(">") >= 0) [el, token] = [el.replaceAll(">", "&gt;")];
     else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
     else if (el === ",") token = "@";
     else if (/["',./?!()[\]]/.test(el)) token = "p";                // punctuation
@@ -832,6 +927,29 @@ function tokenize3(textArr) {
 }
 
 
+// function tokenize4(textArr) {
+//   // Pass 4: Mark punctuation-delimited chunks
+//   const TOKEN = 0;    // word or punctuation
+//   const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+//   const inPhraseTypes = "wsc";
+
+//   let tmpArr = [];
+//   let chunk = [];
+//   let prevWasInPhrase, currIsInPhrase;
+//   for (let el of textArr) {
+//     currIsInPhrase = inPhraseTypes.includes(el.type);
+//     const isStartOfNewPhrase = !prevWasInPhrase && currIsInPhrase;
+//     if (isStartOfNewPhrase) {
+//       // if (chunk.length) tmpArr.push(chunk);
+//       tmpArr.push(chunk);
+//       chunk = [];
+//     }
+//     chunk.push(el);
+//     prevWasInPhrase = currIsInPhrase;
+//   }
+//   tmpArr.push(chunk);
+//   return tmpArr;
+// }
 
 function textLookupCompounds(tokenArr) {
   const len = Object.keys(tokenArr).length;
@@ -840,6 +958,7 @@ function textLookupCompounds(tokenArr) {
     if (token.type.startsWith("w")) {
       let j = i;
       let wordBlob = "";
+      // while (j < len && !(tokenArr[j].type.startsWith("p") || tokenArr[j].type === "me")) {
       while (j < len && !tokenArr[j].type.startsWith("p")) {
         const tmpToken = tokenArr[j];
         if (tmpToken.type.startsWith("w")) wordBlob += tmpToken.lemma;
@@ -857,6 +976,32 @@ function textLookupCompounds(tokenArr) {
   return tokenArr;
 }
 
+function textFlattenAndLookupCompoundsOLD(chunks) {
+  // ** for each word (token[1]==="w"), search within punctuation-delimited chunk for compound match
+
+  let flatArray = [];
+  for (const chunk of chunks) {
+    for (let word = 0; word <= chunk.length - 1; word++) {
+      let token = chunk[word];
+      let match = [];
+      if (token.type.startsWith("w")) {
+        let flattenedTail = chunk.slice(word).reduce((acc, entry) => {
+          acc.push((entry.type.startsWith("w")) ? entry.lemma.toLowerCase() : "");
+          return acc;
+        }, []).join("");
+        for (const compound in V.currentDb.compounds) {
+          if (flattenedTail.startsWith(compound)) {
+            match = [V.currentDb.compounds[compound]]
+            break;
+          }
+        }
+      }
+      token.matches = match;
+      flatArray.push(token);
+    }
+  }
+  return flatArray;
+}
 
 function getAllLevelStats(textArr) {
   const firstAppearanceOfWord = [];
@@ -868,7 +1013,7 @@ function getAllLevelStats(textArr) {
       const firstID = token.matches[0];
       if (token.type === "wo") level = -1;
       if (token.count === 0) {
-        [level, awlLevel] = (firstID > 0) ? getEntryById(firstID).levelArr.slice(0, 2) : [-1, -1];
+        [level, awlLevel] = (firstID > 0) ? getLevel(getEntryById(firstID)).slice(0, 2) : [-1, -1];
         const info = [token.lemma, firstID, level, awlLevel];
         firstAppearanceOfWord.push(info)
       }
@@ -970,14 +1115,14 @@ function markOfflist(word, offlistType) {
   let offlistID;
   let isUnique = true;
   for (const entry of V.offlistDb) {
-    if (entry.lemma === word) {
+    if (getLemma(entry) === word) {
       isUnique = false;
-      offlistID = entry.id;
+      offlistID = getId(entry);
       break;
     }
   }
   if (isUnique) {
-    offlistEntry = [word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + LOOKUP.level_headings.length, -1, -1], ""];
+    offlistEntry = [word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + LOOKUP.level_headings.length], ""];
     offlistID = addNewEntryToOfflistDb(offlistEntry);
   }
   return offlistID;
@@ -986,7 +1131,7 @@ function markOfflist(word, offlistType) {
 
 function addNewEntryToOfflistDb(entry) {
   const offlistID = -(V.offlistIndex);
-  V.offlistDb.push(new Entry(...entry,offlistID));
+  V.offlistDb.push([offlistID, ...entry]);
   V.offlistIndex++;
   return offlistID;
 }
@@ -1348,7 +1493,7 @@ function winnowPoS(roughMatches, posArr) {
   for (const id of roughMatches) {
     const match = getEntryById(id);
     for (const pos of posArr) {
-      if (match && match.pos.includes(pos)) {
+      if (match && getPoS(match).includes(pos)) {
         localMatches.push(id);
       }
     }
@@ -1372,6 +1517,10 @@ function buildHTMLtext(textArr) {
   let htmlString = "";
   let wordIndex = 0;
   for (let token of textArr) {
+    // if (token.type.startsWith("m")) {
+    //   if (token.type === "me") htmlString += EOL.HTMLtext;
+    //   else htmlString += CURSOR.HTMLtext;
+    // }
     if (token.type === "pe") htmlString += EOL.HTMLtext;
     else if (token.type === "mc") htmlString += CURSOR.HTMLtext;
     let toWrapInHTML = ["w", "wc", "wv", "wo", "wd", "c", "d", "y"];
@@ -1381,7 +1530,7 @@ function buildHTMLtext(textArr) {
       let lemmaIdLevelArr = [];
       for (let id of token.matches) {
         let match = getEntryById(id);
-        lemmaIdLevelArr.push([token.lemma, id, match[0]]);
+        lemmaIdLevelArr.push([token.lemma, id, getLevelNum(match)]);
         matchCount++;
       }
       wordIndex++;
@@ -1395,8 +1544,6 @@ function buildHTMLtext(textArr) {
 
 
 function buildHTMLword(lemmaIdLevelArr, wordIndex, token) {
-  // ** expects populated list of matches (therefore requires textLookupSimples)
-  if (!lemmaIdLevelArr.length) console.log(`WARNING: No match for this item (${token.lemma})!!`)
   let word = lemmaIdLevelArr[0][0];
   const [
     sortedByLevel,
@@ -1409,6 +1556,7 @@ function buildHTMLword(lemmaIdLevelArr, wordIndex, token) {
   ] = sortedByLevel[0];
   const firstMatch = getEntryById(firstID);
   let variantClass = (token.type === "wv") ? " variant" : "";
+  // let variantRefLink = "";
   if (token.type.startsWith("w")) V.setOfLemmaID.add(firstLemma.toLowerCase() + ":" + firstID);
   const ignoreThisRep = LOOKUP.repeatableWords.includes(firstLemma.toLowerCase());
   const [
@@ -1519,6 +1667,7 @@ function setLevelState(e) {
 
 
 function setDetailState(e, destination) {
+  // const destination = "help_state";
   let el, mode;
   if (e.target) {
     el = e.target;
@@ -1575,7 +1724,12 @@ function getDuplicateDetails(id, ignoreRepeats, reps) {
 
 function getLevelDetails(entry) {
   const levelClass = "level-" + getLevelPrefix(entry);
-  return [entry.levelArr, levelClass];
+  return [getLevel(entry), levelClass];
+}
+
+
+function getLevelNum(entry) {
+  return getLevel(entry)[0];
 }
 
 
@@ -1590,9 +1744,13 @@ function escapeHTML(text) {
   return text;
 }
 
+function unEscapeHTML(encodedText) {
+  return decodeURIComponent(encodedText);
+}
+
 
 function getLevelPrefix(entry) {
-  const levelNum = entry.levelGEPT;
+  const levelNum = getLevelNum(entry);
   let level = V.levelSubs[levelNum];
   if (isKids() && levelNum < V.OFFLIST) level = "k";
   if (!level) level = "o";
@@ -1618,6 +1776,7 @@ function buildHTMLlevelStats(separateLemmasCount, levelStats) {
     if (levelID < 3) tmpStats.push(tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
     else if (isBESTEP()) tmpStats.push(tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
   }
+  // debug(tmpStats)
   const toggleOpen = (V.current.level_state) ? " open" : "";
   levelStatsHTML = root([tag("details", ["id=level-details", toggleOpen], [
     tag("summary", ["class=all-repeats"], [
@@ -1658,7 +1817,7 @@ function buildHTMLrepeatList(wordCount) {
           let display = rep;
           let displayClass = "class=anchors";
           if (rep === 1) {
-            display = highlightAwlWord(entry.levelArr, word);
+            display = highlightAwlWord(getLevel(entry), word);
             displayClass = `class=level-${getLevelPrefix(entry)}`;
           }
           anchors.push(" ", tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
@@ -1689,8 +1848,8 @@ function buildHTMLrepeatList(wordCount) {
 
 
 function compareByLemma(a, b) {
-  const lemmaA = getEntryById(a).lemma.toLowerCase();
-  const lemmaB = getEntryById(b).lemma.toLowerCase();
+  const lemmaA = getLemma(getEntryById(a)).toLowerCase();
+  const lemmaB = getLemma(getEntryById(b)).toLowerCase();
   if (lemmaA < lemmaB) {
     return -1;
   }
@@ -1732,8 +1891,8 @@ function getIdsByLemma(word) {
   // ** returns empty array or array of matched IDs [4254, 4255]
   word = word.toLowerCase();
   const searchResults = V.currentDb.db
-    .filter(el => el.lemma.toLowerCase() === word)
-    .map(el => el.id);
+    .filter(el => getLemma(el).toLowerCase() === word)
+    .map(el => getId(el));
   return searchResults;
 }
 
@@ -1867,6 +2026,7 @@ function setDbShared(e) {
   if (V.current.db_state === C.GEPT) {
     V.currentDb = {
       name: "GEPT",
+      // db: indexDb(makeGEPTdb()),
       db: createDbfromArray(makeGEPTdb()),
       show: [HTM.G_level],
       hide: [HTM.K_theme, HTM.B_AWL],
@@ -1881,6 +2041,7 @@ function setDbShared(e) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
       name: "BESTEP",
+      // db: indexDb(tmpDb.concat(makeAWLdb())),
       db: createDbfromArray(tmpDb.concat(makeAWLdb())),
       show: [HTM.G_level, HTM.B_AWL],
       hide: [HTM.K_theme],
@@ -1894,6 +2055,7 @@ function setDbShared(e) {
   } else {
     V.currentDb = {
       name: "GEPTKids",
+      // db: indexDb(makeKIDSdb()),
       db: createDbfromArray(makeKIDSdb()),
       show: [HTM.K_theme],
       hide: [HTM.G_level, HTM.B_AWL],
@@ -1917,7 +2079,8 @@ function setDbShared(e) {
 }
 
 function createDbfromArray(db) {
-  return db.map(entry => new Entry(...entry));
+  return indexDb(db);
+  // return db.map(entry => new Entry(...entry));
 }
 
 function isGEPT() {
@@ -1933,7 +2096,7 @@ function isKids() {
 }
 
 function isInOfflistDb(idOrEntry) {
-  const id = (Number.isInteger(idOrEntry)) ? idOrEntry : idOrEntry.id;
+  const id = (Number.isInteger(idOrEntry)) ? idOrEntry : getId(idOrEntry);
   return id < 0;
 }
 
@@ -1964,11 +2127,12 @@ function buildCompoundsDb(dB) {
   */
   let compounds = {};
   for (let entry of dB) {
-    const word = entry.lemma.trim().toLowerCase();
-    const id = entry.id;
+    const word = getLemma(entry).trim().toLowerCase();
+    const id = getId(entry);
     const splitWord = word.split(/[-'\s\.]/g);
     if (splitWord.length > 1) {
       const newCompound = splitWord.join("");
+      // entry[C.isCOMPOUND] = true;
       compounds[newCompound] = id;
       // ** to catch A.M. and P.M.
       if (/[ap]\.m\./.test(word)) compounds[word] = id;
