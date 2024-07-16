@@ -19,7 +19,9 @@ class Entry {
   get pos() { return this._pos }
   get levelArr() { return this._levelArr }
   get levelGEPT() { return this._levelArr[0] }
-  get levelAWL() { return this._levelArr[1] }
+  get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
+
+  get levelAWLraw() { return this._levelArr[1]}
   get levelStatus() { return this._levelArr[1] }
 
   get notes() {
@@ -94,6 +96,7 @@ class Tag {
     this.content = content.map(el => (typeof el === "string") ? escapeHTML(el) : el);
   }
   stringify() {
+    if (!this.name) return "";
     if (this.isEmpty) return `<${this.name} />`;
     let tmpContent = "";
     for (let el of this.content) {

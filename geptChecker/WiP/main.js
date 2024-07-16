@@ -398,21 +398,22 @@ function wordRunSearch(searchTerms) {
     /*
     el[C.LEVEL][2]:
     1-in awl only
-    2-in gept only
+    // 2-in gept only
+    -1 in gept only
     3-in gept AND awl
 
     from search from (awl)
     100 = choose only words in AWL list
     200 = choose only words in GEPT list
     */
-    if (searchTerms.awl == C.FIND_GEPT_ONLY) {
-      results = results.filter(el => el.levelStatus >= C.GEPT_ONLY);
+    if (searchTerms.awl[0] === C.FIND_GEPT_ONLY) {
+      results = results.filter(el => el.levelStatus === C.GEPT_ONLY);
     }
-    else if (searchTerms.awl == C.FIND_AWL_ONLY) {
-      results = results.filter(el => el.levelAWL > -1);
+    else if (searchTerms.awl[0] === C.FIND_AWL_ONLY) {
+      results = results.filter(el => el.levelAWL > 0);
     }
     else {
-      results = results.filter(el => searchTerms.awl.indexOf(el.levelAWL) > -1);
+      results = results.filter(el => searchTerms.awl.indexOf(el.levelAWLraw) > -1);
     }
   }
   results = results.filter(result => result.id > 0);
@@ -617,10 +618,15 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
 function buildHTMLlevelDot(entry) {
   let html = "";
   if (!isKids()) {
-    const levelNum = entry.levelGEPT;
-    html = (levelNum <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][levelNum]]) : "";
+    const geptLevel = entry.levelGEPT;
+    html = (geptLevel <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
   }
+  if (isBESTEP() && entry.levelAWL > 0) html = root(html, ... buildHTMLlevelAWL(entry));
   return html;
+}
+
+function buildHTMLlevelAWL(entry) {
+  return [" ", tag("strong", [], [`AWL ${entry.levelAWL}`])];
 }
 
 function getExpandedPoS(entry) {
@@ -659,17 +665,12 @@ function textMarkup(e) {
   if (revisedText) {
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
-    let taggedTextArr = textdivideIntoTokens(revisedText);
+    let taggedTokenArr = textdivideIntoTokens(revisedText);
     revisedText = null;
-    taggedTextArr = textLookupCompounds(taggedTextArr);
-    taggedTextArr = textLookupSimples(taggedTextArr);
-    const [
-      resultsHTML,
-      repeatsHTML,
-      levelStatsHTML,
-      wordCount
-    ] = textBuildHTML(taggedTextArr);
-    textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount);
+    taggedTokenArr = textLookupCompounds(taggedTokenArr);
+    taggedTokenArr = textLookupSimples(taggedTokenArr);
+    // debug(taggedTokenArr)
+    textBuildHTML(taggedTokenArr);
     backupSave();
     signalRefreshNeeded("off");
     setCursorPos(document.getElementById(CURSOR.id));
@@ -712,17 +713,17 @@ function textdivideIntoTokens(rawText) {
   signalRefreshNeeded("off");
   if (typeof rawText === "object") return;
   let text = normalizeRawText(rawText);
-  let taggedTextArr = tokenize(text);
-  return taggedTextArr;
+  let taggedTokenArr = tokenize(text);
+  return taggedTokenArr;
 }
 
 function textBuildHTML(resultsAsTextArr) {
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(resultsAsTextArr);
   const resultsHTML = buildHTMLtext(resultsAsTextArr);
-  resultsAsTextArr = "";
+  resultsAsTextArr = null;
   const repeatsHTML = buildHTMLrepeatList(totalWordCount);
   const levelStatsHTML = buildHTMLlevelStats(separateLemmasCount, levelStats);
-  return [resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount];
+  textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount);
 }
 
 
@@ -744,6 +745,7 @@ function tokenize(text) {
   textArr = tokenize1(textArr);   // identify main tokens
   textArr = tokenize2(textArr);   // confirm identification + prepare for grouping
   textArr = tokenize3(textArr);   // fine-tune position of splits
+  textArr = tokenize4(textArr);
   return textArr;
 }
 
@@ -831,6 +833,26 @@ function tokenize3(textArr) {
   return tmpArr;
 }
 
+function tokenize4(taggedTokenArr) {
+  // ** to deal with measurements i.e. num+abbrev. (no space)
+  let tmpArr = [];
+  for (let token of taggedTokenArr) {
+    let toAdd = [];
+    if (token.type === "d") {
+      for (let el of Object.keys(LOOKUP.abbreviations)) {
+        const ending = token.lemma.slice(-el.length)
+        if (ending === el) {
+          const num = token.lemma.slice(0,-el.length)
+          toAdd.push(new Token(num, "d", []), new Token(ending, "w", []))
+          break;
+        }
+      }
+    }
+    if (!toAdd.length) toAdd.push(token)
+    tmpArr.push(...toAdd);
+  }
+  return tmpArr;
+}
 
 
 function textLookupCompounds(tokenArr) {
@@ -936,6 +958,9 @@ function textLookupSimples(textArr) {
   V.tallyOfIDreps = {};
   let repeatCount = 0;
   for (let token of textArr) {
+    // if (token.type === "d") {
+    //   debug(token.lemma, token)
+    // }
     if (token.type.startsWith("w")) {
       const [revisedType, localMatches] = lookupWord(token.lemma, token.type, token.matches);
       if (!isEmpty(localMatches)) {
@@ -998,8 +1023,7 @@ function lookupWord(word, type, matchedCompoundsArr = []) {
   // ** Assumes word is lowercase
   // ** first, account for non-ascii, hyphenated words & contractions (which are listes with apostrophe to disambiguate from abbreviations, e.g. 'm = contraction, m = meter/mile)
   // NEW return [type, matchedArr]: type= w (word), wd (derived word), wv (variant word)
-  let localMatchedIDarr;
-  localMatchedIDarr = getIdsByLemma(word);
+  let localMatchedIDarr = getIdsByLemma(word);
   if (!isEmpty(localMatchedIDarr)) return [type, matchedCompoundsArr.concat(localMatchedIDarr)];
   localMatchedIDarr = checkDerivations(word);
   if (!isEmpty(localMatchedIDarr)) return ["wd", matchedCompoundsArr.concat(localMatchedIDarr)];
@@ -1038,25 +1062,11 @@ function testForNegativePrefix(word) {
 }
 
 
-function translateToOfflistDbID(id) {
-  if (typeof id === "object") id = id[0];
-  return (id < 0) ? -id : id;
-}
+// function translateToOfflistDbID(id) {
+//   if (typeof id === "object") id = id[0];
+//   return (id < 0) ? -id : id;
+// }
 
-function checkAllowedVariants(word, offlistID = 0) {
-  const shouldUpdateOfflistDb = (offlistID !== 0);
-  let matchedIDarr = checkVariantWords(word);
-  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantSuffixes(word);
-  if (isEmpty(matchedIDarr)) matchedIDarr = checkAbbreviations(word);
-  if (isEmpty(matchedIDarr)) matchedIDarr = checkGenderedNouns(word);
-  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantSpellings(word);
-  if (isEmpty(matchedIDarr)) matchedIDarr = checkVariantHyphens(word);
-  if (!isEmpty(matchedIDarr)) {
-    const offlistEntry = [offlistID, word, "variant", matchedIDarr, ""];
-    if (shouldUpdateOfflistDb) V.offlistDb[-offlistID] = offlistEntry;
-  }
-  return matchedIDarr;
-}
 
 function checkVariantWords(word) {
   let match = "";
@@ -1126,15 +1136,15 @@ function checkVariantSuffixes(word) {
 }
 
 
-function checkVariantHyphens(word) {
-  let matchIDarr = [];
-  if (word.length > 4 && word.includes("-")) {
-    const deHyphenatedWord = word.replace("-", "");
-    matchIDarr = getIdsByLemma(deHyphenatedWord);
-    if (!idSuccessfullyMatched(matchIDarr)) matchIDarr = checkDerivations(deHyphenatedWord);
-  }
-  return matchIDarr;
-}
+// function checkVariantHyphens(word) {
+//   let matchIDarr = [];
+//   if (word.length > 4 && word.includes("-")) {
+//     const deHyphenatedWord = word.replace("-", "");
+//     matchIDarr = getIdsByLemma(deHyphenatedWord);
+//     if (!idSuccessfullyMatched(matchIDarr)) matchIDarr = checkDerivations(deHyphenatedWord);
+//   }
+//   return matchIDarr;
+// }
 
 function checkVariantSpellings(word) {
   let matchIDarr = [];
@@ -1167,6 +1177,32 @@ function replaceLetters(word, letters, replacement) {
   return matchedIDarr;
 }
 
+
+
+function checkAllowedVariants(word, offlistID = 0) {
+  const shouldUpdateOfflistDb = (offlistID !== 0);
+  let matchedIDarr = [];
+  for (let check of [
+    checkVariantWords,
+    checkVariantSuffixes,
+    checkAbbreviations,
+    checkGenderedNouns,
+    checkVariantSpellings,
+    // checkVariantHyphens,
+  ]) {
+      let result = check(word);
+      if (result.length){
+        matchedIDarr.push(...result);
+        break;
+      }
+    }
+  if (!isEmpty(matchedIDarr) && offlistID!== 0) {
+    V.offlistDb[-offlistID] = [offlistID, word, "variant", matchedIDarr, ""];
+  }
+  return matchedIDarr;
+}
+
+
 function checkDerivations(word, preMatchedIDarr = []) {
   /*
   returns => array of matched ids
@@ -1184,99 +1220,90 @@ function checkDerivations(word, preMatchedIDarr = []) {
   Final-s =  families tries potatoes scarves crises boxes dogs
   regular ADVs =  happily clumsily annually finely sensibly sadly automatically
   */
-  if (LOOKUP.falseDerivations.includes(word)) {
-    return preMatchedIDarr;
-  }
-
-  // let localMatches = runChecks(word, matches);
-
-  let localMatches = [];
-  for (const guess of [
-    checkNames,
-    checkArticle,
-    checkIrregularNegatives,
-    checkIrregularVerbs,
-    checkIrregularPlurals,
-    checkForeignPlurals,
-    checkVing,
-    checkVpp,
-    checkSuperlatives,
-    checkComparatives,
-    checkRegularAdverbs,
-    checkNegativePrefix,
-  ]) {
-    const result = guess(word);
-    if (result && !isEmpty(result)) {
-      localMatches.push(result);
-      break;
+  if (!LOOKUP.falseDerivations.includes(word)) {
+    let localMatches = [];
+    for (const guess of [
+      checkNames,
+      checkArticle,
+      checkIrregularNegatives,
+      checkIrregularVerbs,
+      checkIrregularPlurals,
+      checkForeignPlurals,
+      checkAllSuffixes,
+      checkNegativePrefix,
+    ]) {
+      const result = guess(word);
+      if (result && !isEmpty(result)) {
+        localMatches.push(...result);
+        break;
+      }
+    }
+    if (localMatches || !isEmpty(localMatches)) {
+      preMatchedIDarr.push(...localMatches);
     }
   }
-  // ** -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
-  const result = checkFinalS(word);
-  if (result) {
-    localMatches.push(result);
-  }
-  if (!localMatches || isEmpty(localMatches)) {
-    return preMatchedIDarr;
-  }
-  preMatchedIDarr.push(...localMatches);
-  return dedupeSimpleArray(preMatchedIDarr);
+  preMatchedIDarr = dedupeSimpleArray(preMatchedIDarr);
+  return preMatchedIDarr;
 }
 
 
 function dedupeSimpleArray(arr) {
-  if (typeof arr !== "object") arr = [arr];
-  return [...new Set(arr)];
+  if (typeof arr !== "object") return [arr];
+  arr = [...new Set(arr)];
+  arr = arr.filter(el => el.length);
+  return arr;
 }
 
 
 function checkNames(word) {
-  let result;
+  let result = [];
   if (LOOKUP.personalNames.includes(word)) {
-    result = markOfflist(word, "name");
+    result.push(...markOfflist(word, "name"));
   }
   return result;
 }
 
 function checkArticle(word) {
-  let result;
+  let result = [];
   if (word === "an") {
-    result = getIdsByLemma("a")[0];
+    // result.push(...getIdsByLemma("a")[0]);
+    result.push(...getIdsByLemma("a"));
   }
   return result;
 }
 
 
 function checkIrregularNegatives(word) {
-  let result;
+  let result = [];
   const lookup = LOOKUP.irregNegVerb[word];
   if (lookup) {
-    result = winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
+    // result.push(...winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0]);
+    result.push(...winnowPoS(getIdsByLemma(lookup), ["x", "v"]));
   }
   return result;
 }
 
 function checkIrregularVerbs(word) {
-  let result;
+  let result = [];
   const lookup = LOOKUP.irregVerb[word];
   if (lookup) {
-    result = winnowPoS(getIdsByLemma(lookup), ["x", "v"])[0];
+    result.push(...winnowPoS(getIdsByLemma(lookup), ["x", "v"]));
   }
   return result;
 }
 
 function checkIrregularPlurals(word) {
-  let result;
+  let result = [];
   const lookup = LOOKUP.irregPlural[word];
   if (lookup) {
     // ** words in the lookup are most likely the correct word (and 'others / yourselves' aren't nouns!)
-    result = getIdsByLemma(lookup);
+    result.push(...getIdsByLemma(lookup));
   }
   return result;
 }
 
 function checkForeignPlurals(word) {
-  let result;
+  let result = [];
   if (word.length <= 2) return;
   for (const [plural, singular] of LOOKUP.foreign_plurals) {
     const root = word.slice(0, -plural.length);
@@ -1284,7 +1311,7 @@ function checkForeignPlurals(word) {
     if (ending === plural) {
       const lookup = getIdsByLemma(root + singular);
       if (!isEmpty(lookup)) {
-        result = winnowPoS(lookup, ["n"])[0];
+        result.push(...winnowPoS(lookup, ["n"]));
         break;
       }
     }
@@ -1292,51 +1319,29 @@ function checkForeignPlurals(word) {
   return result;
 }
 
-function checkVing(word) {
-  let result;
-  if (word.endsWith("ing")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.ing_subs), ["v"])[0];
+function checkAllSuffixes(word) {
+  const suffixChecks = [
+    ["s", LOOKUP.s_subs, ["n", "v"]],
+    ["ing", LOOKUP.ing_subs, ["v"]],
+    ["ed", LOOKUP.ed_subs, ["v"]],
+    ["st", LOOKUP.est_subs, ["j"]],
+    ["r", LOOKUP.er_subs, ["j"]],
+    ["ly", LOOKUP.ly_subs, ["j"]],
+  ];
+  let matches = [];
+  for (let el of suffixChecks) {
+    matches.push(checkForSuffix(word, ...el));
+    if (matches.length && el[0] !== "s") break;
+    // ** -es (-s plural) overlaps with -is > -es in foreignPlurals, so both need to be applied
   }
-  return result;
+  return matches;
 }
 
-function checkVpp(word) {
-  let result;
-  if (word.endsWith("ed")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.ed_subs), ["v"])[0];
-  }
-  return result;
-}
 
-function checkSuperlatives(word) {
-  let result;
-  if (word.endsWith("st")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.est_subs), ["j"])[0];
-  }
-  return result;
-}
-
-function checkComparatives(word) {
-  let result;
-  if (word.endsWith("r")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.er_subs), ["j"])[0];
-  }
-  return result;
-}
-
-function checkFinalS(word) {
-  let result;
-  if (word.endsWith("s")) {
-    // ** DISREGARD: pronouns ("r") included to allow 'others' (allows 'thems'!!)
-    result = winnowPoS(findBaseForm(word, LOOKUP.s_subs), ["n", "v"])[0];
-  }
-  return result;
-}
-
-function checkRegularAdverbs(word) {
-  let result;
-  if (word.endsWith("ly")) {
-    result = winnowPoS(findBaseForm(word, LOOKUP.ly_subs), ["j"])[0];
+function checkForSuffix(word, suffix, lookup, pos){
+  let result = [];
+  if (word.endsWith(suffix)) {
+    result.push(...winnowPoS(findBaseForm(word, lookup), pos));
   }
   return result;
 }
@@ -1635,6 +1640,7 @@ function buildHTMLrepeatList(wordCount) {
   let countAllReps = 0;
   let repeatsHeader;
   let listOfRepeats = [];
+  const idForEventListener = "repeat-details";
   if (wordCount) {
     /* List of repeated lemmas
     in line with display policy, if two lemmas are identical,
@@ -1666,7 +1672,6 @@ function buildHTMLrepeatList(wordCount) {
         listOfRepeats.push(tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry)}`], [...anchors]));
       }
     }
-    const idForEventListener = "repeat-details";
     if (countAllReps > 0) {
       const toggleOpen = (V.current.repeat_state) ? " open" : "";
       repeatsHeader = tag("details", [`id=${idForEventListener}`, toggleOpen], [
@@ -1679,18 +1684,19 @@ function buildHTMLrepeatList(wordCount) {
         ]),
         tag("div", ["id=repeats"], [...listOfRepeats]),
       ]);
-    } else {
-      repeatsHeader = tag("p", [`id=${idForEventListener}`], [
-        tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
     }
+  }
+  if (!repeatsHeader) {
+    repeatsHeader = tag("p", [`id=${idForEventListener}`], [
+      tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
   }
   return repeatsHeader.stringify();
 }
 
 
 function compareByLemma(a, b) {
-  const lemmaA = getEntryById(a).lemma.toLowerCase();
-  const lemmaB = getEntryById(b).lemma.toLowerCase();
+  const lemmaA = a.lemma.toLowerCase();
+  const lemmaB = b.lemma.toLowerCase();
   if (lemmaA < lemmaB) {
     return -1;
   }
