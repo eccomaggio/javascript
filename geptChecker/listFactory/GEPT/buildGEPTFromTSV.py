@@ -5,7 +5,7 @@ This takes in a csv file which consists of 6 cols:
 3) Chinese gloss
 4) notes
 5) GEPT level
-6) wordlist level (if available)
+6) AWL wordlist level (if available)
 
 And will change it into this:
 
@@ -17,7 +17,8 @@ And will change it into this:
             43,                   // AWL level (6*)
             3                     // status** (here: in both lists)
         ],
-        "抽象的，摘要|abstract"    // chinese gloss (if any) + separator + awl headword (if any)
+        # "抽象的，摘要|abstract"    // chinese gloss (if any) + separator + awl headword (if any)
+        new: ["抽象的，摘要", "", "abstract"]    // chinese gloss (if any) + notes (if any) + awl headword (if any)
     ],
 
     * according to position in level_headings
@@ -63,7 +64,7 @@ from pprint import pprint
 #     int: str = "t"
 #     inf: str = "f"
 
-pov_lookup = {
+pos_lookup = {
     "noun": "n",
     "verb": "v",
     "art": "a",
@@ -185,6 +186,7 @@ class Pos(Enum):
     AWL_ONLY = 1
     GEPT_ONLY = 2
     AWL_AND_GEPT = 3
+    OFFLIST = -1
     # AWL_OR_GEPT = 4 ## overlaps all others!
 
 
@@ -196,7 +198,7 @@ class C(Enum):
 
 
 SEP = '"'
-NOTES_SEP = "|"
+# NOTES_SEP = "|"
 
 
 # def get_full_awl_list():
@@ -252,14 +254,19 @@ def return_list_from_json_file(filename):
 def minimize_pos(pos):
     if pos:
         pos = pos.replace(".", "")
-        pos = re.sub("[()/,]", " ", pos)
-        pos = re.sub("\s{2,}", " ", pos).strip()
+        pos = re.sub(r"[()/,]", " ", pos)
+        pos = re.sub(r"\s{2,}", " ", pos).strip()
         # return " ".join([pov_lookup[item] for item in pos.split(" ")])
-        return "".join([pov_lookup[item] for item in pos.split(" ")])
+        return "".join([pos_lookup[item] for item in pos.split(" ")])
 
-def createNotes(gloss, notes):
-    tmp = [x for x in [gloss, notes] if x]
-    return "; ".join(tmp)
+# def create_notes(gloss, notes):
+#     tmp = [x for x in [gloss, notes] if x.strip()]
+#     return "; ".join(tmp)
+
+def create_notes(gloss, notes):
+    ## the placeholder empty string is for awl headword (if any)
+    return [gloss.strip(), notes.strip(), ""]
+
 
 def normalize_cols(list):
     ur_lemma = 0
@@ -277,22 +284,24 @@ def normalize_cols(list):
 
     normalized = []
     for e in list:
-      awl_level = -1
-      if e[ur_awl]:
-        awl_level = int(e[ur_awl].strip()[1:]) + AWL_INDEX
-      normalized_entry = [
-          e[ur_lemma].strip(),
-          e[ur_pos].strip(),
-          [
-            levels[e[ur_gept][0].lower()],
-            awl_level,
-            Pos.GEPT_ONLY.value
-          ],
-          # e[ur_gloss] + "; " + e[ur_notes] + "|"
-        #   e[ur_gloss].strip() + "; " + e[ur_notes].strip()
-          createNotes(e[ur_gloss].strip(), e[ur_notes].strip())
+        # awl_level = -1
+        awl_level = Pos.OFFLIST.value
+        # if e[ur_awl]:
+        if len(e) == 6:
+            awl_level = int(e[ur_awl].strip()[1:]) + AWL_INDEX
+        normalized_entry = [
+            e[ur_lemma].strip(),
+            e[ur_pos].strip(),
+            [
+                levels[e[ur_gept][0].lower()],
+                awl_level,
+                Pos.GEPT_ONLY.value
+            ],
+            # e[ur_gloss] + "; " + e[ur_notes] + "|"
+            #   e[ur_gloss].strip() + "; " + e[ur_notes].strip()
+            create_notes(e[ur_gloss], e[ur_notes])
         ]
-      normalized.append(normalized_entry)
+        normalized.append(normalized_entry)
     return normalized
 
 
@@ -303,7 +312,8 @@ def main():
     raw_gept.pop(0) ## Remove header line
     gept_list = normalize_cols(raw_gept)
     gept_list.insert(0,
-        ["", "", [0, -1, 2], "dummy entry: 0 easily confused with undefined|"],
+        # ["", "", [0, -1, 2], "dummy entry: 0 easily confused with undefined|"],
+        ["", "", [0, Pos.OFFLIST.value, 2], ["dummy entry: 0 easily confused with undefined","",""]],
     )
     assert len(gept_list) == 8393 + 1  ## according to the spreadsheet (minus headers line)
     save_list_as_json(gept_list, "dbGEPT.json")

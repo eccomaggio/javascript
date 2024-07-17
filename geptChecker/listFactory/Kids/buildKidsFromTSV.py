@@ -1,7 +1,14 @@
+"""
+This file needs updating. Currently only creates a clean .tsv file. Need also to create .JSON
+"""
+
+
 import csv
+import json
 import os
 import re
 import string
+from pprint import pprint
 
 cat_lookup = [
   'elementary',
@@ -44,65 +51,121 @@ cat_lookup = [
   'Wh-words (疑問詞)'
   ]
 
-pov_lookup = {
-  'n': 'noun',
-  'v': 'verb',
-  'art': 'art.',
-  'det': 'determiner',
-  'aux': 'aux.',
-  'adj': 'adj.',
-  'conj': 'conj.',
-  'interj': 'interj.',
-  'number': 'number',
-  'adv': 'adv.',
-  'prep': 'prep.',
-  'pron': 'pron.',
+# pos_lookup = {
+#   'n': 'noun',
+#   'v': 'verb',
+#   'art': 'art.',
+#   'det': 'determiner',
+#   'aux': 'aux.',
+#   'adj': 'adj.',
+#   'conj': 'conj.',
+#   'interj': 'interj.',
+#   'number': 'number',
+#   'adv': 'adv.',
+#   'prep': 'prep.',
+#   'pron': 'pron.',
+#   # '--': 'title',
+#   '--': 'noun', # titles are listed as 'noun' in main GEPT wordlist
+#   }
+
+pos_lookup = {
+  'n': 'n',
+  'v': 'v',
+  'art': 'a',
+  'det': 'd',
+  'aux': 'x',
+  'adj': 'j',
+  'conj': 'c',
+  'interj': 'i',
+  'number': 'm',
+  'adv': 'b',
+  'prep': 'p',
+  'pron': 'r',
   # '--': 'title',
-  '--': 'noun', # titles are listed as 'noun' in main GEPT wordlist
+  '--': 'n', # titles are listed as 'noun' in main GEPT wordlist
   }
 
-sep = "\""
-
-files = os.listdir('.')
-tsv_filename = ""
-alpha = "[a-zA-Z]"
-# print(files)
-for file in files:
-  if file.endswith('.tsv'):
-    tsv_filename = file
-
-with open(os.path.join(os.getcwd(),tsv_filename), "r") as tsv_file, open(os.path.join(os.getcwd(),"out.test"),"w") as out_file:
-  tsv_reader = csv.reader(tsv_file, delimiter="\t")
-  categories = list(dict.fromkeys([col[1] for col in tsv_reader if col[1] and re.match(alpha,col[1])]))
-  tsv_file.seek(0)
-  POVs = list(dict.fromkeys([col[2] for col in tsv_reader if col[2] and re.match(alpha, col[2])]))
-  tsv_file.seek(0)
-  """
-  Tests here to:
-  1) weed out chinese headings
-  2) split alternate entries (in the form "coke/cola")
-  3) ignore occasional inconsistencies (i.e. 'adv.' vs 'adv')
-  """
-  for row in tsv_reader:
-    lemmaRaw = row[0]
-    lemma = lemmaRaw.split("/")
-    # normalizedLemma = lemma.replace("-","")
-    normalizedLemma = lemma[0].translate(str.maketrans('', '', string.punctuation))
-    normalizedLemma = normalizedLemma.replace(" ","")
-    if (normalizedLemma.isalpha() and normalizedLemma.isascii()):
-      tmpPov = row[2].replace(".","")
-      pov = [pov_lookup[el.strip().replace(".","")] for el in row[2].split("/")]
-      cat = cat_lookup.index(row[1])
-      notes = row[3]
-      # print(f"[{sep}{lemma}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],")
-      out_file.write(f"[{sep}{lemma[0]}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],\n")
-      try:
-        lemma[1]
-        out_file.write(f"[{sep}{lemma[1]}{sep},{sep}{'/'.join(pov)}{sep},[{cat}], {sep}{notes}{sep}],\n")
-      except Exception:
-        pass
+def save_list_as_json(list, out_filename, top="", tail=""):
+    with open(os.path.join(os.getcwd(), out_filename), "w") as out_file:
+        if top:
+            out_file.write(top)
+        json.dump(list, out_file, indent=None)
+        if tail:
+            out_file.write(tail)
 
 
-print(f"cats: {categories}")
-# print(f"POVs: {POVs}")
+def return_separated_file_as_dict(file, sep="\t"):
+    with open(file, mode="r") as f:
+        reader = csv.reader(f, delimiter=sep)
+        tmp = {}
+        for uid, row in enumerate(reader):
+            tmp[uid] = row
+    return tmp
+
+
+def return_separated_file_as_list(file, sep="\t"):
+    with open(file, mode="r") as f:
+        reader = csv.reader(f, delimiter=sep)
+        tmp = []
+        for row in reader:
+            if row:
+                tmp.append(row)
+    return tmp
+
+
+def return_list_from_json_file(filename):
+    with open(filename, "r") as file:
+        data = json.load(file)
+    return data
+
+def get_tsv_file():
+  files = os.listdir('.')
+  tsv_filename = ""
+  for file in files:
+    if file.endswith('.tsv'):
+      tsv_filename = file
+      break
+  return tsv_filename
+
+def streamline(list):
+  tmp = []
+  kids_heading_index_offset = 3
+  for i, row in enumerate(list):
+    if i == 0:
+      continue
+    lemma_raw = row[0]
+    lemma = lemma_raw.split("/")
+    # normalized_lemma = lemma[0].translate(str.maketrans('', '', string.punctuation))
+    # normalized_lemma = normalized_lemma.replace(" ","")
+    # if (normalized_lemma.isalpha() and normalized_lemma.isascii()):
+      # tmpPov = row[2].replace(".","")
+    pos = "".join([pos_lookup[el.strip().replace(".","")] for el in row[2].split("/")])
+    # cat = cat_lookup.index(row[1]) + kids_heading_index_offset
+    cat = cat_lookup.index(row[1])
+    notes = row[3]
+    # out_file.write(f"[{sep}{lemma[0]}{sep},{sep}{'/'.join(pos)}{sep},[{cat}], {sep}{notes}{sep}],\n")
+    # entry = [lemma[0], pos, cat, notes]
+    tmp.append([lemma[0], pos, [cat,-1,4], [notes,"",""]])
+    try:
+      tmp.append([lemma[1], pos, [cat,-1,4], [notes,"",""]])
+    except Exception:
+      pass
+  return tmp
+
+
+
+
+if __name__ == "__main__":
+  tsv_filename = get_tsv_file()
+  kids = return_separated_file_as_list(tsv_filename)
+  kids = streamline(kids)
+  pprint(kids)
+  kids.insert(0,
+      ["", "", [0, -1, 4], ["dummy entry: 0 easily confused with undefined","",""]],
+  )
+  save_list_as_json(kids, "dbKids.json")
+
+
+# print(f"cats: {categories}")
+# # print(f"POVs: {POVs}")
 

@@ -17,6 +17,13 @@ class Entry {
   get id() { return this._id }
   get lemma() { return this._lemma }
   get pos() { return this._pos }
+
+  get posExpansion() {
+  const pos_str = this._pos;
+  if (this._id < 0) return pos_str;
+  return (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
+  }
+
   get levelArr() { return this._levelArr }
   get levelGEPT() { return this._levelArr[0] }
   get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
@@ -25,17 +32,15 @@ class Entry {
   get levelStatus() { return this._levelArr[1] }
 
   get notes() {
-    // return this._notes
-    let [note, awl_note] = ["", ""];
-    if (this._notes) {
-      [note, awl_note] = this._notes.trim().split(C.NOTE_SEP);
-    note = note.split(";").filter(el => String(el).trim()).join(";");
-    }
-    return [note, awl_note];
+    let note = this._notes[0];
+    if (this._notes[1]) note += `; ${this._notes[1]}`;
+    return [note, this._notes[2]];
   }
 
   static incrementID() { Entry.currID++ }
 }
+
+
 
 class Token {
   constructor(lemma, type, matches = [], count = 0) {
@@ -47,11 +52,11 @@ class Token {
 }
 
 
-function escapeHTML(text) {
-  if (!text) return "";
-  // console.log("escape:", typeof text, text)
-  return text.replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': " &quot;" }[char]));
-}
+// function escapeHTML(text) {
+//   if (!text) return "";
+//   // console.log("escape:", typeof text, text)
+//   return text.replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': " &quot;" }[char]));
+// }
 
 function tag(name, attrs = [], content = []) {
   return new Tag(name, attrs, content);
@@ -89,12 +94,16 @@ class Tag {
     if (typeof attrs === "string") attrs = [attrs];
     this.attrs = attrs.map(el => {
       let tmp = el.split("=");
-      return (tmp.length === 1) ? [tmp] : [tmp[0], escapeHTML(tmp[1])];
+      return (tmp.length === 1) ? [tmp] : [tmp[0], this.escapeHTML(tmp[1])];
     });
-    // console.log(content)
-    // this.content = (typeof content === "string") ? [content] : content;
-    this.content = content.map(el => (typeof el === "string") ? escapeHTML(el) : el);
+    this.content = content.map(el => (typeof el === "string") ? this.escapeHTML(el) : el);
   }
+
+  escapeHTML(text) {
+    if (!text) return "";
+    return text.replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': " &quot;" }[char]));
+  }
+
   stringify() {
     if (!this.name) return "";
     if (this.isEmpty) return `<${this.name} />`;

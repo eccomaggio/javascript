@@ -54,7 +54,7 @@ from enum import Enum
 from pprint import pprint
 
 
-pov_lookup = {
+pos_lookup = {
     "noun": "n",
     "verb": "v",
     "art": "a",
@@ -175,6 +175,7 @@ class Pos(Enum):
     AWL_ONLY = 1
     GEPT_ONLY = 2
     AWL_AND_GEPT = 3
+    OFFLIST = -1
     # AWL_OR_GEPT = 4 ## overlaps all others!
 
 
@@ -188,7 +189,7 @@ AWL_LEVEL = 1
 STATUS = 2
 
 SEP = '"'
-NOTES_SEP = "|"
+# NOTES_SEP = "|"
 # ALPHA = "[a-zA-Z]"
 shared_words = {}
 
@@ -221,9 +222,10 @@ def create_awl_from_tsv(tsv_filename):
                 except IndexError:
                     pass
                 for i, entry in enumerate(entries):
-                    notes = []
-                    awl_info = f"{NOTES_SEP}{headword}"
-                    notes += [awl_info]
+                    # notes = []
+                    # awl_info = f"{NOTES_SEP}{headword}"
+                    # notes += [awl_info]
+                    # notes = ["", "", headword]
                     gept_level = 1 if level <= 5 else 2
                     pos = []
                     display = entry
@@ -289,7 +291,8 @@ def create_awl_from_tsv(tsv_filename):
                             display.strip(),
                             " ".join(pos),
                             [gept_level, 37 + level, Pos.AWL_ONLY.value],
-                            " ".join(notes),
+                            # " ".join(notes),
+                            ["", "", headword]
                         ]
                     ]
 
@@ -336,10 +339,11 @@ def consolidate_with_gept(awl_list, gept_list):
                     Pos.AWL_AND_GEPT.value,
                 ]
                 gept_line[LEVEL] = awl_line[LEVEL] = combined_level
-                combined_notes = gept_line[NOTES] + "; " + awl_line[NOTES]
+                # combined_notes = gept_line[NOTES] + "; " + awl_line[NOTES]
+                # gept_line[NOTES] = awl_line[NOTES] = combined_notes
+                ## CHANGED to accommodate new note design: [chinese, notes, awl headword]
+                combined_notes = [*gept_line[NOTES][:2], awl_line[NOTES][2]]
                 gept_line[NOTES] = awl_line[NOTES] = combined_notes
-                # awl_line[POS] += " " + Pos.DEL.value
-                # count += 1
                 tmp_shared_entries.append(awl_line)
                 shared_words[gept_line[LEMMA]] = 1
     print(f"\t{len(tmp_shared_entries)} entries are shared between AWL & GEPT.")
@@ -348,8 +352,8 @@ def consolidate_with_gept(awl_list, gept_list):
     print(f"\t{len(tmp_shared_del)} of these are marked for deletion; leaving {len(tmp_shared)} entries shared.")
     for gept_line in gept_list:
         if len(gept_line[LEVEL]) == 1:
-            gept_line[NOTES] += f"{NOTES_SEP}"
-            gept_line[LEVEL] = [gept_line[LEVEL][0], -1, Pos.GEPT_ONLY.value]
+            # gept_line[NOTES] += f"{NOTES_SEP}"
+            gept_line[LEVEL] = [gept_line[LEVEL][0], Pos.OFFLIST.value, Pos.GEPT_ONLY.value]
     return (awl_list, gept_list, tmp_shared)
 
 
@@ -425,10 +429,10 @@ def minimize_pos(pos):
     if pos:
         # print(">>>>>", pos)
         pos = pos.replace(".", "")
-        pos = re.sub("[()/,]", " ", pos)
-        pos = re.sub("\s{2,}", " ", pos).strip()
+        pos = re.sub(r"[()/,]", " ", pos)
+        pos = re.sub(r"\s{2,}", " ", pos).strip()
         # return " ".join([pov_lookup[item] for item in pos.split(" ")])
-        return "".join([pov_lookup[item] if pov_lookup.get(item) else item for item in pos.split(" ")])
+        return "".join([pos_lookup[item] if pos_lookup.get(item) else item for item in pos.split(" ")])
         # return "".join([pov_lookup[item] for item in pos.split(" ")])
 
 
@@ -476,7 +480,7 @@ if __name__ == "__main__":
     new_gept_js_file = "dbGEPT.new.js"          ## as above but for import into wordlist
     new_awl_js_file = "dbAWL.new.js"
 
-    kids_json_file = "../dbKids.json"
+    kids_json_file = "../Kids/dbKids.json"
     new_kids_js_file = "dbKids.new.js"
 
     #### Load the two wordlists (if awl wordlist json does not exist, create it)
@@ -528,6 +532,7 @@ if __name__ == "__main__":
     )
     save_list_as_json(awl_list_final, new_awl_js_file, "function makeAWLdb() {\n return", "\n;}")
 
+    ## CURRENTLY no kids.json :S Need to rewrite buildKidsFromTSV.py to create this!
     kids_list = get_list_from_json(kids_json_file)
     kids_list = [
         [el[LEMMA], minimize_pos(el[POS]), el[LEVEL], el[NOTES]] for el in kids_list
@@ -546,4 +551,4 @@ if __name__ == "__main__":
     # write_list_as_tsv(full_awl_list, "awl_full.tsv")
     write_list_as_tsv(awl_slim, "awl_full.tsv")
     write_list_as_tsv(gept_list, "gept.tsv")
-    write_list_as_tsv(kids_list, "kids.tsv")
+    # write_list_as_tsv(kids_list, "kids.tsv")

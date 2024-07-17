@@ -416,8 +416,20 @@
       text-align: center;
       /* font-size: larger; */
       font-size: normal;
+      font-style: normal;
       font-family: sans-serif;
       color: black;
+    }
+
+    .awl-level {
+      font-family: sans-serif;
+      font-weight: bold;
+      font-size: smaller;
+    }
+
+    .lemma {
+      font-weight: bold;
+      font-style: normal;
     }
 
     #t2_final_info > div {

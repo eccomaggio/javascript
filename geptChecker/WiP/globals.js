@@ -12,7 +12,8 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
         43,                    AWL level (6+)
         3                      status++ (here: in both lists)
     ],
-    "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
+    OLD: "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
+		NEW: [chinese, notes, awl headword]
 ], ...
 
     + according to position in level_headings
@@ -20,6 +21,8 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
       AWL_ONLY = 1
       GEPT_ONLY = 2
       AWL_AND_GEPT = 3
+			new: OFFLIST = -1
+			new: KIDS = 4
 */
 
 
@@ -86,6 +89,7 @@ let C = {
   NBSP: String.fromCharCode(160),
   backupIDs: ["long_term", "short_term"],
   awl_level_offset: 37,
+  kids_level_offset: 3,
   NOTE_SEP: "|",
   // ** local storage: [name-of-storage-variable, default-value]
   DEFAULT_STATE: {
