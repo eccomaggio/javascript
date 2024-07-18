@@ -37,7 +37,10 @@ class Entry {
     return [note, this._notes[2]];
   }
 
+  // resetIDs() {Entry.resetID()}
+
   static incrementID() { Entry.currID++ }
+  static resetID() {Entry.currID = 0}
 }
 
 
@@ -51,12 +54,6 @@ class Token {
   }
 }
 
-
-// function escapeHTML(text) {
-//   if (!text) return "";
-//   // console.log("escape:", typeof text, text)
-//   return text.replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': " &quot;" }[char]));
-// }
 
 function tag(name, attrs = [], content = []) {
   return new Tag(name, attrs, content);
@@ -109,7 +106,7 @@ class Tag {
     if (this.isEmpty) return `<${this.name} />`;
     let tmpContent = "";
     for (let el of this.content) {
-      // debug(typeof el)
+      if (!el) continue;
       if (typeof el === "number") el = el.toString();
       // tmpContent += (typeof el === "string") ? escapeHTML(el) : el.stringify();
       tmpContent += (typeof el === "string") ? el : el.stringify();

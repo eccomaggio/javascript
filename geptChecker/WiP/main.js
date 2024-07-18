@@ -883,44 +883,13 @@ function textLookupCompounds(tokenArr) {
 }
 
 
-function getAllLevelStats(textArr) {
-  // debug(">>", textArr)
-  const firstAppearanceOfWord = [];
-  const subsequentAppearances = [];
-  for (const token of textArr) {
-    if (token.type.startsWith("w")) {
-      let level;
-      let awlLevel;
-      const firstID = token.matches[0];
-      // debug(token.lemma, token.matches[0], token)
-      if (token.type === "wo") level = -1;
-      if (token.count === 0) {
-        // debug(">>>", firstID, V.currentDb.db[firstID].levelArr.slice(0,2))
-        debug(">>>", firstID, ...getEntryById(firstID).levelArr.slice(0,2))
-        // [level, awlLevel] = (firstID > 0) ? getEntryById(firstID).levelArr.slice(0,2) : [-1, -1];
-        if (firstID > 0) {
-          let tmp = getEntryById(firstID);
-          level = tmp[0];
-          awlLevel = tmp[1];
-        }
-        else {
-          level = -1;
-          awlLevel = -1;
-        }
-        const info = [token.lemma, firstID, level, awlLevel];
-        firstAppearanceOfWord.push(info)
-      }
-      else subsequentAppearances.push([token.lemma, firstID])
-    }
-  }
+function getAllLevelStats(tokenArr) {
+  /*
+  firstAppearanceOfWord = [lemma, id, gept level, awl level]
+  */
+  const [firstAppearanceOfWord, totalWordCount] = getFirstAppearanceOfEachWord(tokenArr);
   const separateLemmasCount = firstAppearanceOfWord.length;
-  const totalWordCount = separateLemmasCount + subsequentAppearances.length;
-  let lemmasBylevel = {};
-  for (const [word, id, geptLevel, awlLevel] of firstAppearanceOfWord) {
-    // ** NB awl words are also included in the GEPT level counts
-    lemmasBylevel[geptLevel] = (lemmasBylevel[geptLevel] || 0) + 1;
-    if (awlLevel > -1) lemmasBylevel[awlLevel] = (lemmasBylevel[awlLevel] || 0) + 1;
-  }
+  let lemmasBylevel = getListOfFirstAppearancesByLemma(firstAppearanceOfWord);
   let levelStats = [];
   let awlCount = 0;
   let awlEntries = 0;
@@ -936,6 +905,43 @@ function getAllLevelStats(textArr) {
   }
   if (isBESTEP() && awlEntries > 1) levelStats.push(buildLevelStat(37, tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
   return [totalWordCount, separateLemmasCount, levelStats];
+}
+
+
+function getFirstAppearanceOfEachWord(tokenArr) {
+  const firstAppearanceOfWord = []; // [lemma, id, gept level, awl level]
+  const subsequentAppearances = []; // [lemma, id]
+  for (const entry of tokenArr) {
+    if (entry.type.startsWith("w")) {
+      let level;
+      let awlLevel;
+      const firstID = entry.matches[0];
+      if (entry.count === 0) {
+        if (entry.type === "wo") {
+          [level, awlLevel] = [-1,-1];
+        }
+        else {
+          [level, awlLevel] = getEntryById(firstID).levelArr.slice(0,2);
+        }
+        const info = [entry.lemma, firstID, level, awlLevel];
+        firstAppearanceOfWord.push(info)
+      }
+      else subsequentAppearances.push([entry.lemma, firstID])
+    }
+  }
+  const separateLemmasCount = firstAppearanceOfWord.length;
+  const totalWordCount = separateLemmasCount + subsequentAppearances.length;
+  return [firstAppearanceOfWord, totalWordCount];
+}
+
+function getListOfFirstAppearancesByLemma(firstAppearanceOfWord) {
+  let lemmasBylevel = {};
+  for (const [word, id, geptLevel, awlLevel] of firstAppearanceOfWord) {
+    // ** NB awl words are also included in the GEPT level counts
+    lemmasBylevel[geptLevel] = (lemmasBylevel[geptLevel] || 0) + 1;
+    if (awlLevel > -1) lemmasBylevel[awlLevel] = (lemmasBylevel[awlLevel] || 0) + 1;
+  }
+  return lemmasBylevel;
 }
 
 function buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount) {
@@ -1272,7 +1278,8 @@ function dedupeSimpleArray(arr) {
 function checkNames(word) {
   let result = [];
   if (LOOKUP.personalNames.includes(word)) {
-    result.push(...markOfflist(word, "name"));
+    // result.push(...markOfflist(word, "name"));
+    result.push(markOfflist(word, "name"));
   }
   return result;
 }
@@ -1651,6 +1658,7 @@ function buildHTMLlevelStats(separateLemmasCount, levelStats) {
     tag("div", ["class=level-stats-cols"], [...tmpStats])
   ])
   ]);
+  debug(levelStatsHTML)
   return levelStatsHTML.stringify();
 }
 
@@ -1896,7 +1904,8 @@ function appStateSaveItem(item, value) {
 function setDbShared(e) {
   let choice = (e.target) ? e.target.value : e;
   V.current.db_state = parseInt(choice);
-  V.currentDb = [];
+  // V.currentDb = [];
+  Entry.resetID();
   if (V.current.db_state === C.GEPT) {
     V.currentDb = {
       name: "GEPT",
