@@ -46,28 +46,11 @@ class Entry {
 
 
 class Token {
-  /*
-  Token{id, lemma, candidates[{type, [matches]},..], count}
-  */
-  constructor(lemma, type="", matches=[], candidates = [], count = 0) {
+  constructor(lemma, type, matches = [], count = 0) {
     this.lemma = lemma;
-    this.candidates = candidates;
-    // if (type) candidates.push({type:type, matches:match})
-    if (type) this.addCandidate(type, matches);
+    this.type = type;
+    this.matches = matches;
     this.count = count;
-  }
-  addCandidate(typeStr, matchesArr){
-    // this.candidates.push({type:typeStr, matches:matchesArr});
-    this.candidates.push(this.makeCandidate(typeStr, matchesArr));
-    return this.candidates.length - 1;
-  }
-
-  makeCandidate(typeStr, matchesArr) {
-    return {type: typeStr, matches: matchesArr};
-  }
-
-  updateCandidate(index, typeStr, matchesArr) {
-    this.candidates[index] = this.makeCandidate(typeStr, matchesArr);
   }
 }
 
