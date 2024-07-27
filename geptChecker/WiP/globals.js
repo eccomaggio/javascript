@@ -92,14 +92,14 @@ let C = {
   kids_level_offset: 3,
   NOTE_SEP: "|",
   // ** local storage: [name-of-storage-variable, default-value]
-  DEFAULT_STATE: {
-    db_state: 0,
-    tab_state: 0,
-    limit_state: -1,
-    help_state: 1,
-    level_state: 1,
-    repeat_state: 1,
-  },
+  // DEFAULT_STATE: {
+  //   db_state: 0,
+  //   tab_state: 0,
+  //   limit_state: -1,
+  //   help_state: 1,
+  //   level_state: 1,
+  //   repeat_state: 1,
+  // },
   DEFAULT_tab: 0,
   MATCHES: {
     exact: ["^", "$"],
@@ -136,14 +136,14 @@ let V = {
   cursorOffsetNoMarks: 0,
   cursorIncrement: 0,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
-  current: {
-    db_state: 0,
-    tab_state: 0,
-    limit_state: -1,
-    help_state: 1,
-    level_state: 1,
-    repeat_state: 1,
-  },
+  // current: {
+  //   db_state: 0,
+  //   tab_state: 0,
+  //   limit_state: -1,
+  //   help_state: 1,
+  //   level_state: 1,
+  //   repeat_state: 1,
+  // },
   levelLimitStr: "",
   levelLimitActiveClassesArr: [],
   levelLimitRule: null,

@@ -3,18 +3,27 @@
 
 */
 // ## SETUP ############################################
-
-const app = new App();
-app.init();
-// const app2 = new App();
+init();
+// addListeners();
 
 // TAB1 (words) CODE ## ############################################
 
 // ***** INIT FUNCTIONS
 
+function init() {
+  appStateWriteToCurrent();
+  setDbShared(V.current.db_state);
+  setTab(V.current.tab_state);
+  setupEditing();
+  HTM.form.reset();
+  updateDropdownMenuOptions();
+  visibleLevelLimitSet(true);
+  setHelpState("fromSaved");
+  addListeners();
+}
 
 function updateDropdownMenuOptions() {
-  HTM.selectDb.value = app.state.current.db_state;
+  HTM.selectDb.value = V.current.db_state;
 }
 
 
@@ -45,8 +54,7 @@ function addTabListeners() {
 
 function addMenuListeners() {
   HTM.clearButton.addEventListener("click", clearTab);
-  // HTM.resetButton.addEventListener("click", resetApp);
-  HTM.resetButton.addEventListener("click", app.reset);
+  HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
   HTM.selectDb.addEventListener("change", setDbShared);
@@ -93,6 +101,13 @@ function setHoverEffects() {
 }
 
 // *****  FUNCTIONS
+
+// function isArrayElementInOtherArray(x, y) {
+//   for (const el of x) {
+//     if (y.indexOf(el) > -1) return true;
+//   }
+//   return false;
+// }
 
 function dropdown(e) {
   // ## toggle visibility of settings dropdown
@@ -143,8 +158,7 @@ function backupLoad(e) {
   HTM.workingDiv.innerText = restoredContent;
   forceUpdateInputDiv();
   // if (swap) localStorage.setItem(id, swap);
-  // if (swap) appStateSaveItem(id, swap);
-  if (swap) app.state.saveItem(id, swap);
+  if (swap) appStateSaveItem(id, swap);
   backupDialogClose("backup-dlg");
 }
 
@@ -168,12 +182,12 @@ function backupSave() {
     const shortTermSavedContent = localStorage.getItem(shortTerm);
     const longTermSavedContent = localStorage.getItem(longTerm);
     if (shortTermSavedContent !== longTermSavedContent) {
-      app.state.saveItem(longTerm, shortTermSavedContent);
+      appStateSaveItem(longTerm, shortTermSavedContent);
     }
     V.appHasBeenReset = false;
   }
   if (currentText !== localStorage.getItem(shortTerm)) {
-    app.state.saveItem(shortTerm, currentText);
+    appStateSaveItem(shortTerm, currentText);
     // HTM.backupSave.innerText = "text saved";
     // HTM.backupSave.classList.add("error");
   }
@@ -433,6 +447,10 @@ function lazyCheckAgainstCompounds(word) {
 }
 
 
+// function getAwlSublist(levelArr) {
+//   return (isBESTEP() && levelArr[1]) ? levelArr[1] - C.awl_level_offset : -1;
+// }
+
 function highlightAwlWord(levelArr, word) {
   return (isBESTEP() && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
 }
@@ -656,7 +674,7 @@ function textMarkup(e) {
     revisedText = null;
     taggedTokenArr = textLookupCompounds(taggedTokenArr);
     taggedTokenArr = textLookupSimples(taggedTokenArr);
-    // debug(taggedTokenArr)
+    debug(taggedTokenArr)
     textBuildHTML(taggedTokenArr);
     backupSave();
     signalRefreshNeeded("off");
@@ -1022,6 +1040,47 @@ function addNewEntryToOfflistDb(entry) {
 }
 
 
+// function lookupWord(word, type, matchedCompoundsArr = []) {
+//   word = word.toLowerCase();
+//   let exactMatches = getIdsByExactLemma(word);
+//   let localMatchedIDarr;
+//   while (true) {
+//     if (!isEmpty(exactMatches)) {
+//       // localMatchedIDarr = [type, exactMatches];
+//       localMatchedIDarr = ["w", exactMatches];
+//       break;
+//     }
+//     localMatchedIDarr = checkDerivations(word);
+//     if (!isEmpty(localMatchedIDarr)) {
+//       localMatchedIDarr = ["wd", localMatchedIDarr];  // wd=derived word (e.g. play<played)
+//       break;
+//     }
+//     localMatchedIDarr = checkAllowedVariants(word);
+//     if (!isEmpty(localMatchedIDarr)) {
+//       localMatchedIDarr = ["wv", localMatchedIDarr];  // wv=variant word (e.g. color<colour)
+//       break;
+//     }
+//     else {
+//       localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
+//       break;
+//     }
+//   }
+//   if (!isEmpty(matchedCompoundsArr)) {
+//     if (localMatchedIDarr.length) localMatchedIDarr[1].push(...matchedCompoundsArr);
+//     else localMatchedIDarr = ["wc", matchedCompoundsArr]; // wc=compound word
+//   }
+//   /* Enabling this (and disabling the first section of the while clause) allows e.g. 'colored' to
+//   be parsed as both the adj. 'colored' AND a derivation of 'color' BUT it messes up jumping to reps
+//   and misses derivations, i.e. 'coloured' is only found as a derivation of 'colored'
+//   TODO: check variant spellings before all other checks?
+//   */
+//   // if (!isEmpty(exactMatches)) {
+//   //   if (localMatchedIDarr.length) localMatchedIDarr = ["w", exactMatches.concat(localMatchedIDarr[1])];
+//   //   else localMatchedIDarr = ["w", exactMatches];
+//   // }
+//   return localMatchedIDarr;
+// }
+
 function lookupWord(word) {
   // const originalWord = word;
   word = word.toLowerCase();
@@ -1091,6 +1150,11 @@ function testForNegativePrefix(word) {
   return result;
 }
 
+
+// function translateToOfflistDbID(id) {
+//   if (typeof id === "object") id = id[0];
+//   return (id < 0) ? -id : id;
+// }
 
 
 function checkVariantWords(word) {
@@ -1209,8 +1273,10 @@ function checkAllowedVariants(word, offlistID = 0) {
   let matchedIDarr = [];
   for (let check of [
     checkVariantWords,
+    // checkVariantSuffixes,
     checkAbbreviations,
     checkGenderedNouns,
+    // checkVariantSpellings,
   ]) {
     let result = check(word);
     if (result.length) {
@@ -1484,14 +1550,14 @@ function visibleLevelLimitToggle(e) {
       visibleLevelLimitApply(V.levelLimitStr);
       V.levelLimitStr = "";
       V.levelLimitActiveClassesArr = [];
-      app.state.current.limit_state = -1;
+      V.current.limit_state = -1;
     } else {
       V.levelLimitStr = level;
       V.levelLimitActiveClassesArr = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimitStr));
-      app.state.current.limit_state = C.LEVEL_LIMITS.indexOf(level);
+      V.current.limit_state = C.LEVEL_LIMITS.indexOf(level);
       visibleLevelLimitApply(V.levelLimitStr, false);
     }
-    app.state.saveItem("limit_state", app.state.current.limit_state);
+    appStateSaveItem("limit_state", V.current.limit_state);
   }
 }
 
@@ -1518,8 +1584,8 @@ function visibleLevelLimitApply(className, removeClass = true) {
 
 function visibleLevelLimitSet(fromSaved = false) {
   if (fromSaved) {
-    V.levelLimitStr = (app.state.current.limit_state >= 0) ? C.LEVEL_LIMITS[app.state.current.limit_state] : "";
-    V.levelLimitActiveClassesArr = (V.levelLimitStr) ? C.LEVEL_LIMITS.slice(app.state.current.limit_state) : [];
+    V.levelLimitStr = (V.current.limit_state >= 0) ? C.LEVEL_LIMITS[V.current.limit_state] : "";
+    V.levelLimitActiveClassesArr = (V.levelLimitStr) ? C.LEVEL_LIMITS.slice(V.current.limit_state) : [];
   }
   if (V.levelLimitStr) {
     visibleLevelLimitApply(V.levelLimitStr, false);
@@ -1530,7 +1596,7 @@ function visibleLevelLimitSet(fromSaved = false) {
 }
 
 function visibleLevelLimitReset() {
-  app.state.saveItem("limit_state", app.state.default.limit_state);
+  appStateSaveItem("limit_state", C.DEFAULT_STATE.limit_state);
   visibleLevelLimitSet(true);
 }
 
@@ -1558,14 +1624,14 @@ function setDetailState(e, destination) {
     mode = e;
   }
   if (mode === "toggle") {
-    app.state.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
+    V.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
   }
   else {
-    if (mode === "reset") app.state.current[destination] = app.state.default[destination];
-    if (app.state.current[destination] && el) el.setAttribute("open", "")
+    if (mode === "reset") V.current[destination] = C.DEFAULT_STATE[destination];
+    if (V.current[destination] && el) el.setAttribute("open", "")
     else if (el) el.removeAttribute("open");
   }
-  app.state.saveItem(destination, app.state.current[destination]);
+  appStateSaveItem(destination, V.current[destination]);
 }
 
 
@@ -1650,7 +1716,7 @@ function buildHTMLlevelStats(separateLemmasCount, levelStats) {
     if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
     else if (isBESTEP()) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
   }
-  const toggleOpen = (app.state.current.level_state) ? " open" : "";
+  const toggleOpen = (V.current.level_state) ? " open" : "";
   levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
     Tag.tag("summary", ["class=all-repeats"], [
       "Level statistics:",
@@ -1700,7 +1766,7 @@ function buildHTMLrepeatList(wordCount) {
       }
     }
     if (countAllReps > 0) {
-      const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
+      const toggleOpen = (V.current.repeat_state) ? " open" : "";
       repeatsHeader = Tag.tag("details", [`id=${idForEventListener}`, toggleOpen], [
         Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
           countAllReps,
@@ -1859,13 +1925,54 @@ function clearTab(event) {
   displayInputCursor();
 }
 
+function resetApp() {
+  appStateForceDefault();
+  clearTab1();
+  clearTab2();
+  visibleLevelLimitReset();
+  setTab(V.current.tab_state);
+  setDbShared(V.current.db_state);
+  HTM.selectDb.value = V.current.db_state;
+  setHelpState("reset");
+  visibleLevelLimitReset();
+}
+
+function appStateForceDefault() {
+  for (const key in C.DEFAULT_STATE) {
+    const defaultVal = C.DEFAULT_STATE[key];
+    appStateSaveItem(key, defaultVal)
+    V.current[key] = defaultVal;
+  }
+}
+
+function appStateReadFromStorage() {
+  let retrieved_items = {};
+  for (const key in C.DEFAULT_STATE) {
+    const retrieved_item = localStorage.getItem(key);
+    retrieved_items[key] = (retrieved_item) ? parseInt(retrieved_item) : C.DEFAULT_STATE[key];
+  }
+  return retrieved_items;
+}
+
+function appStateWriteToCurrent() {
+  const retrieved_items = appStateReadFromStorage();
+  for (const key in retrieved_items) {
+    const value = retrieved_items[key];
+    V.current[key] = value;
+  }
+}
+
+function appStateSaveItem(item, value) {
+  localStorage.setItem(item, value);
+}
+
 
 function setDbShared(e) {
   let choice = (e.target) ? e.target.value : e;
-  app.state.current.db_state = parseInt(choice);
+  V.current.db_state = parseInt(choice);
   // V.currentDb = [];
   Entry.resetID();
-  if (app.state.current.db_state === C.GEPT) {
+  if (V.current.db_state === C.GEPT) {
     V.currentDb = {
       name: "GEPT",
       db: createDbfromArray(makeGEPTdb()),
@@ -1878,7 +1985,7 @@ function setDbShared(e) {
         _accent: "#daebe8"
       }
     };
-  } else if (app.state.current.db_state === C.BESTEP) {
+  } else if (V.current.db_state === C.BESTEP) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
       name: "BESTEP",
@@ -1914,7 +2021,7 @@ function setDbShared(e) {
   visibleLevelLimitSet();
   setDbTab2();
   setDbTab1();
-  app.state.saveItem("db_state", app.state.current.db_state);
+  appStateSaveItem("db_state", V.current.db_state);
 }
 
 function createDbfromArray(db) {
@@ -1922,15 +2029,15 @@ function createDbfromArray(db) {
 }
 
 function isGEPT() {
-  return app.state.current.db_state === C.GEPT;
+  return V.current.db_state === C.GEPT;
 }
 
 function isBESTEP() {
-  return app.state.current.db_state === C.BESTEP;
+  return V.current.db_state === C.BESTEP;
 }
 
 function isKids() {
-  return app.state.current.db_state === C.Kids;
+  return V.current.db_state === C.Kids;
 }
 
 function isInOfflistDb(idOrEntry) {
@@ -2014,7 +2121,7 @@ function setTab(tab) {
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
-      app.state.current.tab_state = i;
+      V.current.tab_state = i;
       HTM.tabHead.children[i].classList.add("tab-on");
       HTM.tabHead.children[i].classList.remove("tab-off");
       content.style.display = "flex";
@@ -2026,7 +2133,7 @@ function setTab(tab) {
     i++;
   }
   setTabHead();
-  app.state.saveItem("tab_state", app.state.current.tab_state);
+  appStateSaveItem("tab_state", V.current.tab_state);
   forceUpdateInputDiv();
   displayInputCursor();
   V.isExactMatch = !isFirstTab();
@@ -2040,7 +2147,7 @@ function setTabHead() {
 }
 
 function isFirstTab() {
-  return parseInt(app.state.current.tab_state) === 0;
+  return parseInt(V.current.tab_state) === 0;
 }
 
 function displayInputCursor() {

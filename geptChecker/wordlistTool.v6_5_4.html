@@ -3466,7 +3466,6 @@ function textMarkup(e) {
     revisedText = null;
     taggedTokenArr = textLookupCompounds(taggedTokenArr);
     taggedTokenArr = textLookupSimples(taggedTokenArr);
-    debug(taggedTokenArr)
     textBuildHTML(taggedTokenArr);
     backupSave();
     signalRefreshNeeded("off");

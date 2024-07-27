@@ -1,4 +1,91 @@
 
+class App {
+  constructor() {
+    if (App.#instance) {
+      throw new Error("Only one app is allowed to run at a time.");
+    }
+    App.#instance = this;
+    this.state;
+    // this.state = new State();
+    // this.db = new Db();
+  }
+
+  init() {
+    this.state = new State();
+    console.log("state:", this.state)
+    // setDbShared(V.current.db_state);
+    setDbShared(this.state.current.db_state);
+    setTab(this.state.current.tab_state);
+    setupEditing();
+    HTM.form.reset();
+    updateDropdownMenuOptions();
+    visibleLevelLimitSet(true);
+    setHelpState("fromSaved");
+    addListeners();
+  }
+
+  reset() {
+    this.state.forceDefault();
+    clearTab1();
+    clearTab2();
+    visibleLevelLimitReset();
+    setTab(V.current.tab_state);
+    setDbShared(V.current.db_state);
+    HTM.selectDb.value = V.current.db_state;
+    setHelpState("reset");
+    visibleLevelLimitReset();
+  }
+  static #instance;
+}
+
+
+
+
+
+class State {
+  default = {
+    db_state: 0,
+    tab_state: 0,
+    limit_state: -1,
+    help_state: 1,
+    level_state: 1,
+    repeat_state: 1,
+  };
+
+  current = {};
+
+  constructor() {
+    const retrieved_items = this.readFromStorage();
+    for (const key in retrieved_items) {
+      const value = retrieved_items[key];
+      this.current[key] = value;
+    }
+  }
+
+  forceDefault() {
+    for (const key in this.default) {
+      const defaultVal = this.default[key];
+      this.saveItem(key, defaultVal)
+      this.current[key] = defaultVal;
+    }
+  }
+
+  readFromStorage() {
+    let retrieved_items = {};
+    for (const key in this.default) {
+      const retrieved_item = localStorage.getItem(key);
+      retrieved_items[key] = (retrieved_item) ? parseInt(retrieved_item) : this.default[key];
+    }
+    return retrieved_items;
+  }
+
+
+  saveItem(item, value) {
+    localStorage.setItem(item, value);
+  }
+}
+
+
 class Entry {
   static currID = 0;
   constructor(lemma, pos, levelArr, notes, id) {
@@ -37,8 +124,6 @@ class Entry {
     return [note, this._notes[2]];
   }
 
-  // resetIDs() {Entry.resetID()}
-
   static incrementID() { Entry.currID++ }
   static resetID() {Entry.currID = 0}
 }
@@ -47,7 +132,7 @@ class Entry {
 
 class Token {
   /*
-  Token{id, lemma, candidates[{type, [matches]},..], count}
+  Token{id, lemma, matches=[id] type, count}
   */
   constructor(lemma, type="", matches=[], count = 0) {
     this.lemma = lemma;
@@ -58,35 +143,11 @@ class Token {
 }
 
 
-function tag(name, attrs = [], content = []) {
-  return new Tag(name, attrs, content);
-}
-
-function root(content=[]) {
-  // ** GUARD#1 accept Tags/strings/numbers as single array OR as individual arguments
-  if (arguments.length === 1) {
-    const firstArg = arguments[0];
-    // if (typeof firstArg !== "object" || firstArg instanceof Tag) content = [firstArg];
-    // else content = firstArg;
-    if (Array.isArray(firstArg)) content = firstArg;
-    else content = [firstArg];
-  }
-  else if (arguments.length > 1) content = [...arguments];
-  // ** GUARD#2 resolve any mistakenly included arrays
-  content = content.reduce((acc,el) => {
-    (Array.isArray(el)) ? acc.push(...el.flat(Infinity)) : acc.push(el);
-    return acc;
-  }, []);
-
-  return new Tag("root", [], content);
-}
-
-// function attr(name, value) {
-//   return new Attr(name, value);
-// }
-
 
 class Tag {
+  /*
+  [name, attrs=["property=value", ...], content=[]]
+  */
   constructor(name, attrs = [], content = []) {
     if (typeof content === "string") content = [content];
     this.isEmpty = !attrs.length && !content.length;
@@ -106,12 +167,11 @@ class Tag {
 
   stringify() {
     if (!this.name) return "";
-    if (this.isEmpty) return `<${this.name} />`;
+    if (this.isEmpty) return `<${this.name}>`;
     let tmpContent = "";
     for (let el of this.content) {
       if (!el) continue;
       if (typeof el === "number") el = el.toString();
-      // tmpContent += (typeof el === "string") ? escapeHTML(el) : el.stringify();
       tmpContent += (typeof el === "string") ? el : el.stringify();
     }
     // ** <root> is used to render a chain of html/text tags; it is not itself rendered
@@ -125,5 +185,31 @@ class Tag {
       ).join("");
     }
     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;
+  }
+
+
+  static tag(name, attrs = [], content = []) {
+    return new Tag(name, attrs, content);
+  }
+
+// static attr(name, value) {
+//   return new Attr(name, value);
+// }
+
+  static root(content=[]) {
+    // ** GUARD#1 accept Tags/strings/numbers as single array OR as individual arguments
+    if (arguments.length === 1) {
+      const firstArg = arguments[0];
+      if (Array.isArray(firstArg)) content = firstArg;
+      else content = [firstArg];
+    }
+    else if (arguments.length > 1) content = [...arguments];
+    // ** GUARD#2 resolve any mistakenly included arrays
+    content = content.reduce((acc,el) => {
+      (Array.isArray(el)) ? acc.push(...el.flat(Infinity)) : acc.push(el);
+      return acc;
+    }, []);
+
+    return new Tag("root", [], content);
   }
 }

@@ -3,18 +3,26 @@
 
 */
 // ## SETUP ############################################
-
-const app = new App();
-app.init();
-// const app2 = new App();
+init();
+addListeners();
 
 // TAB1 (words) CODE ## ############################################
 
 // ***** INIT FUNCTIONS
 
+function init() {
+  appStateWriteToCurrent();
+  setDbShared(V.current.db_state);
+  setTab(V.current.tab_state);
+  setupEditing();
+  HTM.form.reset();
+  updateDropdownMenuOptions();
+  visibleLevelLimitSet(true);
+  setHelpState("fromSaved");
+}
 
 function updateDropdownMenuOptions() {
-  HTM.selectDb.value = app.state.current.db_state;
+  HTM.selectDb.value = V.current.db_state;
 }
 
 
@@ -45,8 +53,7 @@ function addTabListeners() {
 
 function addMenuListeners() {
   HTM.clearButton.addEventListener("click", clearTab);
-  // HTM.resetButton.addEventListener("click", resetApp);
-  HTM.resetButton.addEventListener("click", app.reset);
+  HTM.resetButton.addEventListener("click", resetApp);
 
   // ## for refresh button + settings menu
   HTM.selectDb.addEventListener("change", setDbShared);
@@ -94,6 +101,13 @@ function setHoverEffects() {
 
 // *****  FUNCTIONS
 
+function isArrayElementInOtherArray(x, y) {
+  for (const el of x) {
+    if (y.indexOf(el) > -1) return true;
+  }
+  return false;
+}
+
 function dropdown(e) {
   // ## toggle visibility of settings dropdown
   // ## was originally handled in css but firefox has mouseout quirks
@@ -121,7 +135,7 @@ function backupShow(e) {
     let content = (lsContent) ? lsContent.trim() : "";
     if (content) {
       // if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
-      if (localStorage.getItem("mostRecent") == id) content = Tag.tag("span", ["class=warning"], ["Most Recent: "]).stringify() + content;
+      if (localStorage.getItem("mostRecent") == id) content = tag("span", ["class=warning"], ["Most Recent: "]).stringify() + content;
       backup.innerHTML = content;
       backup.disabled = false;
     } else {
@@ -143,8 +157,7 @@ function backupLoad(e) {
   HTM.workingDiv.innerText = restoredContent;
   forceUpdateInputDiv();
   // if (swap) localStorage.setItem(id, swap);
-  // if (swap) appStateSaveItem(id, swap);
-  if (swap) app.state.saveItem(id, swap);
+  if (swap) appStateSaveItem(id, swap);
   backupDialogClose("backup-dlg");
 }
 
@@ -168,12 +181,12 @@ function backupSave() {
     const shortTermSavedContent = localStorage.getItem(shortTerm);
     const longTermSavedContent = localStorage.getItem(longTerm);
     if (shortTermSavedContent !== longTermSavedContent) {
-      app.state.saveItem(longTerm, shortTermSavedContent);
+      appStateSaveItem(longTerm, shortTermSavedContent);
     }
     V.appHasBeenReset = false;
   }
   if (currentText !== localStorage.getItem(shortTerm)) {
-    app.state.saveItem(shortTerm, currentText);
+    appStateSaveItem(shortTerm, currentText);
     // HTM.backupSave.innerText = "text saved";
     // HTM.backupSave.classList.add("error");
   }
@@ -279,7 +292,7 @@ function wordSearch(e) {
 }
 
 function markStringAsError(str) {
-  return Tag.tag("span", ["class=error"], [str]).stringify();
+  return tag("span", ["class=error"], [str]).stringify();
 }
 
 function updateKidstheme(e) {
@@ -433,13 +446,17 @@ function lazyCheckAgainstCompounds(word) {
 }
 
 
+// function getAwlSublist(levelArr) {
+//   return (isBESTEP() && levelArr[1]) ? levelArr[1] - C.awl_level_offset : -1;
+// }
+
 function highlightAwlWord(levelArr, word) {
-  return (isBESTEP() && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
+  return (isBESTEP() && levelArr[1] >= 0) ? tag("span", ["class=awl-word"], [word]) : word;
 }
 
 function wordFormatResultsAsHTML(results) {
   if (isEmpty(results)) {
-    return Tag.tag("span", ["class=warning"], ["Search returned no results."]).stringify();
+    return tag("span", ["class=warning"], ["Search returned no results."]).stringify();
   }
   let output = [];
   let previousInitial = "";
@@ -451,19 +468,19 @@ function wordFormatResultsAsHTML(results) {
       output.push(formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
     }
     const awlWord = highlightAwlWord(entry.levelArr, entry.lemma);
-    const lemma = Tag.tag("strong", [], [awlWord]);
+    const lemma = tag("strong", [], [awlWord]);
     const pos = `[${entry.posExpansion}]`;
     let level = V.levelSubs[entry.levelGEPT];
     if (entry.levelAWL >= 0) level += `; AWL${entry.levelAWL}`;
     if (!level) continue;
     let [note, awl_note] = getNotesAsHTML(entry);
-    const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
+    const col2 = [lemma, tag("span", ["class=show-pos"], [pos]), " ", tag("span", ["class=show-level"], [level]), note, awl_note];
     let class2 = (isKids()) ? "level-e" : `level-${level[0]}`;
     output.push(formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
     previousInitial = currentInitial;
     i++;
   }
-  return Tag.tag("table", [], [...output]).stringify();
+  return tag("table", [], [...output]).stringify();
 }
 
 
@@ -473,7 +490,7 @@ function getNotesAsHTML(entry) {
   if (entry) {
     [note, awl_note] = entry.notes;
     note = note ? `, ${note}` : "";
-    awl_note = (isBESTEP() && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
+    awl_note = (isBESTEP() && awl_note) ? tag("span", ["class=awl-note"], ["(headword: ", tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
   }
   return [note, awl_note];
 }
@@ -483,9 +500,9 @@ function formatResultsAsTablerows(col1, col2, class1, class2, row) {
   class1 = (class1) ? `class=${class1}` : "";
   class2 = (class2) ? `class=${class2}` : "";
   row = (row) ? `class=${row}` : "";
-  return Tag.tag("tr", [], [
-    Tag.tag("td", [class1], [col1]),
-    Tag.tag("td", [class2], [...col2]),
+  return tag("tr", [], [
+    tag("td", [class1], [col1]),
+    tag("td", [class2], [...col2]),
   ]);
 }
 
@@ -558,17 +575,17 @@ function displayEntryInfo(refs) {
     const levelTagArr = buildHTMLlevel(entry, id, levelArr, tokenType);
     // const levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
     let levelTag = "";
-    if (isKids() && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
-    else levelTag = Tag.tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
+    if (isKids() && entry.levelGEPT !== 49) levelTag = tag("div", [], buildHTMLlevelKids(entry));
+    else levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
     const pos = `[${entry.posExpansion}]`;
     let [notes, awl_notes] = getNotesAsHTML(entry);
-    html.push(Tag.tag(
+    html.push(tag(
       "div",
       [`class=word-detail ${levelClass}`],
-      [levelTag, Tag.tag("span", [], [...lemma, pos, notes, awl_notes])]
+      [levelTag, tag("span", [], [...lemma, pos, notes, awl_notes])]
     ));
   }
-  html = Tag.root(html);
+  html = root(html);
   return html.stringify();
 }
 
@@ -577,11 +594,11 @@ function buildHTMLlemma(entry, id, word, tokenType) {
   let displayLemma;
   if (entry.pos === "unknown") return displayLemma;
   if (tokenType === "wv") {
-    displayLemma = [Tag.tag("em", [], "** Use "), Tag.tag("span", ["class=lemma"], entry.lemma), Tag.tag("em", [], " instead of "), Tag.tag("br"), word];
+    displayLemma = [tag("em", [], "** Use "), tag("span", ["class=lemma"], entry.lemma), tag("em", [], " instead of "), tag("br"), word];
   } else if (tokenType === "wd") {
-    displayLemma = [Tag.tag("span", ["class=lemma"], word), " < ", entry.lemma];
+    displayLemma = [tag("span", ["class=lemma"], word), " < ", entry.lemma];
   } else {
-    displayLemma = [Tag.tag("span", ["class=lemma"], entry.lemma)];
+    displayLemma = [tag("span", ["class=lemma"], entry.lemma)];
   }
   return displayLemma;
 }
@@ -601,7 +618,7 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
     }
   }
   let level = [];
-  if (levelStr) level = [Tag.tag("em", [], level), Tag.tag("br")];
+  if (levelStr) level = [tag("em", [], level), tag("br")];
   return level;
 }
 
@@ -609,18 +626,18 @@ function buildHTMLlevelDot(entry) {
   let html = "";
   if (!isKids()) {
     const geptLevel = entry.levelGEPT;
-    html = (geptLevel <= 2) ? Tag.tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
+    html = (geptLevel <= 2) ? tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
   }
-  if (isBESTEP() && entry.levelAWL > 0) html = Tag.root(html, ...buildHTMLlevelAWL(entry));
+  if (isBESTEP() && entry.levelAWL > 0) html = root(html, ...buildHTMLlevelAWL(entry));
   return html;
 }
 
 function buildHTMLlevelAWL(entry) {
-  return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelAWL}`])];
+  return [" ", tag("span", ["class=awl-level"], [`AWL ${entry.levelAWL}`])];
 }
 
 function buildHTMLlevelKids(entry) {
-  return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
+  return [" ", tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
 }
 
 // ** if text is pasted in, this is where processing starts
@@ -656,7 +673,7 @@ function textMarkup(e) {
     revisedText = null;
     taggedTokenArr = textLookupCompounds(taggedTokenArr);
     taggedTokenArr = textLookupSimples(taggedTokenArr);
-    // debug(taggedTokenArr)
+    debug(taggedTokenArr)
     textBuildHTML(taggedTokenArr);
     backupSave();
     signalRefreshNeeded("off");
@@ -836,8 +853,8 @@ function tokenize4(taggedTokenArr) {
         }
       }
     }
-    if (!toAdd.length) toAdd.push(token)
-    tmpTokenArr.push(...toAdd);
+      if (!toAdd.length) toAdd.push(token)
+      tmpTokenArr.push(...toAdd);
     // }
   }
   return tmpTokenArr;
@@ -891,7 +908,7 @@ function getAllLevelStats(tokenArr) {
       awlEntries++;
     }
   }
-  if (isBESTEP() && awlEntries > 1) levelStats.push(buildLevelStat(37, Tag.tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
+  if (isBESTEP() && awlEntries > 1) levelStats.push(buildLevelStat(37, tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
   return [totalWordCount, separateLemmasCount, levelStats];
 }
 
@@ -970,7 +987,7 @@ function textLookupSimples(textArr) {
     // ** ignore compounds for now; they are dealt with separately
     if (token.type === "w") {
       // const [revisedType, localMatches] = lookupWord(token.lemma, token.type, token.matches);
-      const [revisedType, localMatches] = lookupWord(token.lemma);
+      const [revisedType, localMatches] = lookupWord(token.lemma.toLowerCase());
       if (!isEmpty(localMatches)) {
         token.matches.push(...localMatches);
         token.type = revisedType;
@@ -1022,48 +1039,83 @@ function addNewEntryToOfflistDb(entry) {
 }
 
 
+// function lookupWord(word, type, matchedCompoundsArr = []) {
+//   word = word.toLowerCase();
+//   let exactMatches = getIdsByExactLemma(word);
+//   let localMatchedIDarr;
+//   while (true) {
+//     if (!isEmpty(exactMatches)) {
+//       // localMatchedIDarr = [type, exactMatches];
+//       localMatchedIDarr = ["w", exactMatches];
+//       break;
+//     }
+//     localMatchedIDarr = checkDerivations(word);
+//     if (!isEmpty(localMatchedIDarr)) {
+//       localMatchedIDarr = ["wd", localMatchedIDarr];  // wd=derived word (e.g. play<played)
+//       break;
+//     }
+//     localMatchedIDarr = checkAllowedVariants(word);
+//     if (!isEmpty(localMatchedIDarr)) {
+//       localMatchedIDarr = ["wv", localMatchedIDarr];  // wv=variant word (e.g. color<colour)
+//       break;
+//     }
+//     else {
+//       localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
+//       break;
+//     }
+//   }
+//   if (!isEmpty(matchedCompoundsArr)) {
+//     if (localMatchedIDarr.length) localMatchedIDarr[1].push(...matchedCompoundsArr);
+//     else localMatchedIDarr = ["wc", matchedCompoundsArr]; // wc=compound word
+//   }
+//   /* Enabling this (and disabling the first section of the while clause) allows e.g. 'colored' to
+//   be parsed as both the adj. 'colored' AND a derivation of 'color' BUT it messes up jumping to reps
+//   and misses derivations, i.e. 'coloured' is only found as a derivation of 'colored'
+//   TODO: check variant spellings before all other checks?
+//   */
+//   // if (!isEmpty(exactMatches)) {
+//   //   if (localMatchedIDarr.length) localMatchedIDarr = ["w", exactMatches.concat(localMatchedIDarr[1])];
+//   //   else localMatchedIDarr = ["w", exactMatches];
+//   // }
+//   return localMatchedIDarr;
+// }
+
 function lookupWord(word) {
-  // const originalWord = word;
-  word = word.toLowerCase();
-  let type = "w";
   let exactMatches = getIdsByExactLemma(word);
-  if (isEmpty(exactMatches)) [word, exactMatches, type] = checkForEnglishSpelling(word, type);
-  // debug(word, (type === "wv") ? `(${originalWord})` : "", type, exactMatches)
+  debug(word, checkVariantSpellings(word), checkVariantSuffixes(word), exactMatches)
   let localMatchedIDarr;
-  if (isEmpty(exactMatches)) {
-    while (true) {
-      localMatchedIDarr = checkDerivations(word);
-      if (!isEmpty(localMatchedIDarr)) {
-        localMatchedIDarr = [type + "d", localMatchedIDarr];  // wd=derived word (e.g. play<played)
-        break;
-      }
-      localMatchedIDarr = checkAllowedVariants(word);
-      if (!isEmpty(localMatchedIDarr)) {
-        localMatchedIDarr = [type, localMatchedIDarr];  // wv=variant word (e.g. color<colour)
-        break;
-      }
-      // else if (isEmpty(exactMatches)) {
-      else {
-        localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
-        break;
-      }
+  while (true) {
+    if (!isEmpty(exactMatches)) {
+      localMatchedIDarr = ["w", exactMatches];
+      break;
+    }
+    localMatchedIDarr = checkDerivations(word);
+    if (!isEmpty(localMatchedIDarr)) {
+      localMatchedIDarr = ["wd", localMatchedIDarr];  // wd=derived word (e.g. play<played)
+      break;
+    }
+    localMatchedIDarr = checkAllowedVariants(word);
+    if (!isEmpty(localMatchedIDarr)) {
+      localMatchedIDarr = ["wv", localMatchedIDarr];  // wv=variant word (e.g. color<colour)
+      break;
+    }
+    // else if (isEmpty(exactMatches)) {
+    else {
+      localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
+      break;
     }
   }
-  else localMatchedIDarr = [type, exactMatches];
+  /* Enabling this (and disabling the first section of the while clause) allows e.g. 'colored' to
+  be parsed as both the adj. 'colored' AND a derivation of 'color' BUT it messes up jumping to reps
+  and misses derivations, i.e. 'coloured' is only found as a derivation of 'colored'
+  TODO: check variant spellings before all other checks?
+  */
+  // if (!isEmpty(exactMatches)) {
+  //   if (localMatchedIDarr.length) localMatchedIDarr = ["w", exactMatches.concat(localMatchedIDarr[1])];
+  //   else localMatchedIDarr = ["w", exactMatches];
+  // }
   return localMatchedIDarr;
 }
-
-
-function checkForEnglishSpelling(word, type) {
-  let exactMatches = checkVariantSpellings(word);
-  if (isEmpty(exactMatches)) exactMatches = checkVariantSuffixes(word);
-  if (!isEmpty(exactMatches)) {
-    word = getEntryById(exactMatches[0]).lemma;
-    type += "v";
-  }
-  return [word, exactMatches, type];
-}
-
 function idSuccessfullyMatched(idArr) {
   return idArr.some(id => id > 0);
 }
@@ -1091,6 +1143,11 @@ function testForNegativePrefix(word) {
   return result;
 }
 
+
+// function translateToOfflistDbID(id) {
+//   if (typeof id === "object") id = id[0];
+//   return (id < 0) ? -id : id;
+// }
 
 
 function checkVariantWords(word) {
@@ -1209,8 +1266,11 @@ function checkAllowedVariants(word, offlistID = 0) {
   let matchedIDarr = [];
   for (let check of [
     checkVariantWords,
+    checkVariantSuffixes,
     checkAbbreviations,
     checkGenderedNouns,
+    checkVariantSpellings,
+    // checkVariantHyphens,
   ]) {
     let result = check(word);
     if (result.length) {
@@ -1454,7 +1514,7 @@ function buildHTMLword(token, wordIndex, matchesIdLevelArr) {
   let showAsMultiple = "";
   if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
   const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
-  const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
+  const displayWord = tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
   return displayWord.stringify();
 }
 
@@ -1462,9 +1522,9 @@ function buildHTMLword(token, wordIndex, matchesIdLevelArr) {
 function getSortedMatchesInfo(token) {
   let matches = token.matches;
   let idLevelArr = [];   // ** [[0:id, 1:[gept,awl, status], 2:tokenType], ...]]
-  for (const id of matches) {
-    idLevelArr.push([id, getEntryById(id).levelArr, token.type])
-  }
+    for (const id of matches) {
+      idLevelArr.push([id, getEntryById(id).levelArr, token.type])
+    }
   let levelsAreIdentical = true;
   if (idLevelArr.length > 1) {
     idLevelArr.sort((a, b) => a[1][0] - b[1][0]);
@@ -1484,14 +1544,14 @@ function visibleLevelLimitToggle(e) {
       visibleLevelLimitApply(V.levelLimitStr);
       V.levelLimitStr = "";
       V.levelLimitActiveClassesArr = [];
-      app.state.current.limit_state = -1;
+      V.current.limit_state = -1;
     } else {
       V.levelLimitStr = level;
       V.levelLimitActiveClassesArr = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimitStr));
-      app.state.current.limit_state = C.LEVEL_LIMITS.indexOf(level);
+      V.current.limit_state = C.LEVEL_LIMITS.indexOf(level);
       visibleLevelLimitApply(V.levelLimitStr, false);
     }
-    app.state.saveItem("limit_state", app.state.current.limit_state);
+    appStateSaveItem("limit_state", V.current.limit_state);
   }
 }
 
@@ -1518,8 +1578,8 @@ function visibleLevelLimitApply(className, removeClass = true) {
 
 function visibleLevelLimitSet(fromSaved = false) {
   if (fromSaved) {
-    V.levelLimitStr = (app.state.current.limit_state >= 0) ? C.LEVEL_LIMITS[app.state.current.limit_state] : "";
-    V.levelLimitActiveClassesArr = (V.levelLimitStr) ? C.LEVEL_LIMITS.slice(app.state.current.limit_state) : [];
+    V.levelLimitStr = (V.current.limit_state >= 0) ? C.LEVEL_LIMITS[V.current.limit_state] : "";
+    V.levelLimitActiveClassesArr = (V.levelLimitStr) ? C.LEVEL_LIMITS.slice(V.current.limit_state) : [];
   }
   if (V.levelLimitStr) {
     visibleLevelLimitApply(V.levelLimitStr, false);
@@ -1530,7 +1590,7 @@ function visibleLevelLimitSet(fromSaved = false) {
 }
 
 function visibleLevelLimitReset() {
-  app.state.saveItem("limit_state", app.state.default.limit_state);
+  appStateSaveItem("limit_state", C.DEFAULT_STATE.limit_state);
   visibleLevelLimitSet(true);
 }
 
@@ -1558,14 +1618,14 @@ function setDetailState(e, destination) {
     mode = e;
   }
   if (mode === "toggle") {
-    app.state.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
+    V.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
   }
   else {
-    if (mode === "reset") app.state.current[destination] = app.state.default[destination];
-    if (app.state.current[destination] && el) el.setAttribute("open", "")
+    if (mode === "reset") V.current[destination] = C.DEFAULT_STATE[destination];
+    if (V.current[destination] && el) el.setAttribute("open", "")
     else if (el) el.removeAttribute("open");
   }
-  app.state.saveItem(destination, app.state.current[destination]);
+  appStateSaveItem(destination, V.current[destination]);
 }
 
 
@@ -1647,16 +1707,16 @@ function buildHTMLlevelStats(separateLemmasCount, levelStats) {
   if (!separateLemmasCount || isKids()) return levelStatsHTML;
   let tmpStats = [];
   for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
-    if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
-    else if (isBESTEP()) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
+    if (levelID < 3) tmpStats.push(tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
+    else if (isBESTEP()) tmpStats.push(tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
   }
-  const toggleOpen = (app.state.current.level_state) ? " open" : "";
-  levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
-    Tag.tag("summary", ["class=all-repeats"], [
+  const toggleOpen = (V.current.level_state) ? " open" : "";
+  levelStatsHTML = root([tag("details", ["id=level-details", toggleOpen], [
+    tag("summary", ["class=all-repeats"], [
       "Level statistics:",
-      Tag.tag("em", [], [separateLemmasCount, " headwords"]),
+      tag("em", [], [separateLemmasCount, " headwords"]),
     ]),
-    Tag.tag("div", ["class=level-stats-cols"], [...tmpStats])
+    tag("div", ["class=level-stats-cols"], [...tmpStats])
   ])
   ]);
   return levelStatsHTML.stringify();
@@ -1694,28 +1754,28 @@ function buildHTMLrepeatList(wordCount) {
             display = highlightAwlWord(entry.levelArr, word);
             displayClass = `class=level-${getLevelPrefix(entry.levelGEPT)}`;
           }
-          anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
+          anchors.push(" ", tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
         }
-        listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry.levelGEPT)}`], [...anchors]));
+        listOfRepeats.push(tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry.levelGEPT)}`], [...anchors]));
       }
     }
     if (countAllReps > 0) {
-      const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
-      repeatsHeader = Tag.tag("details", [`id=${idForEventListener}`, toggleOpen], [
-        Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
+      const toggleOpen = (V.current.repeat_state) ? " open" : "";
+      repeatsHeader = tag("details", [`id=${idForEventListener}`, toggleOpen], [
+        tag("summary", ["id=all_repeats", "class=all-repeats"], [
           countAllReps,
           ` significant repeated word${(countAllReps === 1) ? "" : "s"}`,
         ]),
-        Tag.tag("p", [], [
-          Tag.tag("em", [], ["Click on word / number to jump to that occurrence."])
+        tag("p", [], [
+          tag("em", [], ["Click on word / number to jump to that occurrence."])
         ]),
-        Tag.tag("div", ["id=repeats"], [...listOfRepeats]),
+        tag("div", ["id=repeats"], [...listOfRepeats]),
       ]);
     }
   }
   if (!repeatsHeader) {
-    repeatsHeader = Tag.tag("p", [`id=${idForEventListener}`], [
-      Tag.tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
+    repeatsHeader = tag("p", [`id=${idForEventListener}`], [
+      tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
   }
   return repeatsHeader.stringify();
 }
@@ -1734,14 +1794,14 @@ function compareByLemma(a, b) {
 }
 
 function getWordCountForDisplay(wordCount) {
-  const numOfWords = (wordCount > 0) ? Tag.tag("span", ["class=text-right dark"], [
+  const numOfWords = (wordCount > 0) ? tag("span", ["class=text-right dark"], [
     "(",
     wordCount,
     " word",
     pluralNoun(wordCount),
     ")",
     // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
-    Tag.tag("a", ["href=#all_repeats", "class=medium"]),
+    tag("a", ["href=#all_repeats", "class=medium"]),
   ]) : "";
   return numOfWords;
 }
@@ -1756,7 +1816,7 @@ function displayDbNameInTab1() {
 
 function displayDbNameInTab2(msg) {
   if (!msg) msg = "";
-  HTM.finalLegend.innerHTML = Tag.root("Checking ", Tag.tag("span", ["id=db_name2", "class=dbColor"], [V.currentDb.name]), " ", msg).stringify();
+  HTM.finalLegend.innerHTML = root("Checking ", tag("span", ["id=db_name2", "class=dbColor"], [V.currentDb.name]), " ", msg).stringify();
   document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:list-item;" : "display:none;");
   document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:list-item;" : "display:none;");
   document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:list-item;" : "display:none;");
@@ -1859,13 +1919,54 @@ function clearTab(event) {
   displayInputCursor();
 }
 
+function resetApp() {
+  appStateForceDefault();
+  clearTab1();
+  clearTab2();
+  visibleLevelLimitReset();
+  setTab(V.current.tab_state);
+  setDbShared(V.current.db_state);
+  HTM.selectDb.value = V.current.db_state;
+  setHelpState("reset");
+  visibleLevelLimitReset();
+}
+
+function appStateForceDefault() {
+  for (const key in C.DEFAULT_STATE) {
+    const defaultVal = C.DEFAULT_STATE[key];
+    appStateSaveItem(key, defaultVal)
+    V.current[key] = defaultVal;
+  }
+}
+
+function appStateReadFromStorage() {
+  let retrieved_items = {};
+  for (const key in C.DEFAULT_STATE) {
+    const retrieved_item = localStorage.getItem(key);
+    retrieved_items[key] = (retrieved_item) ? parseInt(retrieved_item) : C.DEFAULT_STATE[key];
+  }
+  return retrieved_items;
+}
+
+function appStateWriteToCurrent() {
+  const retrieved_items = appStateReadFromStorage();
+  for (const key in retrieved_items) {
+    const value = retrieved_items[key];
+    V.current[key] = value;
+  }
+}
+
+function appStateSaveItem(item, value) {
+  localStorage.setItem(item, value);
+}
+
 
 function setDbShared(e) {
   let choice = (e.target) ? e.target.value : e;
-  app.state.current.db_state = parseInt(choice);
+  V.current.db_state = parseInt(choice);
   // V.currentDb = [];
   Entry.resetID();
-  if (app.state.current.db_state === C.GEPT) {
+  if (V.current.db_state === C.GEPT) {
     V.currentDb = {
       name: "GEPT",
       db: createDbfromArray(makeGEPTdb()),
@@ -1878,7 +1979,7 @@ function setDbShared(e) {
         _accent: "#daebe8"
       }
     };
-  } else if (app.state.current.db_state === C.BESTEP) {
+  } else if (V.current.db_state === C.BESTEP) {
     let tmpDb = makeGEPTdb();
     V.currentDb = {
       name: "BESTEP",
@@ -1914,7 +2015,7 @@ function setDbShared(e) {
   visibleLevelLimitSet();
   setDbTab2();
   setDbTab1();
-  app.state.saveItem("db_state", app.state.current.db_state);
+  appStateSaveItem("db_state", V.current.db_state);
 }
 
 function createDbfromArray(db) {
@@ -1922,15 +2023,15 @@ function createDbfromArray(db) {
 }
 
 function isGEPT() {
-  return app.state.current.db_state === C.GEPT;
+  return V.current.db_state === C.GEPT;
 }
 
 function isBESTEP() {
-  return app.state.current.db_state === C.BESTEP;
+  return V.current.db_state === C.BESTEP;
 }
 
 function isKids() {
-  return app.state.current.db_state === C.Kids;
+  return V.current.db_state === C.Kids;
 }
 
 function isInOfflistDb(idOrEntry) {
@@ -2014,7 +2115,7 @@ function setTab(tab) {
   let i = 0;
   for (const content of HTM.tabBody.children) {
     if (tab === HTM.tabHead.children[i]) {
-      app.state.current.tab_state = i;
+      V.current.tab_state = i;
       HTM.tabHead.children[i].classList.add("tab-on");
       HTM.tabHead.children[i].classList.remove("tab-off");
       content.style.display = "flex";
@@ -2026,7 +2127,7 @@ function setTab(tab) {
     i++;
   }
   setTabHead();
-  app.state.saveItem("tab_state", app.state.current.tab_state);
+  appStateSaveItem("tab_state", V.current.tab_state);
   forceUpdateInputDiv();
   displayInputCursor();
   V.isExactMatch = !isFirstTab();
@@ -2040,7 +2141,7 @@ function setTabHead() {
 }
 
 function isFirstTab() {
-  return parseInt(app.state.current.tab_state) === 0;
+  return parseInt(V.current.tab_state) === 0;
 }
 
 function displayInputCursor() {
