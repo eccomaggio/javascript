@@ -43,19 +43,13 @@ function addTabListeners() {
   }
 }
 
-function changeDb(e) {
-  app.wordlist.change(e);
-}
-
 function addMenuListeners() {
   HTM.clearButton.addEventListener("click", clearTab);
   // HTM.resetButton.addEventListener("click", resetApp);
   HTM.resetButton.addEventListener("click", app.reset);
 
   // ## for refresh button + settings menu
-  // HTM.selectDb.addEventListener("change", setDbShared);
-  // HTM.selectDb.addEventListener("change", app.wordlist.change);
-  HTM.selectDb.addEventListener("change", changeDb);
+  HTM.selectDb.addEventListener("change", setDbShared);
   HTM.selectFontSize.addEventListener("change", changeFont);
   HTM.backupButton.addEventListener("click", backupShow);
   HTM.backupDialog.addEventListener("mouseleave", backupDialogClose);
@@ -312,12 +306,9 @@ function wordGetFormData(e) {
     // ## default value of html option (but screws up db lookup)
     if (value === "-1") value = "";
     // ## ignore form elements that aren't required for current dB
-    // if (key === "level" && isKids()) continue;
-    // if (key === "theme" && !isKids()) continue;
-    // if (key === "awl" && !isBESTEP()) continue;
-    if (key === "level" && app.state.isKids) continue;
-    if (key === "theme" && !app.state.isKids) continue;
-    if (key === "awl" && !app.state.isBESTEP) continue;
+    if (key === "level" && isKids()) continue;
+    if (key === "theme" && !isKids()) continue;
+    if (key === "awl" && !isBESTEP()) continue;
     const digit = parseInt(value)
     if (Number.isInteger(digit)) data[key].push(digit);
     else {
@@ -369,8 +360,7 @@ function wordBuildSearchTerms(data) {
   const searchTerms = {
     lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
     raw_lemma: lemma,
-    // level: (isKids()) ? data.theme : data.level,
-    level: (app.state.isKids) ? data.theme : data.level,
+    level: (isKids()) ? data.theme : data.level,
     awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
     pos: data.pos.join("|")
   };
@@ -401,7 +391,7 @@ function wordRunSearch(searchTerms) {
   if (!isEmpty(searchTerms.pos)) {
     results = results.filter(el => el.pos).filter(el => el.pos.search(searchTerms.pos) != -1);
   }
-  if (app.state.isBESTEP && !isEmpty(searchTerms?.awl)) {
+  if (isBESTEP() && !isEmpty(searchTerms?.awl)) {
     /*
     el[C.LEVEL][2]:
     1-in awl only
@@ -433,8 +423,7 @@ function wordRunSearch(searchTerms) {
 function lazyCheckAgainstCompounds(word) {
   const tmpWord = word.replace(/-'\./g, "").split(" ").join("");
   let result = [];
-  // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
-  for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
+  for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
     if (compound.startsWith(tmpWord)) {
       result.push(id);
       break;
@@ -445,7 +434,7 @@ function lazyCheckAgainstCompounds(word) {
 
 
 function highlightAwlWord(levelArr, word) {
-  return (app.state.isBESTEP && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
+  return (isBESTEP() && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
 }
 
 function wordFormatResultsAsHTML(results) {
@@ -469,8 +458,7 @@ function wordFormatResultsAsHTML(results) {
     if (!level) continue;
     let [note, awl_note] = getNotesAsHTML(entry);
     const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
-    // let class2 = (isKids()) ? "level-e" : `level-${level[0]}`;
-    let class2 = (app.state.isKids) ? "level-e" : `level-${level[0]}`;
+    let class2 = (isKids()) ? "level-e" : `level-${level[0]}`;
     output.push(formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
     previousInitial = currentInitial;
     i++;
@@ -485,7 +473,7 @@ function getNotesAsHTML(entry) {
   if (entry) {
     [note, awl_note] = entry.notes;
     note = note ? `, ${note}` : "";
-    awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
+    awl_note = (isBESTEP() && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
   }
   return [note, awl_note];
 }
@@ -570,8 +558,7 @@ function displayEntryInfo(refs) {
     const levelTagArr = buildHTMLlevel(entry, id, levelArr, tokenType);
     // const levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
     let levelTag = "";
-    // if (isKids() && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
-    if (app.state.isKids && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
+    if (isKids() && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
     else levelTag = Tag.tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
     const pos = `[${entry.posExpansion}]`;
     let [notes, awl_notes] = getNotesAsHTML(entry);
@@ -620,12 +607,11 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
 
 function buildHTMLlevelDot(entry) {
   let html = "";
-  // if (!isKids()) {
-  if (!app.state.isKids) {
+  if (!isKids()) {
     const geptLevel = entry.levelGEPT;
     html = (geptLevel <= 2) ? Tag.tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
   }
-  if (app.state.isBESTEP && entry.levelAWL > 0) html = Tag.root(html, ...buildHTMLlevelAWL(entry));
+  if (isBESTEP() && entry.levelAWL > 0) html = Tag.root(html, ...buildHTMLlevelAWL(entry));
   return html;
 }
 
@@ -666,9 +652,6 @@ function textMarkup(e) {
   if (revisedText) {
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
-    // app.wordlist.offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
-    // app.wordlist.offlistIndex = 0;
-    app.wordlist.resetOfflistDb();
     let taggedTokenArr = textdivideIntoTokens(revisedText);
     revisedText = null;
     taggedTokenArr = textLookupCompounds(taggedTokenArr);
@@ -696,7 +679,7 @@ function getTextFromWorkingDiv() {
 }
 
 function textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
-  app.wordlist.displayDbNameInTab2(getWordCountForDisplay(wordCount));
+  displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsHTML, levelStatsHTML);
   displayWorkingText(resultsHTML);
   // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
@@ -875,8 +858,7 @@ function textLookupCompounds(tokenArr) {
         j++;
       }
       wordBlob = wordBlob.toLowerCase();
-      // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
-      for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
+      for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
         if (wordBlob.startsWith(compound)) {
           token.matches.push(id);
           // token.type = "wc";
@@ -904,12 +886,12 @@ function getAllLevelStats(tokenArr) {
     const lemmasAtThisLevel = lemmasBylevel[level];
     const currStat = buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount);
     levelStats.push(currStat);
-    if (app.state.isBESTEP && level >= 38) {
+    if (isBESTEP() && level >= 38) {
       awlCount += lemmasAtThisLevel;
       awlEntries++;
     }
   }
-  if (app.state.isBESTEP && awlEntries > 1) levelStats.push(buildLevelStat(37, Tag.tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
+  if (isBESTEP() && awlEntries > 1) levelStats.push(buildLevelStat(37, Tag.tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
   return [totalWordCount, separateLemmasCount, levelStats];
 }
 
@@ -1017,8 +999,7 @@ function markOfflist(word, offlistType) {
   let offlistEntry = [];
   let offlistID;
   let isUnique = true;
-  // for (const entry of V.offlistDb) {
-  for (const entry of app.wordlist.offlistDb) {
+  for (const entry of V.offlistDb) {
     if (entry.lemma === word) {
       isUnique = false;
       offlistID = entry.id;
@@ -1034,10 +1015,9 @@ function markOfflist(word, offlistType) {
 
 
 function addNewEntryToOfflistDb(entry) {
-  // const offlistID = -(app.wordlist.offlistIndex);
-  const offlistID = -(app.wordlist.offlistDb.length);
-  app.wordlist.offlistDb.push(new Entry(...entry, offlistID));
-  app.wordlist.offlistIndex++;
+  const offlistID = -(V.offlistIndex);
+  V.offlistDb.push(new Entry(...entry, offlistID));
+  V.offlistIndex++;
   return offlistID;
 }
 
@@ -1239,8 +1219,7 @@ function checkAllowedVariants(word, offlistID = 0) {
     }
   }
   if (!isEmpty(matchedIDarr) && offlistID !== 0) {
-    // V.offlistDb[-offlistID] = [offlistID, word, "variant", matchedIDarr, ""];
-    app.wordlist.offlistDb[-offlistID] = [offlistID, word, "variant", matchedIDarr, ""];
+    V.offlistDb[-offlistID] = [offlistID, word, "variant", matchedIDarr, ""];
   }
   return matchedIDarr;
 }
@@ -1416,8 +1395,7 @@ function getEntryById(id) {
   let result;
   if (id !== undefined) {
     let parsedId = parseInt(id);
-    // const dB = (isInOfflistDb(parsedId)) ? V.offlistDb : V.currentDb.db;
-    const dB = (isInOfflistDb(parsedId)) ? app.wordlist.offlistDb : app.wordlist.db;
+    const dB = (isInOfflistDb(parsedId)) ? V.offlistDb : V.currentDb.db;
     parsedId = Math.abs(parsedId);
     result = dB[parsedId]
   }
@@ -1648,8 +1626,7 @@ function escapeHTML(text) {
 function getLevelPrefix(levelGEPT) {
   // const levelNum = entry.levelGEPT;
   let level = V.levelSubs[levelGEPT];
-  // if (isKids() && levelGEPT < V.OFFLIST) level = "k";
-  if (app.state.isKids && levelGEPT < app.wordlist.offlistLevel) level = "k";
+  if (isKids() && levelGEPT < V.OFFLIST) level = "k";
   if (!level) level = "o";
   return level[0];
 }
@@ -1667,12 +1644,11 @@ function buildHTMLlevelStats(separateLemmasCount, levelStats) {
   </details>
   */
   let levelStatsHTML = "";
-  // if (!separateLemmasCount || isKids()) return levelStatsHTML;
-  if (!separateLemmasCount || app.state.isKids) return levelStatsHTML;
+  if (!separateLemmasCount || isKids()) return levelStatsHTML;
   let tmpStats = [];
   for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
     if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
-    else if (app.state.isBESTEP) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
+    else if (isBESTEP()) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
   }
   const toggleOpen = (app.state.current.level_state) ? " open" : "";
   levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
@@ -1774,12 +1750,22 @@ function pluralNoun(amount) {
   return (amount > 1) ? "s" : "";
 }
 
+function displayDbNameInTab1() {
+  document.getElementById('db_name1').textContent = V.currentDb.name;
+}
+
+function displayDbNameInTab2(msg) {
+  if (!msg) msg = "";
+  HTM.finalLegend.innerHTML = Tag.root("Checking ", Tag.tag("span", ["id=db_name2", "class=dbColor"], [V.currentDb.name]), " ", msg).stringify();
+  document.getElementById("help-kids").setAttribute("style", (isKids()) ? "display:list-item;" : "display:none;");
+  document.getElementById("help-gept").setAttribute("style", (!isKids()) ? "display:list-item;" : "display:none;");
+  document.getElementById("help-awl").setAttribute("style", (isBESTEP()) ? "display:list-item;" : "display:none;");
+}
 
 function getIdsByExactLemma(lemma) {
   // ** returns empty array or array of matched IDs [4254, 4255]
   lemma = lemma.toLowerCase();
-  // const searchResults = V.currentDb.db
-  const searchResults = app.wordlist.db
+  const searchResults = V.currentDb.db
     .filter(el => el.lemma.toLowerCase() === lemma)
     .map(el => el.id);
   return searchResults;
@@ -1787,7 +1773,7 @@ function getIdsByExactLemma(lemma) {
 
 function getIdsByPartialLemma(lemma) {
   // lemma = lemma.toLowerCase();
-  const searchResults = app.wordlist.db
+  const searchResults = V.currentDb.db
     .filter(el => el.lemma.search(lemma) !== -1)
   return searchResults;
 }
@@ -1814,7 +1800,7 @@ function clearTab2() {
   HTM.workingDiv.innerText = "";
   HTM.finalInfoDiv.innerText = "";
   HTM.repeatsList.innerText = "";
-  app.wordlist.displayDbNameInTab2();
+  displayDbNameInTab2();
   V.appHasBeenReset = true;
   // backupReset();
 }
@@ -1874,13 +1860,86 @@ function clearTab(event) {
 }
 
 
+function setDbShared(e) {
+  let choice = (e.target) ? e.target.value : e;
+  app.state.current.db_state = parseInt(choice);
+  // V.currentDb = [];
+  Entry.resetID();
+  if (app.state.current.db_state === C.GEPT) {
+    V.currentDb = {
+      name: "GEPT",
+      db: createDbfromArray(makeGEPTdb()),
+      show: [HTM.G_level],
+      hide: [HTM.K_theme, HTM.B_AWL],
+      css: {
+        _light: "#cfe0e8",
+        _medium: "#87bdd8",
+        _dark: "#3F7FBF",
+        _accent: "#daebe8"
+      }
+    };
+  } else if (app.state.current.db_state === C.BESTEP) {
+    let tmpDb = makeGEPTdb();
+    V.currentDb = {
+      name: "BESTEP",
+      db: createDbfromArray(tmpDb.concat(makeAWLdb())),
+      show: [HTM.G_level, HTM.B_AWL],
+      hide: [HTM.K_theme],
+      css: {
+        _light: "#e1e5bb",
+        _medium: "#d6c373",
+        _dark: "#3e4820",
+        _accent: "#d98284"
+      }
+    };
+  } else {
+    V.currentDb = {
+      name: "GEPTKids",
+      db: createDbfromArray(makeKIDSdb()),
+      show: [HTM.K_theme],
+      hide: [HTM.G_level, HTM.B_AWL],
+      css: {
+        _light: "#f9ccac",
+        _medium: "#f4a688",
+        _dark: "#c1502e",
+        _accent: "#fbefcc"
+      }
+    };
+  }
+  V.currentDb.compounds = buildCompoundsDb(V.currentDb.db);
+  for (const key in V.currentDb.css) {
+    const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
+    HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
+  }
+  visibleLevelLimitSet();
+  setDbTab2();
+  setDbTab1();
+  app.state.saveItem("db_state", app.state.current.db_state);
+}
+
+function createDbfromArray(db) {
+  return db.map(entry => new Entry(...entry));
+}
+
+function isGEPT() {
+  return app.state.current.db_state === C.GEPT;
+}
+
+function isBESTEP() {
+  return app.state.current.db_state === C.BESTEP;
+}
+
+function isKids() {
+  return app.state.current.db_state === C.Kids;
+}
+
 function isInOfflistDb(idOrEntry) {
   const id = (Number.isInteger(idOrEntry)) ? idOrEntry : idOrEntry.id;
   return id < 0;
 }
 
 function lemmaIsInCompoundsDb(lemma) {
-  return app.wordlist.compounds[lemma];
+  return V.currentDb.compounds[lemma];
 }
 
 function isEmpty(arr) {
@@ -1893,6 +1952,48 @@ function isEmpty(arr) {
   return !hasContent;
 }
 
+function buildCompoundsDb(dB) {
+  /* ##
+  A) goes through currentDb and checks for compounds (words containing spaces / hyphens)
+  These are a problem as spaces are used to divide words;
+  This function creates a table of items (compounds) to be checked against the text
+  before it is divided into words. All compounds are converted into 3 forms:
+  1) compoundword, 2) compound word, 3) compound-word
+
+  B) updates database to include isCOMPOUND marker to avoid searching for words twice
+  (as compounds and single words)
+  */
+  let compounds = {};
+  for (let entry of dB) {
+    const word = entry.lemma.trim().toLowerCase();
+    const id = entry.id;
+    const splitWord = word.split(/[-'\s\.]/g);
+    if (splitWord.length > 1) {
+      const newCompound = splitWord.join("");
+      compounds[newCompound] = id;
+      // ** to catch A.M. and P.M.
+      if (/[ap]\.m\./.test(word)) compounds[word] = id;
+    }
+  }
+  return compounds;
+}
+
+function setDbTab1() {
+  displayDbNameInTab1();
+  // ** Allows for multiple elements to be toggled
+  for (const el of V.currentDb.show) {
+    el.style.setProperty("display", "block");
+  }
+  for (const el of V.currentDb.hide) {
+    el.style.setProperty("display", "none");
+  }
+  wordSearch();
+}
+
+function setDbTab2() {
+  displayDbNameInTab2();
+  forceUpdateInputDiv();
+}
 
 function debounce(func, timeout = 500) {
   let timer;
