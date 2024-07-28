@@ -19,7 +19,7 @@ function updateDropdownMenuOptions() {
 
 
 function addListeners() {
-  addTabListeners();
+  // addTabListeners();
   addMenuListeners();
   addHTMLlisteners();
   addDetailListeners();
@@ -37,33 +37,58 @@ function addWordInputListeners() {
   }
 }
 
-function addTabListeners() {
-  for (const el of document.getElementsByTagName("tab-tag")) {
-    el.addEventListener("click", setTab);
-  }
-}
+// function addTabListeners() {
+//   for (const el of document.getElementsByTagName("tab-tag")) {
+//     el.addEventListener("click", setTab);
+//   }
+// }
 
-function changeDb(e) {
+function changeDbWrapper(e) {
   app.wordlist.change(e);
 }
 
+function setTabWrapper(e) {
+  app.tabs.setTab(e);
+}
+
+function clearTabWrapper(e) {
+  app.tabs.clearTab(e);
+}
+
+function resetWrapper(e) {
+  app.reset(e);
+}
+
+function backupSaveWrapper(e) {
+  app.backup.save(e);
+}
+
+function backupShowWrapper(e) {
+  app.backup.show(e);
+}
+
+function backupLoadWrapper(e) {
+  app.backup.load(e);
+}
+
+function backupDialogCloseWrapper(e) {
+  app.backup.dialogClose(e);
+}
+
 function addMenuListeners() {
-  HTM.clearButton.addEventListener("click", clearTab);
-  // HTM.resetButton.addEventListener("click", resetApp);
-  HTM.resetButton.addEventListener("click", app.reset);
+  // HTM.clearButton.addEventListener("click", clearTab);
+  HTM.resetButton.addEventListener("click", resetWrapper);
 
   // ## for refresh button + settings menu
-  // HTM.selectDb.addEventListener("change", setDbShared);
-  // HTM.selectDb.addEventListener("change", app.wordlist.change);
-  HTM.selectDb.addEventListener("change", changeDb);
+  HTM.selectDb.addEventListener("change", changeDbWrapper);
   HTM.selectFontSize.addEventListener("change", changeFont);
-  HTM.backupButton.addEventListener("click", backupShow);
-  HTM.backupDialog.addEventListener("mouseleave", backupDialogClose);
-  // HTM.backupSave.addEventListener("click", backupSave);
-  HTM.backupSave2.addEventListener("click", backupSave);
-  for (const id of C.backupIDs) {
-    document.getElementById(id).addEventListener("click", backupLoad);
-  }
+  // HTM.backupButton.addEventListener("click", backupShow);
+  // HTM.backupDialog.addEventListener("mouseleave", backupDialogClose);
+  // // HTM.backupSave.addEventListener("click", backupSave);
+  // HTM.backupSave2.addEventListener("click", backupSave);
+  // for (const id of C.backupIDs) {
+  //   document.getElementById(id).addEventListener("click", backupLoad);
+  // }
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
@@ -110,95 +135,95 @@ function dropdown(e) {
   HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
 }
 
-function backupShow(e) {
-  /*
-  1) on refresh, swap backup_0 to backup_1
-  2) close backup dialog on mouseout
-  3) close settings dialog when backup opens
-  4) hide backup settings on tab 1
+// function backupShow(e) {
+//   /*
+//   1) on refresh, swap backup_0 to backup_1
+//   2) close backup dialog on mouseout
+//   3) close settings dialog when backup opens
+//   4) hide backup settings on tab 1
 
-  An html popup is populated with backups stored in local storage;
-  The popup is then displayed to the user
-  The text in the popups is actually in a button; clicking it populates the InputDiv
-  */
-  for (const id of C.backupIDs) {
-    const backup = document.getElementById(id)
-    const lsContent = localStorage.getItem(id);
-    let content = (lsContent) ? lsContent.trim() : "";
-    if (content) {
-      // if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
-      if (localStorage.getItem("mostRecent") == id) content = Tag.tag("span", ["class=warning"], ["Most Recent: "]).stringify() + content;
-      backup.innerHTML = content;
-      backup.disabled = false;
-    } else {
-      backup.innerHTML = "[empty]";
-      backup.disabled = true;
-    }
-  }
-  HTM.backupDialog.style.setProperty("display", "flex");
-}
+//   An html popup is populated with backups stored in local storage;
+//   The popup is then displayed to the user
+//   The text in the popups is actually in a button; clicking it populates the InputDiv
+//   */
+//   for (const id of C.backupIDs) {
+//     const backup = document.getElementById(id)
+//     const lsContent = localStorage.getItem(id);
+//     let content = (lsContent) ? lsContent.trim() : "";
+//     if (content) {
+//       // if (localStorage.getItem("mostRecent") == id) content = "<span class='warning'>Most Recent: </span>" + content;
+//       if (localStorage.getItem("mostRecent") == id) content = Tag.tag("span", ["class=warning"], ["Most Recent: "]).stringify() + content;
+//       backup.innerHTML = content;
+//       backup.disabled = false;
+//     } else {
+//       backup.innerHTML = "[empty]";
+//       backup.disabled = true;
+//     }
+//   }
+//   HTM.backupDialog.style.setProperty("display", "flex");
+// }
 
-function backupLoad(e) {
-  /* Get backup from chosen buffer and replace contents of workingDiv with it
-  Buffer contents are then loaded with the old workingDiv content to allow undo*/
-  const id = e.target.id;
-  const swap = JSON.parse(JSON.stringify(getTextFromWorkingDiv()));
-  let restoredContent = localStorage.getItem(id);
-  if (!restoredContent) return;
-  restoredContent = newlinesToEOLs(restoredContent);
-  HTM.workingDiv.innerText = restoredContent;
-  forceUpdateInputDiv();
-  // if (swap) localStorage.setItem(id, swap);
-  // if (swap) appStateSaveItem(id, swap);
-  if (swap) app.state.saveItem(id, swap);
-  backupDialogClose("backup-dlg");
-}
-
-
-function backupSave() {
-  /*
-  logic
-  on save:
-  IF: nothing in div:
-    do nothing
-  ELSE:
-    IF: V.appHasBeenReset AND longterm content != short term content:
-      move short_term > long term
-      save div > short_term
-    ELSE: overwrite short_term with div
-  */
-  let currentText = getTextFromWorkingDiv();
-  if (!currentText) return;
-  const [shortTerm, longTerm] = C.backupIDs;
-  if (V.appHasBeenReset) {
-    const shortTermSavedContent = localStorage.getItem(shortTerm);
-    const longTermSavedContent = localStorage.getItem(longTerm);
-    if (shortTermSavedContent !== longTermSavedContent) {
-      app.state.saveItem(longTerm, shortTermSavedContent);
-    }
-    V.appHasBeenReset = false;
-  }
-  if (currentText !== localStorage.getItem(shortTerm)) {
-    app.state.saveItem(shortTerm, currentText);
-    // HTM.backupSave.innerText = "text saved";
-    // HTM.backupSave.classList.add("error");
-  }
-  // else {
-  //   HTM.backupSave.innerText = "already saved";
-  //   HTM.backupSave.classList.add("error");
-  // }
-  // setTimeout(() => {
-  //   HTM.backupSave.innerText = "save backup";
-  //   HTM.backupSave.classList.remove("error");
-  // }, 1000);
-  textMarkup();
-}
+// function backupLoad(e) {
+//   /* Get backup from chosen buffer and replace contents of workingDiv with it
+//   Buffer contents are then loaded with the old workingDiv content to allow undo*/
+//   const id = e.target.id;
+//   const swap = JSON.parse(JSON.stringify(getTextFromWorkingDiv()));
+//   let restoredContent = localStorage.getItem(id);
+//   if (!restoredContent) return;
+//   restoredContent = newlinesToEOLs(restoredContent);
+//   HTM.workingDiv.innerText = restoredContent;
+//   forceUpdateInputDiv();
+//   // if (swap) localStorage.setItem(id, swap);
+//   // if (swap) appStateSaveItem(id, swap);
+//   if (swap) app.state.saveItem(id, swap);
+//   backupDialogClose("backup-dlg");
+// }
 
 
-function backupDialogClose(id) {
-  if (id.target) id = "backup-dlg";
-  document.getElementById(id).style.display = "none";
-}
+// function backupSave() {
+//   /*
+//   logic
+//   on save:
+//   IF: nothing in div:
+//     do nothing
+//   ELSE:
+//     IF: V.appHasBeenReset AND longterm content != short term content:
+//       move short_term > long term
+//       save div > short_term
+//     ELSE: overwrite short_term with div
+//   */
+//   let currentText = getTextFromWorkingDiv();
+//   if (!currentText) return;
+//   const [shortTerm, longTerm] = C.backupIDs;
+//   if (V.appHasBeenReset) {
+//     const shortTermSavedContent = localStorage.getItem(shortTerm);
+//     const longTermSavedContent = localStorage.getItem(longTerm);
+//     if (shortTermSavedContent !== longTermSavedContent) {
+//       app.state.saveItem(longTerm, shortTermSavedContent);
+//     }
+//     V.appHasBeenReset = false;
+//   }
+//   if (currentText !== localStorage.getItem(shortTerm)) {
+//     app.state.saveItem(shortTerm, currentText);
+//     // HTM.backupSave.innerText = "text saved";
+//     // HTM.backupSave.classList.add("error");
+//   }
+//   // else {
+//   //   HTM.backupSave.innerText = "already saved";
+//   //   HTM.backupSave.classList.add("error");
+//   // }
+//   // setTimeout(() => {
+//   //   HTM.backupSave.innerText = "save backup";
+//   //   HTM.backupSave.classList.remove("error");
+//   // }, 1000);
+//   textMarkup();
+// }
+
+
+// function backupDialogClose(id) {
+//   if (id.target) id = "backup-dlg";
+//   document.getElementById(id).style.display = "none";
+// }
 
 // ######### Tab 1 (look up word)
 
@@ -508,11 +533,11 @@ function wordDisplayResults(resultsAsHtmlString, resultCount = 0) {
   HTM.resultsText.innerHTML = resultsAsHtmlString;
 }
 
-function clearTab1() {
-  HTM.form.reset();
-  wordSearch();
-  refreshLabels("t1_form");
-}
+// function clearTab1() {
+//   HTM.form.reset();
+//   wordSearch();
+//   refreshLabels("t1_form");
+// }
 
 
 // ## TAB2 (text) SETUP ############################################
@@ -675,7 +700,8 @@ function textMarkup(e) {
     taggedTokenArr = textLookupSimples(taggedTokenArr);
     // debug(taggedTokenArr)
     textBuildHTML(taggedTokenArr);
-    backupSave();
+    // backupSave();
+    app.backup.save();
     signalRefreshNeeded("off");
     setCursorPos(document.getElementById(CURSOR.id));
   }
@@ -1809,15 +1835,15 @@ function findBaseForm(word, subs) {
 }
 
 
-function clearTab2() {
-  backupSave();
-  HTM.workingDiv.innerText = "";
-  HTM.finalInfoDiv.innerText = "";
-  HTM.repeatsList.innerText = "";
-  app.wordlist.displayDbNameInTab2();
-  V.appHasBeenReset = true;
-  // backupReset();
-}
+// function clearTab2() {
+//   backupSave();
+//   HTM.workingDiv.innerText = "";
+//   HTM.finalInfoDiv.innerText = "";
+//   HTM.repeatsList.innerText = "";
+//   app.wordlist.displayDbNameInTab2();
+//   V.appHasBeenReset = true;
+//   // backupReset();
+// }
 
 
 // ## SLIDER code ############################################
@@ -1863,15 +1889,15 @@ function jumpToDuplicate(id) {
 
 // ## COMMON ELEMENTS ######################################
 
-function clearTab(event) {
-  event.preventDefault();
-  if (isFirstTab()) {
-    clearTab1();
-  } else {
-    clearTab2();
-  }
-  displayInputCursor();
-}
+// function clearTab(event) {
+//   event.preventDefault();
+//   if (isFirstTab()) {
+//     clearTab1();
+//   } else {
+//     clearTab2();
+//   }
+//   displayInputCursor();
+// }
 
 
 function isInOfflistDb(idOrEntry) {
@@ -1908,48 +1934,46 @@ function debug(...params) {
 
 // ## TABS ############################################
 
-function setTab(tab) {
-  tab = (tab.currentTarget) ? tab.currentTarget : HTM.tabHead.children[tab];
-  let i = 0;
-  for (const content of HTM.tabBody.children) {
-    if (tab === HTM.tabHead.children[i]) {
-      app.state.current.tab_state = i;
-      HTM.tabHead.children[i].classList.add("tab-on");
-      HTM.tabHead.children[i].classList.remove("tab-off");
-      content.style.display = "flex";
-    } else {
-      HTM.tabHead.children[i].classList.add("tab-off");
-      HTM.tabHead.children[i].classList.remove("tab-on");
-      content.style.display = "none";
-    }
-    i++;
-  }
-  setTabHead();
-  app.state.saveItem("tab_state", app.state.current.tab_state);
-  forceUpdateInputDiv();
-  displayInputCursor();
-  V.isExactMatch = !isFirstTab();
-}
+// function setTab(tab) {
+//   tab = (tab.currentTarget) ? tab.currentTarget : HTM.tabHead.children[tab];
+//   let i = 0;
+//   for (const content of HTM.tabBody.children) {
+//     if (tab === HTM.tabHead.children[i]) {
+//       app.state.current.tab_state = i;
+//       HTM.tabHead.children[i].classList.add("tab-on");
+//       HTM.tabHead.children[i].classList.remove("tab-off");
+//       content.style.display = "flex";
+//     } else {
+//       HTM.tabHead.children[i].classList.add("tab-off");
+//       HTM.tabHead.children[i].classList.remove("tab-on");
+//       content.style.display = "none";
+//     }
+//     i++;
+//   }
+//   setTabHead();
+//   app.state.saveItem("tab_state", app.state.current.tab_state);
+//   forceUpdateInputDiv();
+//   displayInputCursor();
+//   V.isExactMatch = !isFirstTab();
+// }
 
 
-function setTabHead() {
-  let mode = (isFirstTab()) ? "none" : "block";
-  HTM.backupButton.style.display = mode;
-  // HTM.backupSave.style.display = mode;
-}
+// function setTabHead() {
+//   let mode = (isFirstTab()) ? "none" : "block";
+//   HTM.backupButton.style.display = mode;
+//   // HTM.backupSave.style.display = mode;
+// }
 
-function isFirstTab() {
-  return parseInt(app.state.current.tab_state) === 0;
-}
+// function isFirstTab() {
+//   return parseInt(app.state.current.tab_state) === 0;
+// }
 
 function displayInputCursor() {
-  if (isFirstTab()) HTM.inputLemma.focus();
+  // if (isFirstTab()) HTM.inputLemma.focus();
+  if (app.tabs.isFirstTab) HTM.inputLemma.focus();
   else HTM.workingDiv.focus();
 }
 
-
-// ## IN-PLACE EDITING CODE######################################
-// currently in upgrade.js
 
 // ## CURSOR HANDLING ######################################
 
@@ -2062,14 +2086,18 @@ function signalRefreshNeeded(mode) {
   if (mode === "on") {
     V.refreshRequired = true;
     HTM.workingDiv.style.backgroundColor = "ivory";
-    HTM.textTabTag.style.fontStyle = "italic";
-    HTM.backupSave2.style.display = "block";
+    // HTM.textTabTag.style.fontStyle = "italic";
+    app.tabs.htm.textTabTag.style.fontStyle = "italic";
+    // HTM.backupSave2.style.display = "block";
+    app.backup.htm.backupSave2.style.display = "block";
   }
   else {
     V.refreshRequired = false;
     HTM.workingDiv.style.backgroundColor = "white";
-    HTM.textTabTag.style.fontStyle = "normal";
-    HTM.backupSave2.style.display = "none";
+    // HTM.textTabTag.style.fontStyle = "normal";
+    app.tabs.htm.textTabTag.style.fontStyle = "normal";
+    // HTM.backupSave2.style.display = "none";
+    app.backup.htm.backupSave2.style.display = "none";
   }
 }
 

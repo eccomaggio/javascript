@@ -1,21 +1,23 @@
 
 class App {
+  state;
+  db;
+  hasBeenReset = true;
   constructor() {
     if (App.#instance) {
       throw new Error("Only one app is allowed to run at a time.");
     }
     App.#instance = this;
-    this.state;
-    // this.state = new State();
-    // this.db = new Db();
+    this.tabs = new TabController();
+    this.backup = new Backup();
   }
 
   init() {
     this.state = new State();
-    console.log("state:", this.state)
+    console.log("app:", this)
     // setDbShared(this.state.current.db_state);
     this.wordlist = new Db(this.state.current.db_state);
-    setTab(this.state.current.tab_state);
+    this.tabs.setTab(this.state.current.tab_state);
     setupEditing();
     HTM.form.reset();
     updateDropdownMenuOptions();
@@ -24,25 +26,23 @@ class App {
     addListeners();
   }
 
-  reset() {
+  reset(e) {
     this.state.forceDefault();
-    clearTab1();
-    clearTab2();
+    this.tabs.resetTabs();
+    // this.tabs.clearTab1();
+    // this.tabs.clearTab2();
     visibleLevelLimitReset();
     // setTab(V.current.tab_state);
     // setDbShared(V.current.db_state);
     // HTM.selectDb.value = V.current.db_state;
-    setTab(this.state.current.tab_state);
-    this.change(this.state.current.db_state);
+    // this.tabs.setTab(this.state.current.tab_state);
+    this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
     setHelpState("reset");
     visibleLevelLimitReset();
   }
   static #instance;
 }
-
-
-
 
 
 class State {
@@ -101,6 +101,7 @@ class State {
   }
 }
 
+
 class Db {
   name;
   db;
@@ -124,7 +125,6 @@ class Db {
     Entry.resetID();
     this.resetOfflistDb();
     // this.offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
-    // if (app.state.current.db_state === C.GEPT) {
     if (app.state.current.db_state === 0) {
       this.name = "GEPT";
       this.db = this.createDbfromArray(makeGEPTdb());
@@ -136,7 +136,6 @@ class Db {
         _dark: "#3F7FBF",
         _accent: "#daebe8"
       };
-      // } else if (app.state.current.db_state === C.BESTEP) {
     } else if (app.state.current.db_state === 1) {
       this.name = "BESTEP";
       let tmpDb = makeGEPTdb();
@@ -161,12 +160,9 @@ class Db {
         _accent: "#fbefcc"
       };
     }
-    // V.currentDb.compounds = buildCompoundsDb(V.currentDb.db);
     this.compounds = this.buildCompoundsDb(this.db);
-    // for (const key in V.currentDb.css) {
     for (const key in this.css) {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
-      // HTM.root_css.style.setProperty(property, V.currentDb.css[key]);
       HTM.root_css.style.setProperty(property, this.css[key]);
     }
     visibleLevelLimitSet();
@@ -218,11 +214,9 @@ class Db {
     this.displayDbNameInTab1();
     // document.getElementById('db_name1').textContent = this.name;
     // ** Allows for multiple elements to be toggled
-    // for (const el of V.currentDb.show) {
     for (const el of this.show) {
       el.style.setProperty("display", "block");
     }
-    // for (const el of V.currentDb.hide) {
     for (const el of this.hide) {
       el.style.setProperty("display", "none");
     }
@@ -246,6 +240,208 @@ class Db {
     document.getElementById("help-gept").setAttribute("style", (!app.state.isKids) ? "display:list-item;" : "display:none;");
     document.getElementById("help-awl").setAttribute("style", (app.state.isBESTEP) ? "display:list-item;" : "display:none;");
   }
+}
+
+class TabController {
+  htm = {
+    tabHead: document.getElementsByTagName("tab-head")[0],
+    tabBody: document.getElementsByTagName("tab-body")[0],
+    textTabTag: document.getElementById("t1_tab_tag"),
+    clearButton: document.getElementById("clear_btn"),
+  }
+
+  constructor() {
+    for (const el of document.getElementsByTagName("tab-tag")) {
+      // el.addEventListener("click", this.setTab);
+      el.addEventListener("click", setTabWrapper);
+    }
+    // this.htm.clearButton.addEventListener("click", this.clearTab);
+    this.htm.clearButton.addEventListener("click", clearTabWrapper);
+  }
+
+
+  setTab(tab) {
+    tab = (tab.currentTarget) ? tab.currentTarget : this.htm.tabHead.children[tab];
+    let i = 0;
+    for (const content of this.htm.tabBody.children) {
+      if (tab === this.htm.tabHead.children[i]) {
+        app.state.current.tab_state = i;
+        this.htm.tabHead.children[i].classList.add("tab-on");
+        this.htm.tabHead.children[i].classList.remove("tab-off");
+        content.style.display = "flex";
+      } else {
+        this.htm.tabHead.children[i].classList.add("tab-off");
+        this.htm.tabHead.children[i].classList.remove("tab-on");
+        content.style.display = "none";
+      }
+      i++;
+    }
+    this.setTabHead();
+    app.state.saveItem("tab_state", app.state.current.tab_state);
+    forceUpdateInputDiv();
+    displayInputCursor();
+    V.isExactMatch = !this.isFirstTab;
+  }
+
+
+  setTabHead() {
+    let mode = (this.isFirstTab) ? "none" : "block";
+    // HTM.backupButton.style.display = mode;
+    app.backup.htm.backupButton.style.display = mode;
+    // HTM.backupSave.style.display = mode;
+  }
+
+  get isFirstTab() {
+    return parseInt(app.state.current.tab_state) === 0;
+  }
+
+  clearTab(event) {
+    event.preventDefault();
+    if (this.isFirstTab) {
+      this.clearTab1();
+    } else {
+      this.clearTab2();
+    }
+    displayInputCursor();
+  }
+
+  clearTab1() {
+    HTM.form.reset();
+    wordSearch();
+    refreshLabels("t1_form");
+  }
+
+  clearTab2() {
+    // backupSave();
+    app.backup.save();
+    HTM.workingDiv.innerText = "";
+    HTM.finalInfoDiv.innerText = "";
+    HTM.repeatsList.innerText = "";
+    app.wordlist.displayDbNameInTab2();
+    // V.appHasBeenReset = true;
+    app.hasBeenReset = true;
+    // backupReset();
+  }
+
+  resetTabs() {
+    this.clearTab1;
+    this.clearTab2;
+    this.setTab(app.state.current.tab_state);
+  }
+}
+
+class Backup {
+  htm = {
+    backupButton: document.getElementById("backup-btn"),
+    backupDialog: document.getElementById("backup-dlg"),
+    backupSave: document.getElementById("backup-save"),
+    backupSave2: document.getElementById("backup-save2"),
+  };
+  backupIDs = ["long_term", "short_term"];
+
+  constructor() {
+    this.htm.backupButton.addEventListener("click", backupShowWrapper);
+    this.htm.backupDialog.addEventListener("mouseleave", backupDialogCloseWrapper);
+    // this.htm.backupSave.addEventListener("click", backupSave);
+    this.htm.backupSave2.addEventListener("click", backupSaveWrapper);
+    for (const id of this.backupIDs) {
+      document.getElementById(id).addEventListener("click", backupLoadWrapper);
+    }
+
+  }
+
+  show(e) {
+    /*
+    1) on refresh, swap backup_0 to backup_1
+    2) close backup dialog on mouseout
+    3) close settings dialog when backup opens
+    4) hide backup settings on tab 1
+
+    An html popup is populated with backups stored in local storage;
+    The popup is then displayed to the user
+    The text in the popups is actually in a button; clicking it populates the InputDiv
+    */
+    for (const id of this.backupIDs) {
+      const backup = document.getElementById(id)
+      const lsContent = localStorage.getItem(id);
+      let content = (lsContent) ? lsContent.trim() : "";
+      if (content) {
+        if (localStorage.getItem("mostRecent") == id) content = Tag.tag("span", ["class=warning"], ["Most Recent: "]).stringify() + content;
+        backup.innerHTML = content;
+        backup.disabled = false;
+      } else {
+        backup.innerHTML = "[empty]";
+        backup.disabled = true;
+      }
+    }
+    this.htm.backupDialog.style.setProperty("display", "flex");
+  }
+
+  load(e) {
+    /* Get backup from chosen buffer and replace contents of workingDiv with it
+    Buffer contents are then loaded with the old workingDiv content to allow undo*/
+    const id = e.target.id;
+    const swap = JSON.parse(JSON.stringify(getTextFromWorkingDiv()));
+    let restoredContent = localStorage.getItem(id);
+    if (!restoredContent) return;
+    restoredContent = newlinesToEOLs(restoredContent);
+    HTM.workingDiv.innerText = restoredContent;
+    forceUpdateInputDiv();
+    // if (swap) localStorage.setItem(id, swap);
+    // if (swap) appStateSaveItem(id, swap);
+    if (swap) app.state.saveItem(id, swap);
+    this.dialogClose("backup-dlg");
+  }
+
+
+  save() {
+    /*
+    logic
+    on save:
+    IF: nothing in div:
+      do nothing
+    ELSE:
+      IF: V.appHasBeenReset AND longterm content != short term content:
+        move short_term > long term
+        save div > short_term
+      ELSE: overwrite short_term with div
+    */
+    let currentText = getTextFromWorkingDiv().trim();
+    if (!currentText) return;
+    const [shortTermID, longTermID] = this.backupIDs;
+    const shortTermSavedContent = localStorage.getItem(shortTermID).trim();
+    console.log("current == saved?", shortTermSavedContent === currentText)
+    if (app.hasBeenReset) {
+      const longTermSavedContent = localStorage.getItem(longTermID).trim();
+      console.log("shortterm == longterm?", shortTermSavedContent === longTermSavedContent)
+      if (shortTermSavedContent !== longTermSavedContent) {
+        app.state.saveItem(longTermID, shortTermSavedContent);
+      }
+      app.hasBeenReset = false;
+    }
+    // if (currentText !== localStorage.getItem(shortTermID)) {
+    if (currentText !== shortTermSavedContent) {
+      app.state.saveItem(shortTermID, currentText);
+      // HTM.backupSave.innerText = "text saved";
+      // HTM.backupSave.classList.add("error");
+    }
+    // else {
+    //   HTM.backupSave.innerText = "already saved";
+    //   HTM.backupSave.classList.add("error");
+    // }
+    // setTimeout(() => {
+    //   HTM.backupSave.innerText = "save backup";
+    //   HTM.backupSave.classList.remove("error");
+    // }, 1000);
+    textMarkup();
+  }
+
+
+  dialogClose(id) {
+    if (id.target) id = "backup-dlg";
+    document.getElementById(id).style.display = "none";
+  }
+
 }
 
 class Entry {
@@ -291,7 +487,6 @@ class Entry {
 }
 
 
-
 class Token {
   /*
   Token{id, lemma, matches=[id] type, count}
@@ -303,7 +498,6 @@ class Token {
     this.count = count;
   }
 }
-
 
 
 class Tag {

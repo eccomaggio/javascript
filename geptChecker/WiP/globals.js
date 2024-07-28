@@ -49,16 +49,16 @@ const HTM = {
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
   repeatsList: document.getElementById("t2_repeats_list"),
-  tabHead: document.getElementsByTagName("tab-head")[0],
-  tabBody: document.getElementsByTagName("tab-body")[0],
-  textTabTag: document.getElementById("t1_tab_tag"),
-  clearButton: document.getElementById("clear_btn"),
+  // tabHead: document.getElementsByTagName("tab-head")[0],
+  // tabBody: document.getElementsByTagName("tab-body")[0],
+  // textTabTag: document.getElementById("t1_tab_tag"),
+  // clearButton: document.getElementById("clear_btn"),
   resetButton: document.getElementById("reset_btn"),
   settingsMenu: document.getElementById("dropdown"),
-  backupButton: document.getElementById("backup-btn"),
-  backupDialog: document.getElementById("backup-dlg"),
-  backupSave: document.getElementById("backup-save"),
-  backupSave2: document.getElementById("backup-save2"),
+  // backupButton: document.getElementById("backup-btn"),
+  // backupDialog: document.getElementById("backup-dlg"),
+  // backupSave: document.getElementById("backup-save"),
+  // backupSave2: document.getElementById("backup-save2"),
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
@@ -87,7 +87,7 @@ let C = {
   // HTMLunEscape: { "&lt;" : "<", "&gt;" : ">", "&amp;" : "&", "&quot;" : "\"" },
 
   NBSP: String.fromCharCode(160),
-  backupIDs: ["long_term", "short_term"],
+  // backupIDs: ["long_term", "short_term"],
   awl_level_offset: 37,
   kids_level_offset: 3,
   NOTE_SEP: "|",
@@ -124,7 +124,7 @@ let V = {
   // offlistIndex: 1,
   tallyOfIDreps: {},
   setOfLemmaID: new Set(),
-  currentDb: {},
+  // currentDb: {},
   // currentDbChoice: C.GEPT,
   // OFFLIST: 0,
   levelSubs: [],
@@ -147,7 +147,7 @@ let V = {
   levelLimitStr: "",
   levelLimitActiveClassesArr: [],
   levelLimitRule: null,
-  appHasBeenReset: true,
+  // appHasBeenReset: true,
   idOfAM: 0,
 }
 
@@ -167,7 +167,8 @@ const EOL = {
 }
 
 
-if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
+// if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
+if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
 
 const LOOKUP = {
 
