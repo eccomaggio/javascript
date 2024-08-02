@@ -82,7 +82,6 @@ function addMenuListeners() {
   // ## for refresh button + settings menu
   HTM.selectDb.addEventListener("change", changeDbWrapper);
   HTM.selectFontSize.addEventListener("change", changeFont);
-  // // HTM.backupSave.addEventListener("click", backupSave);
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
@@ -125,8 +124,6 @@ function dropdown(e) {
   HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
 }
 
-
-// ######### Tab 1 (look up word)
 
 function registerLabelClick(e_label) {
   const label = e_label.target;
@@ -305,19 +302,19 @@ function wordBuildSearchTerms(data) {
 
 function wordRunSearch(searchTerms) {
   // debug(searchTerms)
-  // let results = V.currentDb.db.filter(el => el.lemma.search(searchTerms.lemma) != -1);
-  let results = getIdsByPartialLemma(searchTerms.lemma);
-  if (isEmpty(results)) {
-    // const word = searchTerms.raw_lemma;
-    // let matchedIDarr = checkDerivations(word);
-    // let matchedIDarr = checkDerivations(word);
-    let [word, matchedIDarr, type] = checkForEnglishSpelling(searchTerms.raw_lemma,"");
-    matchedIDarr.push(lazyCheckAgainstCompounds(word))
-    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkDerivations(word);
-    // if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkNegativePrefix(word);
-    if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkAllowedVariants(word);
-    if (idSuccessfullyMatched(matchedIDarr)) results = [getEntryById(...matchedIDarr)];
-  }
+  let matchedIDarr = checkAgainstLookups(searchTerms.lemma, getIdsByPartialLemma(searchTerms.lemma))
+  // let results = getIdsByPartialLemma(searchTerms.lemma);
+  // if (isEmpty(results)) {
+  //   let [word,matchedIDarr,type] = checkForEnglishSpelling(searchTerms.raw_lemma,"");
+  //   matchedIDarr.push(lazyCheckAgainstCompounds(word))
+  //   matchedIDarr.push(checkDerivations(word));
+  //   if (!idSuccessfullyMatched(matchedIDarr)) matchedIDarr = checkAllowedVariants(word);
+  //   if (idSuccessfullyMatched(matchedIDarr)) results = [getEntryById(...matchedIDarr)];
+  // }
+  matchedIDarr[1].push(lazyCheckAgainstCompounds(word));
+  debug(matchedIDarr)
+  // let results = [getEntryById(...matchedIDarr[1])];
+  let results = matchedIDarr[1];
   if (Number.isInteger(searchTerms.level[0])) {
     let tmp_matches = [];
     for (const level of searchTerms.level) {
@@ -976,10 +973,37 @@ function lookupWord(word) {
   // const originalWord = word;
   word = word.toLowerCase();
   let type = "w";
-  let exactMatches = getIdsByExactLemma(word);
-  if (isEmpty(exactMatches)) [word, exactMatches, type] = checkForEnglishSpelling(word, type);
-  // debug(word, (type === "wv") ? `(${originalWord})` : "", type, exactMatches)
-  let localMatchedIDarr;
+  let localMatchedIDarr = checkAgainstLookups(word, getIdsByExactLemma(word), type);
+  if (isEmpty(localMatchedIDarr[1])) localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
+  // let exactMatches = getIdsByExactLemma(word);
+  // if (isEmpty(exactMatches)) [word, exactMatches, type] = checkForEnglishSpelling(word, type);
+  // let localMatchedIDarr;
+  // if (isEmpty(exactMatches)) {
+  //   while (true) {
+  //     localMatchedIDarr = checkDerivations(word);
+  //     if (!isEmpty(localMatchedIDarr)) {
+  //       localMatchedIDarr = [type + "d", localMatchedIDarr];  // wd=derived word (e.g. play<played)
+  //       break;
+  //     }
+  //     localMatchedIDarr = checkAllowedVariants(word);
+  //     if (!isEmpty(localMatchedIDarr)) {
+  //       localMatchedIDarr = [type, localMatchedIDarr];  // wv=variant word (e.g. color<colour)
+  //       break;
+  //     }
+  //     // else if (isEmpty(exactMatches)) {
+  //     else {
+  //       localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
+  //       break;
+  //     }
+  //   }
+  // }
+  // else localMatchedIDarr = [type, exactMatches];
+  return localMatchedIDarr;
+}
+
+function checkAgainstLookups(word, exactMatches, type="") {
+  let localMatchedIDarr = ["", []];
+  [word,localMatchedIDarr,type] = checkForEnglishSpelling(word, type);
   if (isEmpty(exactMatches)) {
     while (true) {
       localMatchedIDarr = checkDerivations(word);
@@ -992,11 +1016,10 @@ function lookupWord(word) {
         localMatchedIDarr = [type, localMatchedIDarr];  // wv=variant word (e.g. color<colour)
         break;
       }
-      // else if (isEmpty(exactMatches)) {
-      else {
-        localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
-        break;
-      }
+      // else {
+      //   localMatchedIDarr = ["wo", [markOfflist(word.toLowerCase(), "offlist")]]; // wo=offlist word
+      //   break;
+      // }
     }
   }
   else localMatchedIDarr = [type, exactMatches];
@@ -1019,8 +1042,9 @@ function idSuccessfullyMatched(idArr) {
 }
 
 function checkNegativePrefix(word) {
+  // TODO: only for adj/adv
   let matchedIDarr = [];
-  const negativePrefixInfo = testForNegativePrefix(word);
+  const negativePrefixInfo = hasNegativePrefix(word);
   if (negativePrefixInfo) {
     const base = negativePrefixInfo;
     matchedIDarr = getIdsByExactLemma(base);
@@ -1029,7 +1053,7 @@ function checkNegativePrefix(word) {
   return matchedIDarr;
 }
 
-function testForNegativePrefix(word) {
+function hasNegativePrefix(word) {
   // ** returns undefined (falsey) if no prefix found; else [prefix, base]
   let result;
   if (word.length > 4) {
