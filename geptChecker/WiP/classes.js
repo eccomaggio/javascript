@@ -490,12 +490,30 @@ class Entry {
 class Token {
   /*
   Token{id, lemma, matches=[id] type, count}
+  CHANGED; matches now = [Entry]
   */
   constructor(lemma, type = "", matches = [], count = 0) {
     this.lemma = lemma;
     this.type = type;
-    this.matches = matches;
+    // this.matches = matches;
+    this.matches = [];
+    this.appendMatches(matches);
     this.count = count;
+  }
+
+  appendMatches(entryList) {
+    // ** function accepts entries as a single Entry or as list of Entries
+    // ** i.e. Entry or [Entry] o [Entry, Entry, ...] are all fine
+    if (!Array.isArray(entryList)) entryList = [entryList];
+    for (const entry of entryList) {
+      if (entry instanceof Entry) this.matches.push(entry);
+      else throw new TypeError("Entry.matches must be an array of Entries.")
+    }
+  }
+
+  overwriteMatches(entryList) {
+    this.matches = [];
+    this.appendMatches(entryList);
   }
 }
 
