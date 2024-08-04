@@ -116,3 +116,39 @@ updateInputDiv()
 	displayProcessedText()
 		displayWorkingText()
 			setCursorPos()
+
+
+
+Search module: Return types & workflow:
+
+(text) lookupWord - [type, [entry]]
+(word) wordRunSearch - [Entry]
+
+both call:
+checkAgainstLookups - [entry] —>
+
+1) checkForEnglishSpelling - [wordStr, [Entry], typeStr]
+	checkVariantSpellings - [Entry]
+		replaceLetters - [entry]
+			**checkDerivations
+	checkVariantSuffixes - [Entry]
+2) checkNegativePrefix - [entry]
+3) **checkDerivations - [entry]
+	checkNames - [entry]
+		markOfflist - [entry]
+	checkArticle - [entry]
+	checkIrregularNegatives -  [entry]
+		**winnowPos - [entry]
+	checkIrregularVerbs -   [entry]
+		**winnowPos - [entry]
+	checkIrregularPlurals - [entry]
+	checkForeignPlurals - [entry]
+		**winnowPos - [entry]
+	checkAllSuffixes - [entry]
+		checkForSuffix - [entry]
+			**winnowPos - [entry]
+				findBaseForm - [entry]
+4) checkAllowedVariants - [entry]
+	checkVariantWords - [entry]
+	checkAbbreviations - [entry]
+	checkGenderedNouns - [entry]

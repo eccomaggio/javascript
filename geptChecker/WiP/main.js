@@ -666,6 +666,7 @@ function tokenize(text) {
   textArr = tokenize2(textArr);   // confirm identification + prepare for grouping
   textArr = tokenize3(textArr);   // fine-tune position of splits
   textArr = tokenize4(textArr);
+  debug(textArr)
   return textArr;
 }
 
@@ -907,19 +908,15 @@ function textLookupSimples(tokenArr) {
   for (let token of tokenArr) {
     // ** ignore compounds for now; they are dealt with separately
     if (token.type === "w") {
-      // const [revisedType, localMatches] = lookupWord(token.lemma, token.type, token.matches);
       const [revisedType, matchedEntries] = lookupWord(token.lemma);
       if (!isEmpty(matchedEntries)) {
-        // token.matches.push(...matchedEntries);
-        // debug(matchedEntries)
         token.appendMatches(matchedEntries);
         token.type = revisedType;
         token.count = updateTallyOfIDreps(token.matches);
       }
     }
     else if (["c", "d", "y"].includes(token.type)) {
-      // token.matches = [markOfflist(token.lemma, expansions[token.type])];
-      token.overwriteMatches = [markOfflist(token.lemma, expansions[token.type])];
+      token.overwriteMatches(markOfflist(token.lemma, expansions[token.type]));
     }
   }
   return tokenArr;
@@ -1382,8 +1379,7 @@ function buildHTMLtext(tokenArr) {
   return htmlString;
 }
 
-function buildHTMLword(token, wordIndex, matchesIdLevelArr) {
-  debug(token.lemma)
+function buildHTMLword(token, wordIndex) {
   // ** expects populated list of matches (therefore requires textLookupSimples)
   if (!token.matches.length) console.log(`WARNING: No match for this item (${token.lemma})!!`)
   let word = token.lemma;

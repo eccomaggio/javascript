@@ -1,7 +1,7 @@
 
 class App {
   state;
-  db;
+  wordlist;
   hasBeenReset = true;
   constructor() {
     if (App.#instance) {
