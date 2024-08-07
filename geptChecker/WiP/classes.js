@@ -10,12 +10,12 @@ class App {
     App.#instance = this;
     this.tabs = new TabController();
     this.backup = new Backup();
+    this.cursor = new Cursor();
   }
 
   init() {
     this.state = new State();
     console.log("app:", this)
-    // setDbShared(this.state.current.db_state);
     this.wordlist = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
     setupEditing();
@@ -29,13 +29,7 @@ class App {
   reset(e) {
     this.state.forceDefault();
     this.tabs.resetTabs();
-    // this.tabs.clearTab1();
-    // this.tabs.clearTab2();
     visibleLevelLimitReset();
-    // setTab(V.current.tab_state);
-    // setDbShared(V.current.db_state);
-    // HTM.selectDb.value = V.current.db_state;
-    // this.tabs.setTab(this.state.current.tab_state);
     this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
     setHelpState("reset");
@@ -96,7 +90,7 @@ class State {
   }
 
   get isKids() {
-  // isKids() {
+    // isKids() {
     return app.state.current.db_state === 2;
   }
 }
@@ -109,16 +103,96 @@ class Db {
   hide;
   css;
   compounds;
-  // offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
   offlistDb;
-  // offlistIndex = 1;
   offlistLevel = 0;
+  awl_level_offset = 37;
+  kids_level_offset = 3;
+
+  // ## These correlate with the numbers in the dBs
+  level_headings = [
+    "elem (A2)",
+    "int (B1)",
+    "hi-int (B2)",
+    "Animals & insects (動物/昆蟲)",
+    "Articles & determiners (冠詞/限定詞)",
+    "Be & auxiliarie (be動詞/助動詞)",
+    "Clothing & accessories (衣服/配件)",
+    "Colors (顏色)",
+    "Conjunctions (連接詞)",
+    "Family (家庭)",
+    "Food & drink (食物/飲料)",
+    "Forms of address (稱謂)",
+    "Geographical terms (地理名詞)",
+    "Health (健康)",
+    "Holidays & festivals",
+    "Houses & apartments (房子/公寓)",
+    "Interjections (感嘆詞)",
+    "Money (金錢)",
+    "Numbers (數字)",
+    "Occupations (工作)",
+    "Other adjectives (其他形容詞)",
+    "Other adverbs (其他副詞)",
+    "Other nouns (其他名詞)",
+    "Other verbs (其他動詞)",
+    "Parts of body (身體部位)",
+    "People (人)",
+    "Personal characteristics (個性/特點)",
+    "Places & directions (地點/方位)",
+    "Prepositions (介系詞)",
+    "Pronouns (代名詞)",
+    "School (學校)",
+    "Sizes & measurements (尺寸/計量)",
+    "Sports, interest & hobbies(運動 / 興趣 / 嗜好)",
+    "Tableware (餐具)",
+    "Time (時間)",
+    "Transportation (運輸)",
+    "Weather & nature (天氣/自然)",
+    "Wh-words (疑問詞)",
+    "AWL 1",
+    "AWL 2",
+    "AWL 3",
+    "AWL 4",
+    "AWL 5",
+    "AWL 6",
+    "AWL 7",
+    "AWL 8",
+    "AWL 9",
+    "AWL 10",
+  ];
+
+  // ## Computed levels
+  offlist_subs = [
+    "unknown",
+    "offlist",
+    "contraction",
+    "digit",
+    "name",
+    "symbol",
+  ];
+
+  // ## PoS expansions
+  pos_expansions = {
+    n: 'noun',
+    v: 'verb',
+    a: 'article',
+    d: 'determiner',
+    x: 'auxilliary verb',
+    j: 'adjective',
+    c: 'conjunction',
+    i: 'interjection',
+    m: 'number',
+    b: 'adverb',
+    p: 'preposition',
+    r: 'pronoun',
+    t: 'interjection',
+    f: 'infinitive',
+  };
 
   constructor() {
     this.change(app.state.current.db_state)
+    this.levelSubs = this.level_headings.concat(this.offlist_subs);
   }
 
-  // function setDbShared(e) {
   change(e) {
     let choice = (e.target) ? e.target.value : e;
     app.state.current.db_state = parseInt(choice);
@@ -279,7 +353,7 @@ class TabController {
     this.setTabHead();
     app.state.saveItem("tab_state", app.state.current.tab_state);
     forceUpdateInputDiv();
-    displayInputCursor();
+    app.cursor.displayInputCursor();
     V.isExactMatch = !this.isFirstTab;
   }
 
@@ -302,7 +376,7 @@ class TabController {
     } else {
       this.clearTab2();
     }
-    displayInputCursor();
+    app.cursor.displayInputCursor();
   }
 
   clearTab1() {
@@ -410,10 +484,10 @@ class Backup {
     if (!currentText) return;
     const [shortTermID, longTermID] = this.backupIDs;
     const shortTermSavedContent = localStorage.getItem(shortTermID).trim();
-    console.log("current == saved?", shortTermSavedContent === currentText)
+    // console.log("current == saved?", shortTermSavedContent === currentText)
     if (app.hasBeenReset) {
       const longTermSavedContent = localStorage.getItem(longTermID).trim();
-      console.log("shortterm == longterm?", shortTermSavedContent === longTermSavedContent)
+      // console.log("shortterm == longterm?", shortTermSavedContent === longTermSavedContent)
       if (shortTermSavedContent !== longTermSavedContent) {
         app.state.saveItem(longTermID, shortTermSavedContent);
       }
@@ -444,8 +518,124 @@ class Backup {
 
 }
 
+class Cursor {
+  tag = "span";
+  id = "cursorPosHere";
+  HTMLtext = "<span id='cursorPosHere'></span>";
+  simpleText = "CRSR";
+  // text = C.SLICE + "CRSR" + C.SLICE;
+
+  offset = 0;
+  oldOffsetb = 0;
+  increment = 0;
+
+  constructor() {
+    this.text = C.SLICE + this.simpleText + C.SLICE;
+  }
+
+  displayInputCursor() {
+    if (app.tabs.isFirstTab) HTM.inputLemma.focus();
+    else HTM.workingDiv.focus();
+  }
+
+  insertPlaceholder(el, index) {
+    let plainText = this.newlinesToPlaintext(el).innerText;
+    const updatedText = plainText.slice(0, index) + this.text + plainText.slice(index);
+    return updatedText;
+  }
+
+  getInfoInEl(element) {
+    let preCursorOffset = 0;
+    let sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+      // ** Create a range stretching from beginning of div to cursor
+      const currentRange = sel.getRangeAt(0);
+      const preCursorRange = document.createRange();
+      preCursorRange.selectNodeContents(element);
+      preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
+      let preCursorHTML = this.rangeToHTML(preCursorRange);
+      preCursorHTML = this.newlinesToPlaintext(preCursorHTML);
+      preCursorOffset = preCursorHTML.innerText.length;
+    }
+    return [preCursorOffset];
+  }
+
+  rangeToHTML(range) {
+    const nodes = document.createElement("root");
+    nodes.append(range.cloneContents());
+    return nodes;
+  }
+
+  newlinesToPlaintext(divText) {
+    // ** Typing 'Enter' creates a <div>
+    const divs = divText.querySelectorAll("div");
+    for (let el of divs) {
+      el.before(` ${EOL.text} `);
+    }
+    // ** Pasting in text creates <br> (so have to search for both!)
+    const EOLs = divText.querySelectorAll("br, hr");
+    for (let el of EOLs) {
+      el.textContent = ` ${EOL.text} `;
+    }
+    return divText;
+  }
+
+  getIncrement(keypress) {
+    this.increment = 0;
+    if (this.offset < this.oldCursorOffset) this.increment = -1;
+    if (this.offset > this.oldCursorOffset) this.increment = 1;
+  }
+
+  setPos(el, textToInsert = "") {
+    if (!el) return;
+    const selectedRange = document.createRange();
+    selectedRange.setStart(el, 0);
+    if (textToInsert) {
+      const text = document.createTextNode(textToInsert);
+      selectedRange.insertNode(text);
+    }
+    selectedRange.collapse(true);
+    const selectedText = window.getSelection();
+    selectedText.removeAllRanges();
+    selectedText.addRange(selectedRange);
+    el.remove();
+    el.blur()
+    el.focus();
+  }
+
+  updatePos(e) {
+    const keypress = e.key;
+    if (!keypress) return;
+    if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
+    this.oldCursorOffset = this.offset;
+      this.offset = this.getInfoInEl(HTM.workingDiv);
+    if (this.refreshRequired) {
+      const tags = document.querySelectorAll(":hover");
+      const currTag = tags[tags.length - 1];
+      if (currTag) currTag.setAttribute("class", "unprocessed");
+    }
+    this.getIncrement(keypress)
+  }
+
+  insertInHTML(matchCount, wordIndex, rawWord) {
+    if (matchCount === 0) {
+      const [word_i, char_i] = this.cursorPosInTextArr;
+      if (wordIndex === word_i) {
+        rawWord = rawWord.slice(0, char_i) + this.HTMLtext + rawWord.slice(char_i);
+      }
+    }
+    return rawWord;
+  }
+}
+
 class Entry {
   static currID = 0;
+  static AWL_ONLY = 1;
+  static GEPT_ONLY = -1;
+  static AWL_AND_GEPT = 3;
+  static FIND_AWL_ONLY = 100;
+  static FIND_GEPT_ONLY = 200;
+
   constructor(lemma, pos, levelArr, notes, id) {
     if (id !== undefined) this._id = id;
     else {
@@ -466,12 +656,14 @@ class Entry {
   get posExpansion() {
     const pos_str = this._pos;
     if (this._id < 0) return pos_str;
-    return (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
+    // return (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
+    return (pos_str) ? pos_str.split("").map(el => app.wordlist.pos_expansions[el]).join(", ") : "";
   }
 
   get levelArr() { return this._levelArr }
   get levelGEPT() { return this._levelArr[0] }
-  get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
+  // get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
+  get levelAWL() { return this._levelArr[1] - app.wordlist.awl_level_offset }
 
   get levelAWLraw() { return this._levelArr[1] }
   get levelStatus() { return this._levelArr[1] }

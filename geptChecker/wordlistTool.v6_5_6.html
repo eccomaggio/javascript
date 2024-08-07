@@ -1329,7 +1329,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    const versionNumber = "6-5.5";
+    const versionNumber = "6-5.6";
     const versionDetails = "New GEPT wordlist; edits 'in place'; advises on preferred spellings; recognizes negative prefixes and superfluous hyphens; custom level strike-through; preserves original spacing/punctuation; [all html output now funneled through Tag.stringify() to escape; implemented Token & Entry classes]";
     const versionInfo = document.getElementById("version-no");
     versionInfo.innerHTML = `Version ${versionNumber}`;
@@ -1504,12 +1504,12 @@ class App {
     App.#instance = this;
     this.tabs = new TabController();
     this.backup = new Backup();
+    this.cursor = new Cursor();
   }
 
   init() {
     this.state = new State();
     console.log("app:", this)
-    // setDbShared(this.state.current.db_state);
     this.wordlist = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
     setupEditing();
@@ -1523,13 +1523,7 @@ class App {
   reset(e) {
     this.state.forceDefault();
     this.tabs.resetTabs();
-    // this.tabs.clearTab1();
-    // this.tabs.clearTab2();
     visibleLevelLimitReset();
-    // setTab(V.current.tab_state);
-    // setDbShared(V.current.db_state);
-    // HTM.selectDb.value = V.current.db_state;
-    // this.tabs.setTab(this.state.current.tab_state);
     this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
     setHelpState("reset");
@@ -1590,7 +1584,7 @@ class State {
   }
 
   get isKids() {
-  // isKids() {
+    // isKids() {
     return app.state.current.db_state === 2;
   }
 }
@@ -1603,16 +1597,96 @@ class Db {
   hide;
   css;
   compounds;
-  // offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
   offlistDb;
-  // offlistIndex = 1;
   offlistLevel = 0;
+  awl_level_offset = 37;
+  kids_level_offset = 3;
+
+  // ## These correlate with the numbers in the dBs
+  level_headings = [
+    "elem (A2)",
+    "int (B1)",
+    "hi-int (B2)",
+    "Animals & insects (動物/昆蟲)",
+    "Articles & determiners (冠詞/限定詞)",
+    "Be & auxiliarie (be動詞/助動詞)",
+    "Clothing & accessories (衣服/配件)",
+    "Colors (顏色)",
+    "Conjunctions (連接詞)",
+    "Family (家庭)",
+    "Food & drink (食物/飲料)",
+    "Forms of address (稱謂)",
+    "Geographical terms (地理名詞)",
+    "Health (健康)",
+    "Holidays & festivals",
+    "Houses & apartments (房子/公寓)",
+    "Interjections (感嘆詞)",
+    "Money (金錢)",
+    "Numbers (數字)",
+    "Occupations (工作)",
+    "Other adjectives (其他形容詞)",
+    "Other adverbs (其他副詞)",
+    "Other nouns (其他名詞)",
+    "Other verbs (其他動詞)",
+    "Parts of body (身體部位)",
+    "People (人)",
+    "Personal characteristics (個性/特點)",
+    "Places & directions (地點/方位)",
+    "Prepositions (介系詞)",
+    "Pronouns (代名詞)",
+    "School (學校)",
+    "Sizes & measurements (尺寸/計量)",
+    "Sports, interest & hobbies(運動 / 興趣 / 嗜好)",
+    "Tableware (餐具)",
+    "Time (時間)",
+    "Transportation (運輸)",
+    "Weather & nature (天氣/自然)",
+    "Wh-words (疑問詞)",
+    "AWL 1",
+    "AWL 2",
+    "AWL 3",
+    "AWL 4",
+    "AWL 5",
+    "AWL 6",
+    "AWL 7",
+    "AWL 8",
+    "AWL 9",
+    "AWL 10",
+  ];
+
+  // ## Computed levels
+  offlist_subs = [
+    "unknown",
+    "offlist",
+    "contraction",
+    "digit",
+    "name",
+    "symbol",
+  ];
+
+  // ## PoS expansions
+  pos_expansions = {
+    n: 'noun',
+    v: 'verb',
+    a: 'article',
+    d: 'determiner',
+    x: 'auxilliary verb',
+    j: 'adjective',
+    c: 'conjunction',
+    i: 'interjection',
+    m: 'number',
+    b: 'adverb',
+    p: 'preposition',
+    r: 'pronoun',
+    t: 'interjection',
+    f: 'infinitive',
+  };
 
   constructor() {
     this.change(app.state.current.db_state)
+    this.levelSubs = this.level_headings.concat(this.offlist_subs);
   }
 
-  // function setDbShared(e) {
   change(e) {
     let choice = (e.target) ? e.target.value : e;
     app.state.current.db_state = parseInt(choice);
@@ -1773,7 +1847,7 @@ class TabController {
     this.setTabHead();
     app.state.saveItem("tab_state", app.state.current.tab_state);
     forceUpdateInputDiv();
-    displayInputCursor();
+    app.cursor.displayInputCursor();
     V.isExactMatch = !this.isFirstTab;
   }
 
@@ -1796,7 +1870,7 @@ class TabController {
     } else {
       this.clearTab2();
     }
-    displayInputCursor();
+    app.cursor.displayInputCursor();
   }
 
   clearTab1() {
@@ -1904,10 +1978,10 @@ class Backup {
     if (!currentText) return;
     const [shortTermID, longTermID] = this.backupIDs;
     const shortTermSavedContent = localStorage.getItem(shortTermID).trim();
-    console.log("current == saved?", shortTermSavedContent === currentText)
+    // console.log("current == saved?", shortTermSavedContent === currentText)
     if (app.hasBeenReset) {
       const longTermSavedContent = localStorage.getItem(longTermID).trim();
-      console.log("shortterm == longterm?", shortTermSavedContent === longTermSavedContent)
+      // console.log("shortterm == longterm?", shortTermSavedContent === longTermSavedContent)
       if (shortTermSavedContent !== longTermSavedContent) {
         app.state.saveItem(longTermID, shortTermSavedContent);
       }
@@ -1938,8 +2012,124 @@ class Backup {
 
 }
 
+class Cursor {
+  tag = "span";
+  id = "cursorPosHere";
+  HTMLtext = "<span id='cursorPosHere'></span>";
+  simpleText = "CRSR";
+  // text = C.SLICE + "CRSR" + C.SLICE;
+
+  offset = 0;
+  oldOffsetb = 0;
+  increment = 0;
+
+  constructor() {
+    this.text = C.SLICE + this.simpleText + C.SLICE;
+  }
+
+  displayInputCursor() {
+    if (app.tabs.isFirstTab) HTM.inputLemma.focus();
+    else HTM.workingDiv.focus();
+  }
+
+  insertPlaceholder(el, index) {
+    let plainText = this.newlinesToPlaintext(el).innerText;
+    const updatedText = plainText.slice(0, index) + this.text + plainText.slice(index);
+    return updatedText;
+  }
+
+  getInfoInEl(element) {
+    let preCursorOffset = 0;
+    let sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+      // ** Create a range stretching from beginning of div to cursor
+      const currentRange = sel.getRangeAt(0);
+      const preCursorRange = document.createRange();
+      preCursorRange.selectNodeContents(element);
+      preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
+      let preCursorHTML = this.rangeToHTML(preCursorRange);
+      preCursorHTML = this.newlinesToPlaintext(preCursorHTML);
+      preCursorOffset = preCursorHTML.innerText.length;
+    }
+    return [preCursorOffset];
+  }
+
+  rangeToHTML(range) {
+    const nodes = document.createElement("root");
+    nodes.append(range.cloneContents());
+    return nodes;
+  }
+
+  newlinesToPlaintext(divText) {
+    // ** Typing 'Enter' creates a <div>
+    const divs = divText.querySelectorAll("div");
+    for (let el of divs) {
+      el.before(` ${EOL.text} `);
+    }
+    // ** Pasting in text creates <br> (so have to search for both!)
+    const EOLs = divText.querySelectorAll("br, hr");
+    for (let el of EOLs) {
+      el.textContent = ` ${EOL.text} `;
+    }
+    return divText;
+  }
+
+  getIncrement(keypress) {
+    this.increment = 0;
+    if (this.offset < this.oldCursorOffset) this.increment = -1;
+    if (this.offset > this.oldCursorOffset) this.increment = 1;
+  }
+
+  setPos(el, textToInsert = "") {
+    if (!el) return;
+    const selectedRange = document.createRange();
+    selectedRange.setStart(el, 0);
+    if (textToInsert) {
+      const text = document.createTextNode(textToInsert);
+      selectedRange.insertNode(text);
+    }
+    selectedRange.collapse(true);
+    const selectedText = window.getSelection();
+    selectedText.removeAllRanges();
+    selectedText.addRange(selectedRange);
+    el.remove();
+    el.blur()
+    el.focus();
+  }
+
+  updatePos(e) {
+    const keypress = e.key;
+    if (!keypress) return;
+    if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
+    this.oldCursorOffset = this.offset;
+      this.offset = this.getInfoInEl(HTM.workingDiv);
+    if (this.refreshRequired) {
+      const tags = document.querySelectorAll(":hover");
+      const currTag = tags[tags.length - 1];
+      if (currTag) currTag.setAttribute("class", "unprocessed");
+    }
+    this.getIncrement(keypress)
+  }
+
+  insertInHTML(matchCount, wordIndex, rawWord) {
+    if (matchCount === 0) {
+      const [word_i, char_i] = this.cursorPosInTextArr;
+      if (wordIndex === word_i) {
+        rawWord = rawWord.slice(0, char_i) + this.HTMLtext + rawWord.slice(char_i);
+      }
+    }
+    return rawWord;
+  }
+}
+
 class Entry {
   static currID = 0;
+  static AWL_ONLY = 1;
+  static GEPT_ONLY = -1;
+  static AWL_AND_GEPT = 3;
+  static FIND_AWL_ONLY = 100;
+  static FIND_GEPT_ONLY = 200;
+
   constructor(lemma, pos, levelArr, notes, id) {
     if (id !== undefined) this._id = id;
     else {
@@ -1960,12 +2150,14 @@ class Entry {
   get posExpansion() {
     const pos_str = this._pos;
     if (this._id < 0) return pos_str;
-    return (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
+    // return (pos_str) ? pos_str.split("").map(el => LOOKUP.pos_expansions[el]).join(", ") : "";
+    return (pos_str) ? pos_str.split("").map(el => app.wordlist.pos_expansions[el]).join(", ") : "";
   }
 
   get levelArr() { return this._levelArr }
   get levelGEPT() { return this._levelArr[0] }
-  get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
+  // get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
+  get levelAWL() { return this._levelArr[1] - app.wordlist.awl_level_offset }
 
   get levelAWLraw() { return this._levelArr[1] }
   get levelStatus() { return this._levelArr[1] }
@@ -2112,14 +2304,6 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
 */
 
 
-function indexDb(db) {
-  for (const i in db) {
-    db[i].unshift(parseInt(i));
-  }
-  return db;
-}
-
-
 const HTM = {
   root_css: document.documentElement,
   G_level: document.getElementById("t1_level"),
@@ -2135,67 +2319,28 @@ const HTM = {
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
   repeatsList: document.getElementById("t2_repeats_list"),
-  // tabHead: document.getElementsByTagName("tab-head")[0],
-  // tabBody: document.getElementsByTagName("tab-body")[0],
-  // textTabTag: document.getElementById("t1_tab_tag"),
-  // clearButton: document.getElementById("clear_btn"),
   resetButton: document.getElementById("reset_btn"),
   settingsMenu: document.getElementById("dropdown"),
-  // backupButton: document.getElementById("backup-btn"),
-  // backupDialog: document.getElementById("backup-dlg"),
-  // backupSave: document.getElementById("backup-save"),
-  // backupSave2: document.getElementById("backup-save2"),
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
   helpAll: document.getElementById("help-all"),
   help_state: document.getElementById("help-details"),
-  // level_state: document.getElementById("level-details"),
-  // repeat_state: document.getElementById("repeat-details"),
 };
 
 // ## Global constants
 let C = {
-  isCOMPOUND: 5,
-  GEPT_LEVEL: 0,
-  AWL_LEVEL: 1,
-  STATUS: 2,
-  AWL_ONLY: 1,
-  // GEPT_ONLY: 2,
-  GEPT_ONLY: -1,
-  AWL_AND_GEPT: 3,
-  FIND_AWL_ONLY: 100,
-  FIND_GEPT_ONLY: 200,
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |)
-  // HTMLescape: { "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" },
-  // HTMLunEscape: { "&lt;" : "<", "&gt;" : ">", "&amp;" : "&", "&quot;" : "\"" },
 
   NBSP: String.fromCharCode(160),
-  // backupIDs: ["long_term", "short_term"],
-  awl_level_offset: 37,
-  kids_level_offset: 3,
-  NOTE_SEP: "|",
-  // ** local storage: [name-of-storage-variable, default-value]
-  // DEFAULT_STATE: {
-  //   db_state: 0,
-  //   tab_state: 0,
-  //   limit_state: -1,
-  //   help_state: 1,
-  //   level_state: 1,
-  //   repeat_state: 1,
-  // },
-  DEFAULT_tab: 0,
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
     starts: ["^", ".*"],
     ends: [".*", "$"]
   },
-  // GEPT: 0,
-  // BESTEP: 1,
-  // Kids: 2,
   LEVEL_LIMIT_CLASS: "wrong",
   LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
   SLICE: "___",
@@ -2204,45 +2349,17 @@ let C = {
 
 // ## Global variables
 let V = {
-  // ## offlist word db uses negative ids (translate to positive index) so no 0
-  // offlistDb: [["unused"]],
-  // offlistDb: [new Entry("unused", "", [-1, -1, -1], "", 0)],
-  // offlistIndex: 1,
   tallyOfIDreps: {},
   setOfLemmaID: new Set(),
-  // currentDb: {},
-  // currentDbChoice: C.GEPT,
-  // OFFLIST: 0,
   levelSubs: [],
   currentTab: null,
   refreshRequired: false,
   timer: null,
-  cursorOffset: 0,
-  oldCursorOffset: 0,
-  cursorOffsetNoMarks: 0,
-  cursorIncrement: 0,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
-  // current: {
-  //   db_state: 0,
-  //   tab_state: 0,
-  //   limit_state: -1,
-  //   help_state: 1,
-  //   level_state: 1,
-  //   repeat_state: 1,
-  // },
   levelLimitStr: "",
   levelLimitActiveClassesArr: [],
   levelLimitRule: null,
-  // appHasBeenReset: true,
   idOfAM: 0,
-}
-
-const CURSOR = {
-  tag: "span",
-  id: "cursorPosHere",
-  HTMLtext: "<span id='cursorPosHere'></span>",
-  simpleText: "CRSR",
-  text: C.SLICE + "CRSR" + C.SLICE,
 }
 
 const EOL = {
@@ -2252,8 +2369,6 @@ const EOL = {
   text: C.SLICE + "EOL" + C.SLICE,
 }
 
-
-// if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
 if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
 
 const LOOKUP = {
@@ -2268,76 +2383,6 @@ const LOOKUP = {
     results: "Results",
   },
 
-
-  // ## These correlate with the numbers in the dBs
-  level_headings: [
-    "elem (A2)",
-    "int (B1)",
-    "hi-int (B2)",
-    "Animals & insects (動物/昆蟲)",
-    "Articles & determiners (冠詞/限定詞)",
-    "Be & auxiliarie (be動詞/助動詞)",
-    "Clothing & accessories (衣服/配件)",
-    "Colors (顏色)",
-    "Conjunctions (連接詞)",
-    "Family (家庭)",
-    "Food & drink (食物/飲料)",
-    "Forms of address (稱謂)",
-    "Geographical terms (地理名詞)",
-    "Health (健康)",
-    "Holidays & festivals",
-    "Houses & apartments (房子/公寓)",
-    "Interjections (感嘆詞)",
-    "Money (金錢)",
-    "Numbers (數字)",
-    "Occupations (工作)",
-    "Other adjectives (其他形容詞)",
-    "Other adverbs (其他副詞)",
-    "Other nouns (其他名詞)",
-    "Other verbs (其他動詞)",
-    "Parts of body (身體部位)",
-    "People (人)",
-    "Personal characteristics (個性/特點)",
-    "Places & directions (地點/方位)",
-    "Prepositions (介系詞)",
-    "Pronouns (代名詞)",
-    "School (學校)",
-    "Sizes & measurements (尺寸/計量)",
-    "Sports, interest & hobbies(運動 / 興趣 / 嗜好)",
-    "Tableware (餐具)",
-    "Time (時間)",
-    "Transportation (運輸)",
-    "Weather & nature (天氣/自然)",
-    "Wh-words (疑問詞)",
-    "AWL 1",
-    "AWL 2",
-    "AWL 3",
-    "AWL 4",
-    "AWL 5",
-    "AWL 6",
-    "AWL 7",
-    "AWL 8",
-    "AWL 9",
-    "AWL 10",
-  ],
-
-  // ## PoS expansions
-  pos_expansions: {
-    n: 'noun',
-    v: 'verb',
-    a: 'article',
-    d: 'determiner',
-    x: 'auxilliary verb',
-    j: 'adjective',
-    c: 'conjunction',
-    i: 'interjection',
-    m: 'number',
-    b: 'adverb',
-    p: 'preposition',
-    r: 'pronoun',
-    t: 'interjection',
-    f: 'infinitive',
-  },
 
   symbols: [
     "&",
@@ -2356,17 +2401,6 @@ const LOOKUP = {
     "st",
     "rd",
   ],
-
-  // ## Computed levels
-  offlist_subs: [
-    "unknown",
-    "offlist",
-    "contraction",
-    "digit",
-    "name",
-    "symbol",
-  ],
-
 
   // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
 
@@ -3240,19 +3274,13 @@ const LOOKUP = {
 
 }
 
-V.OFFLIST = LOOKUP.level_headings.length;
-V.levelSubs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
-
-
   </script>
 
   <!-- <script src="upgrade.js"></script> -->
 
   <script data-title="main.js">
 // "use strict";
-/*
 
-*/
 // ## SETUP ############################################
 
 const app = new App();
@@ -3288,11 +3316,6 @@ function addWordInputListeners() {
   }
 }
 
-// function addTabListeners() {
-//   for (const el of document.getElementsByTagName("tab-tag")) {
-//     el.addEventListener("click", setTab);
-//   }
-// }
 
 function changeDbWrapper(e) {
   app.wordlist.change(e);
@@ -3326,6 +3349,10 @@ function backupDialogCloseWrapper(e) {
   app.backup.dialogClose(e);
 }
 
+function updateCursorPosWrapper(e) {
+  app.cursor.updatePos(e);
+}
+
 function addMenuListeners() {
   // HTM.clearButton.addEventListener("click", clearTab);
   HTM.resetButton.addEventListener("click", resetWrapper);
@@ -3354,7 +3381,8 @@ function addEditingListeners() {
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
-  HTM.workingDiv.addEventListener("keyup", updateCursorPos);
+  // HTM.workingDiv.addEventListener("keyup", updateCursorPos);
+  HTM.workingDiv.addEventListener("keyup", updateCursorPosWrapper);
   setHoverEffects();
 }
 
@@ -3486,9 +3514,6 @@ function wordGetFormData(e) {
     // ## default value of html option (but screws up db lookup)
     if (value === "-1") value = "";
     // ## ignore form elements that aren't required for current dB
-    // if (key === "level" && isKids()) continue;
-    // if (key === "theme" && !isKids()) continue;
-    // if (key === "awl" && !isBESTEP()) continue;
     if (key === "level" && app.state.isKids) continue;
     if (key === "theme" && !app.state.isKids) continue;
     if (key === "awl" && !app.state.isBESTEP) continue;
@@ -3533,7 +3558,7 @@ function wordBuildSearchTerms(data) {
   // TODO: refine searchterms:
   /*
   .lemma (regex version)
-  .lemmaRaw (non regex)
+  .raw_lemma (non regex)
   .db (0=gept, 1=awl, 2=kids) use C.GEPT/BESTEP/Kids
   .level
   .sublist (i.e. awl/gept/both/awl level)
@@ -3545,7 +3570,8 @@ function wordBuildSearchTerms(data) {
     raw_lemma: lemma,
     // level: (isKids()) ? data.theme : data.level,
     level: (app.state.isKids) ? data.theme : data.level,
-    awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
+    // awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
+    awl: data.awl.map(x => (x < 100) ? x + app.wordlist.awl_level_offset : x),
     pos: data.pos.join("|")
   };
   return searchTerms;
@@ -3580,10 +3606,10 @@ function wordRunSearch(searchTerms) {
     100=all AWL words,
     1-10 AWL levels
     */
-    if (searchTerms.awl[0] === C.FIND_GEPT_ONLY) {
-      matchedEntries = matchedEntries.filter(el => el.levelStatus === C.GEPT_ONLY);
+    if (searchTerms.awl[0] === Entry.FIND_GEPT_ONLY) {
+      matchedEntries = matchedEntries.filter(el => el.levelStatus === Entry.GEPT_ONLY);
     }
-    else if (searchTerms.awl[0] === C.FIND_AWL_ONLY) {
+    else if (searchTerms.awl[0] === Entry.FIND_AWL_ONLY) {
       matchedEntries = matchedEntries.filter(el => el.levelAWL > 0);
     }
     else {
@@ -3628,12 +3654,11 @@ function wordFormatResultsAsHTML(results) {
     const awlWord = highlightAwlWord(entry.levelArr, entry.lemma);
     const lemma = Tag.tag("strong", [], [awlWord]);
     const pos = `[${entry.posExpansion}]`;
-    let level = V.levelSubs[entry.levelGEPT];
+    let level = app.wordlist.levelSubs[entry.levelGEPT];
     if (entry.levelAWL >= 0) level += `; AWL${entry.levelAWL}`;
     if (!level) continue;
     let [note, awl_note] = getNotesAsHTML(entry);
     const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
-    // let class2 = (isKids()) ? "level-e" : `level-${level[0]}`;
     let class2 = (app.state.isKids) ? "level-e" : `level-${level[0]}`;
     output.push(formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
     previousInitial = currentInitial;
@@ -3773,10 +3798,9 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
   }
   else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
   else {
-    levelStr = V.levelSubs[levelArr[0]];
-    // if (getAwlSublist(levelArr) >= 0) {
+    levelStr = app.wordlist.levelSubs[levelArr[0]];
     if (entry.levelAWL >= 0) {
-      levelStr += `; ${V.levelSubs[levelArr[1]]}`;
+      levelStr += `; ${app.wordlist.levelSubs[levelArr[1]]}`;
     }
   }
   let level = [];
@@ -3800,7 +3824,8 @@ function buildHTMLlevelAWL(entry) {
 }
 
 function buildHTMLlevelKids(entry) {
-  return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
+  // return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
+  return [" ", Tag.tag("span", ["class=awl-level"], [app.wordlist.level_headings[entry.levelGEPT]])];
 }
 
 // ** if text is pasted in, this is where processing starts
@@ -3832,8 +3857,6 @@ function textMarkup(e) {
   if (revisedText) {
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
-    // app.wordlist.offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
-    // app.wordlist.offlistIndex = 0;
     app.wordlist.resetOfflistDb();
     let tokenArr = textdivideIntoTokens(revisedText);
     revisedText = null;
@@ -3844,19 +3867,19 @@ function textMarkup(e) {
     // backupSave();
     app.backup.save();
     signalRefreshNeeded("off");
-    setCursorPos(document.getElementById(CURSOR.id));
+    app.cursor.setPos(document.getElementById(app.cursor.id));
   }
 }
 
 
 function textGetLatest() {
-  let revisedText = insertCursorPlaceholder(HTM.workingDiv, V.cursorOffsetNoMarks);
-  if (revisedText === CURSOR.text) revisedText = "";
+  let revisedText = app.cursor.insertPlaceholder(HTM.workingDiv, app.cursor.offset);
+  if (revisedText === app.cursor.text) revisedText = "";
   return revisedText;
 }
 
 function getTextFromWorkingDiv() {
-  let currentText = newlinesToPlaintext(removeTags(HTM.workingDiv)).innerText;
+  let currentText = app.cursor.newlinesToPlaintext(HTM.workingDiv).innerText;
   currentText = EOLsToNewlines(currentText);
   currentText = currentText.trim();
   return currentText;
@@ -3901,7 +3924,7 @@ function textBuildHTML(tokenArr) {
 function split(text) {
   text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");           // protect preferred A.M. / P.M.
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
-  const re = new RegExp("(\\w+)(" + CURSOR.text + ")(\\w+)", "g");  // catch cursor
+  const re = new RegExp("(\\w+)(" + app.cursor.text + ")(\\w+)", "g");  // catch cursor
   text = text.replaceAll(re, "$1$3$2");                             // move cursor to word end (to preserve word for lookup)
   text = text.replaceAll("\n", EOL.text);                            // catch newlines
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
@@ -3940,7 +3963,7 @@ function tokenize1(textArr) {
     else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
     // else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // metacharacter newline
     else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "pe"];    // punctuation newline
-    else if (el.indexOf(CURSOR.simpleText) >= 0) [el, token] = ["", "mc"]; // metacharacter cursor
+    else if (el.indexOf(app.cursor.simpleText) >= 0) [el, token] = ["", "mc"]; // metacharacter cursor
     else if (/--/.test(el)) token = "p";                                   // m-dash
     else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";           // dash (i.e. punctuation)
     else if (/[a-zA-Z]/.test(el)) token = "w";                             // word
@@ -4046,10 +4069,7 @@ function textLookupCompounds(tokenArr) {
       // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
       for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
         if (wordBlob.startsWith(compound)) {
-          // token.matches.push(id);
-          // token.matches.push(getEntryById(id));
           token.appendMatches(getEntryById(id));
-          // token.type = "wc";
           break;
         }
       }
@@ -4070,7 +4090,8 @@ function getAllLevelStats(tokenArr) {
   let awlCount = 0;
   let awlEntries = 0;
   for (const level in lemmasBylevel) {
-    const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
+    // const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
+    const levelText = (level > -1) ? app.wordlist.level_headings[level] : "offlist";
     const lemmasAtThisLevel = lemmasBylevel[level];
     const currStat = buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount);
     levelStats.push(currStat);
@@ -4196,7 +4217,8 @@ function markOfflist(word, offlistType) {
     }
   }
   if (isUnique) {
-    offlistEntry = addNewEntryToOfflistDb([word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + LOOKUP.level_headings.length, -1, -1], ""]);
+    // offlistEntry = addNewEntryToOfflistDb([word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + LOOKUP.level_headings.length, -1, -1], ""]);
+    offlistEntry = addNewEntryToOfflistDb([word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + app.wordlist.level_headings.length, -1, -1], ""]);
   }
   return offlistEntry;
 }
@@ -4215,61 +4237,61 @@ function lookupWord(word) {
   // const originalWord = word;
   word = word.toLowerCase();
   let matchedEntries;
-  let type = "w";
-  [type, matchedEntries] = checkAgainstLookups(word, getEntriesByExactLemma(word), type);
+  let tokenType = "w";
+  [tokenType, matchedEntries] = checkAgainstLookups(word, getEntriesByExactLemma(word), tokenType);
   if (isEmpty(matchedEntries)) {
     matchedEntries = [markOfflist(word.toLowerCase(), "offlist")];
-    type = "wo"   // wo=offlist word
+    tokenType = "wo"   // wo=offlist word
   }
-  const results = [type, matchedEntries];
+  const results = [tokenType, matchedEntries];
   return results;
 }
 
-function checkAgainstLookups(word, exactMatches, type="") {
+function checkAgainstLookups(word, exactMatches, tokenType = "") {
   /*
   algorithm:
   IF direct match(es) found for WORD:
     return match(es) DIRECTLY
   ELSE:
-	  check for variant spelling / negative prefix & if true, revise spelling of WORD
-	  check for derivations / variants / names etc.
+    check for variant spelling / negative prefix & if true, revise spelling of WORD
+    check for derivations / variants / names etc.
   */
   let matchedEntries = [];
   if (isEmpty(exactMatches)) {
     let revisedSpelling = "";
-    [revisedSpelling, matchedEntries, type] = checkForEnglishSpelling(word, type);
+    [revisedSpelling, matchedEntries, tokenType] = checkForEnglishSpelling(word, tokenType);
     if (isEmpty(matchedEntries)) {
       matchedEntries = checkNegativePrefix(word);
       if (!isEmpty(matchedEntries)) {
         revisedSpelling = matchedEntries[0].lemma;
-        type += "n"
+        tokenType += "n"
       }
     }
     word = revisedSpelling;
     const matchedDerivedEntries = checkDerivations(word);
     if (!isEmpty(matchedDerivedEntries)) {
       matchedEntries.push(...matchedDerivedEntries);
-      type = type + "d";
+      tokenType = tokenType + "d";
     }
     if (isEmpty(matchedEntries)) {
       matchedEntries = checkAllowedVariants(word);
-      if (!isEmpty(matchedEntries)) type = type + "v";
+      if (!isEmpty(matchedEntries)) tokenType = tokenType + "v";
     }
   }
   else matchedEntries = exactMatches;
-  return [type, matchedEntries];
+  return [tokenType, matchedEntries];
 }
 
 
-function checkForEnglishSpelling(word, type) {
+function checkForEnglishSpelling(word, tokenType) {
   // returns => [lemma, [ids...], type]
   let exactMatches = checkVariantSpellings(word);
   if (isEmpty(exactMatches)) exactMatches = checkVariantSuffixes(word);
   if (!isEmpty(exactMatches)) {
     word = exactMatches[0].lemma;
-    type += "v";
+    tokenType += "v";
   }
-  return [word, exactMatches, type];
+  return [word, exactMatches, tokenType];
 }
 
 function idSuccessfullyMatched(idArr) {
@@ -4342,7 +4364,7 @@ function checkVariantSpellings(word) {
   let matchedEntries = [];
   if (LOOKUP.notLetterVariant.includes(word)) return matchedEntries;
   for (const [letters, replacement] of LOOKUP.variantLetters) {
-    matchedEntries = replaceLetters(word, letters, replacement);
+    matchedEntries = subLettersAndCheckForMatches(word, letters, replacement);
     if (!isEmpty(matchedEntries)) {
       break;
     }
@@ -4350,7 +4372,7 @@ function checkVariantSpellings(word) {
   return matchedEntries;
 }
 
-function replaceLetters(word, letters, replacement) {
+function subLettersAndCheckForMatches(word, letters, replacement) {
   // N.B. this also checks for derivations
   let matchedEntries = [];
   const re = new RegExp(letters, "gi")
@@ -4612,14 +4634,14 @@ function getEntryById(id) {
 
 
 function buildHTMLtext(tokenArr) {
-  let toWrapInHTML = ["w", "wc", "wv", "wn","wo", "wd", "c", "d", "y"];
+  let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "c", "d", "y"];
   // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
   let htmlString = "";
   let wordIndex = 0;
   for (let token of tokenArr) {
     const firstType = token.type;
     if (firstType === "pe") htmlString += EOL.HTMLtext;
-    else if (firstType === "mc") htmlString += CURSOR.HTMLtext;
+    else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
     else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
     else {
       wordIndex++;
@@ -4655,7 +4677,7 @@ function buildHTMLword(token, wordIndex) {
     duplicateCountInfo,
     anchor
   ] = getDuplicateDetails(token, firstID);
-  word = insertCursorInHTML(token.length, wordIndex, word);
+  word = app.cursor.insertInHTML(token.length, wordIndex, word);
   const localWord = highlightAwlWord(levelArr, word);
   // ** listOfLinks = id:lemma:type
   // let listOfLinksArr = token.matches.map(id => `${id}:${token.lemma.trim()}:${token.type}`);
@@ -4671,9 +4693,6 @@ function buildHTMLword(token, wordIndex) {
 function getSortedMatchesInfo(token) {
   let matches = token.matches;
   let idLevelArr = [];   // ** [[0:id, 1:[gept,awl, status], 2:tokenType], ...]]
-  // for (const id of matches) {
-  //   idLevelArr.push([id, getEntryById(id).levelArr, token.type])
-  // }
   for (const entry of matches) {
     idLevelArr.push([entry.id, entry.levelArr, token.type])
   }
@@ -4790,17 +4809,6 @@ function renderEOLsAsHTML(word, htmlString, wasEOL) {
   return [isEOL, wasEOL, htmlString];
 }
 
-function insertCursorInHTML(matchCount, wordIndex, rawWord) {
-  if (matchCount === 0) {
-    const [word_i, char_i] = V.cursorPosInTextArr;
-    if (wordIndex === word_i) {
-      rawWord = rawWord.slice(0, char_i) + CURSOR.HTMLtext + rawWord.slice(char_i);
-    }
-  }
-  return rawWord;
-}
-
-// function getDuplicateDetails(id, ignoreRepeats, reps) {
 function getDuplicateDetails(token, id) {
   const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
   const totalReps = V.tallyOfIDreps[id];
@@ -4836,9 +4844,7 @@ function escapeHTML(text) {
 
 
 function getLevelPrefix(levelGEPT) {
-  // const levelNum = entry.levelGEPT;
-  let level = V.levelSubs[levelGEPT];
-  // if (isKids() && levelGEPT < V.OFFLIST) level = "k";
+  let level = app.wordlist.levelSubs[levelGEPT];
   if (app.state.isKids && levelGEPT < app.wordlist.offlistLevel) level = "k";
   if (!level) level = "o";
   return level[0];
@@ -4966,12 +4972,10 @@ function pluralNoun(amount) {
 
 
 function getEntriesByExactLemma(lemma) {
-  // ** returns empty array or array of matched IDs [4254, 4255]
+  // ** returns empty array or array of Entries
   lemma = lemma.toLowerCase();
-  // const searchResults = V.currentDb.db
   const entryList = app.wordlist.db
     .filter(el => el.lemma.toLowerCase() === lemma);
-    // .map(el => el.id);
   return entryList;
 }
 
@@ -4999,17 +5003,6 @@ function findBaseForm(word, subs) {
 }
 
 
-// function clearTab2() {
-//   backupSave();
-//   HTM.workingDiv.innerText = "";
-//   HTM.finalInfoDiv.innerText = "";
-//   HTM.repeatsList.innerText = "";
-//   app.wordlist.displayDbNameInTab2();
-//   V.appHasBeenReset = true;
-//   // backupReset();
-// }
-
-
 // ## SLIDER code ############################################
 
 function changeFont(e) {
@@ -5025,17 +5018,17 @@ function setupEditing(e) {
 }
 
 
-function convertMarkupToText(el) {
-  const re = new RegExp("\s*" + EOL.text + "\s*", "g");
-  el = removeTags(el);
-  el = newlinesToPlaintext(el);
-  const HTMLtoPlainText = el.innerText
-    .replace(/\s{2,}/g, " ")
-    .replace(re, "\n")
-    .replace(/\n\s/g, "\n")
-    .replace(/\n{2,}/g, "\n");
-  return HTMLtoPlainText;
-}
+// function convertMarkupToText(el) {
+//   const re = new RegExp("\s*" + EOL.text + "\s*", "g");
+//   el = removeTags(el);
+//   el = newlinesToPlaintext(el);
+//   const HTMLtoPlainText = el.innerText
+//     .replace(/\s{2,}/g, " ")
+//     .replace(re, "\n")
+//     .replace(/\n\s/g, "\n")
+//     .replace(/\n{2,}/g, "\n");
+//   return HTMLtoPlainText;
+// }
 
 
 function jumpToDuplicate(id) {
@@ -5096,155 +5089,6 @@ function debug(...params) {
   console.log(`DEBUG: ${debug.caller.name}> `, params);
 }
 
-// ## TABS ############################################
-
-// function setTab(tab) {
-//   tab = (tab.currentTarget) ? tab.currentTarget : HTM.tabHead.children[tab];
-//   let i = 0;
-//   for (const content of HTM.tabBody.children) {
-//     if (tab === HTM.tabHead.children[i]) {
-//       app.state.current.tab_state = i;
-//       HTM.tabHead.children[i].classList.add("tab-on");
-//       HTM.tabHead.children[i].classList.remove("tab-off");
-//       content.style.display = "flex";
-//     } else {
-//       HTM.tabHead.children[i].classList.add("tab-off");
-//       HTM.tabHead.children[i].classList.remove("tab-on");
-//       content.style.display = "none";
-//     }
-//     i++;
-//   }
-//   setTabHead();
-//   app.state.saveItem("tab_state", app.state.current.tab_state);
-//   forceUpdateInputDiv();
-//   displayInputCursor();
-//   V.isExactMatch = !isFirstTab();
-// }
-
-
-// function setTabHead() {
-//   let mode = (isFirstTab()) ? "none" : "block";
-//   HTM.backupButton.style.display = mode;
-//   // HTM.backupSave.style.display = mode;
-// }
-
-// function isFirstTab() {
-//   return parseInt(app.state.current.tab_state) === 0;
-// }
-
-function displayInputCursor() {
-  // if (isFirstTab()) HTM.inputLemma.focus();
-  if (app.tabs.isFirstTab) HTM.inputLemma.focus();
-  else HTM.workingDiv.focus();
-}
-
-
-// ## CURSOR HANDLING ######################################
-
-function insertCursorPlaceholder(el, index) {
-  let plainText = newlinesToPlaintext(removeTags(el)).innerText;
-  const updatedText = plainText.slice(0, index) + CURSOR.text + plainText.slice(index);
-  return updatedText;
-}
-
-function getCursorInfoInEl(element) {
-  let preCursorOffset = 0;
-  let preCursorOffsetNoMarks = 0;
-  let sel = window.getSelection();
-  if (sel.rangeCount > 0) {
-    // ** Create a range stretching from beginning of div to cursor
-    const currentRange = sel.getRangeAt(0);
-    const preCursorRange = document.createRange();
-    preCursorRange.selectNodeContents(element);
-    preCursorRange.setEnd(currentRange.endContainer, currentRange.endOffset);
-    let preCursorHTML = rangeToHTML(preCursorRange);
-    preCursorHTML = newlinesToPlaintext(preCursorHTML);
-    preCursorOffset = preCursorHTML.innerText.length;
-
-    // ** Make a copy of this and remove <mark> (i.e. additional) tag content
-    let preCursorHTMLNoMarks = removeTags(preCursorHTML);
-    preCursorOffsetNoMarks = preCursorHTMLNoMarks.innerText.length;
-  }
-  return [preCursorOffset, preCursorOffsetNoMarks];
-}
-
-function rangeToHTML(range) {
-  const nodes = document.createElement("root");
-  nodes.append(range.cloneContents());
-  return nodes;
-}
-
-function getCopyWithoutMarks(range) {
-  // Equivalent of newlinesToPlaintext(removeTags(rangeToHTML(range)))
-  const noMarksNodes = document.createElement("root");
-  noMarksNodes.append(range.cloneContents());
-  let divText = removeTags(noMarksNodes);
-  divText = newlinesToPlaintext(divText);
-  return divText;
-}
-
-
-function removeTags(node, tagName = "mark") {
-  const divTextCopy = node.cloneNode(true);
-  // const marks = divTextCopy.querySelectorAll(tagName);
-  return divTextCopy;
-}
-
-function newlinesToPlaintext(divText) {
-  // ** Typing 'Enter' creates a <div>
-  const divs = divText.querySelectorAll("div");
-  for (let el of divs) {
-    el.before(` ${EOL.text} `);
-  }
-  // ** Pasting in text creates <br> (so have to search for both!)
-  const EOLs = divText.querySelectorAll("br, hr");
-  for (let el of EOLs) {
-    el.textContent = ` ${EOL.text} `;
-  }
-  return divText;
-}
-
-
-function getCursorIncrement(keypress) {
-  V.cursorIncrement = 0;
-  if (V.cursorOffset < V.oldCursorOffset) V.cursorIncrement = -1;
-  if (V.cursorOffset > V.oldCursorOffset) V.cursorIncrement = 1;
-}
-
-function setCursorPos(el, textToInsert = "") {
-  if (!el) return;
-  const selectedRange = document.createRange();
-  selectedRange.setStart(el, 0);
-  if (textToInsert) {
-    const text = document.createTextNode(textToInsert);
-    selectedRange.insertNode(text);
-  }
-  selectedRange.collapse(true);
-  const selectedText = window.getSelection();
-  selectedText.removeAllRanges();
-  selectedText.addRange(selectedRange);
-  el.remove();
-  el.blur()
-  el.focus();
-}
-
-
-function updateCursorPos(e) {
-  const keypress = e.key;
-  if (!keypress) return;
-  if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
-  V.oldCursorOffset = V.cursorOffset;
-  [
-    V.cursorOffset,
-    V.cursorOffsetNoMarks,
-  ] = getCursorInfoInEl(HTM.workingDiv);
-  if (V.refreshRequired) {
-    const tags = document.querySelectorAll(":hover");
-    const currTag = tags[tags.length - 1];
-    if (currTag) currTag.setAttribute("class", "unprocessed");
-  }
-  getCursorIncrement(keypress)
-}
 
 function signalRefreshNeeded(mode) {
   if (mode === "on") {

@@ -106,9 +106,9 @@ textMarkup()
 
 
 CAPTURING / INSERTING CURSOR
-automatically moved with every keyup with updateCursorPos()
-updateInputDiv()
-	processText()
+automatically moved with every keyup with cursor.updatePos()
+updateInputDiv() = forceUpdateInputDiv
+	processText() = textMarkup
 		getRevisedText()
 			insertCursorPlaceholder() inserts as CURSOR.simpleText
 			chunkText() + tokenize() then insert as ["", "mc"]

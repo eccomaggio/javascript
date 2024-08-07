@@ -1,5 +1,7 @@
 // "use strict";
+/*
 
+*/
 // ## SETUP ############################################
 
 const app = new App();
@@ -35,6 +37,11 @@ function addWordInputListeners() {
   }
 }
 
+// function addTabListeners() {
+//   for (const el of document.getElementsByTagName("tab-tag")) {
+//     el.addEventListener("click", setTab);
+//   }
+// }
 
 function changeDbWrapper(e) {
   app.wordlist.change(e);
@@ -233,6 +240,9 @@ function wordGetFormData(e) {
     // ## default value of html option (but screws up db lookup)
     if (value === "-1") value = "";
     // ## ignore form elements that aren't required for current dB
+    // if (key === "level" && isKids()) continue;
+    // if (key === "theme" && !isKids()) continue;
+    // if (key === "awl" && !isBESTEP()) continue;
     if (key === "level" && app.state.isKids) continue;
     if (key === "theme" && !app.state.isKids) continue;
     if (key === "awl" && !app.state.isBESTEP) continue;
@@ -325,10 +335,10 @@ function wordRunSearch(searchTerms) {
     100=all AWL words,
     1-10 AWL levels
     */
-    if (searchTerms.awl[0] === Entry.FIND_GEPT_ONLY) {
-      matchedEntries = matchedEntries.filter(el => el.levelStatus === Entry.GEPT_ONLY);
+    if (searchTerms.awl[0] === C.FIND_GEPT_ONLY) {
+      matchedEntries = matchedEntries.filter(el => el.levelStatus === C.GEPT_ONLY);
     }
-    else if (searchTerms.awl[0] === Entry.FIND_AWL_ONLY) {
+    else if (searchTerms.awl[0] === C.FIND_AWL_ONLY) {
       matchedEntries = matchedEntries.filter(el => el.levelAWL > 0);
     }
     else {
@@ -373,11 +383,12 @@ function wordFormatResultsAsHTML(results) {
     const awlWord = highlightAwlWord(entry.levelArr, entry.lemma);
     const lemma = Tag.tag("strong", [], [awlWord]);
     const pos = `[${entry.posExpansion}]`;
-    let level = app.wordlist.levelSubs[entry.levelGEPT];
+    let level = V.levelSubs[entry.levelGEPT];
     if (entry.levelAWL >= 0) level += `; AWL${entry.levelAWL}`;
     if (!level) continue;
     let [note, awl_note] = getNotesAsHTML(entry);
     const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
+    // let class2 = (isKids()) ? "level-e" : `level-${level[0]}`;
     let class2 = (app.state.isKids) ? "level-e" : `level-${level[0]}`;
     output.push(formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
     previousInitial = currentInitial;
@@ -517,9 +528,10 @@ function buildHTMLlevel(entry, id, levelArr, tokenType) {
   }
   else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
   else {
-    levelStr = app.wordlist.levelSubs[levelArr[0]];
+    levelStr = V.levelSubs[levelArr[0]];
+    // if (getAwlSublist(levelArr) >= 0) {
     if (entry.levelAWL >= 0) {
-      levelStr += `; ${app.wordlist.levelSubs[levelArr[1]]}`;
+      levelStr += `; ${V.levelSubs[levelArr[1]]}`;
     }
   }
   let level = [];
@@ -543,8 +555,7 @@ function buildHTMLlevelAWL(entry) {
 }
 
 function buildHTMLlevelKids(entry) {
-  // return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
-  return [" ", Tag.tag("span", ["class=awl-level"], [app.wordlist.level_headings[entry.levelGEPT]])];
+  return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
 }
 
 // ** if text is pasted in, this is where processing starts
@@ -576,6 +587,8 @@ function textMarkup(e) {
   if (revisedText) {
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
+    // app.wordlist.offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
+    // app.wordlist.offlistIndex = 0;
     app.wordlist.resetOfflistDb();
     let tokenArr = textdivideIntoTokens(revisedText);
     revisedText = null;
@@ -592,13 +605,13 @@ function textMarkup(e) {
 
 
 function textGetLatest() {
-  let revisedText = app.cursor.insertPlaceholder(HTM.workingDiv, app.cursor.offset);
+  let revisedText = app.cursor.insertPlaceholder(HTM.workingDiv, this.cursorOffsetNoMarks);
   if (revisedText === app.cursor.text) revisedText = "";
   return revisedText;
 }
 
 function getTextFromWorkingDiv() {
-  let currentText = app.cursor.newlinesToPlaintext(HTM.workingDiv).innerText;
+  let currentText = app.cursor.newlinesToPlaintext(app.cursor.removeTags(HTM.workingDiv)).innerText;
   currentText = EOLsToNewlines(currentText);
   currentText = currentText.trim();
   return currentText;
@@ -809,8 +822,7 @@ function getAllLevelStats(tokenArr) {
   let awlCount = 0;
   let awlEntries = 0;
   for (const level in lemmasBylevel) {
-    // const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
-    const levelText = (level > -1) ? app.wordlist.level_headings[level] : "offlist";
+    const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
     const lemmasAtThisLevel = lemmasBylevel[level];
     const currStat = buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount);
     levelStats.push(currStat);
@@ -936,8 +948,7 @@ function markOfflist(word, offlistType) {
     }
   }
   if (isUnique) {
-    // offlistEntry = addNewEntryToOfflistDb([word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + LOOKUP.level_headings.length, -1, -1], ""]);
-    offlistEntry = addNewEntryToOfflistDb([word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + app.wordlist.level_headings.length, -1, -1], ""]);
+    offlistEntry = addNewEntryToOfflistDb([word, offlistType, [LOOKUP.offlist_subs.indexOf(offlistType) + LOOKUP.level_headings.length, -1, -1], ""]);
   }
   return offlistEntry;
 }
@@ -966,14 +977,14 @@ function lookupWord(word) {
   return results;
 }
 
-function checkAgainstLookups(word, exactMatches, tokenType = "") {
+function checkAgainstLookups(word, exactMatches, tokenType="") {
   /*
   algorithm:
   IF direct match(es) found for WORD:
     return match(es) DIRECTLY
   ELSE:
-    check for variant spelling / negative prefix & if true, revise spelling of WORD
-    check for derivations / variants / names etc.
+	  check for variant spelling / negative prefix & if true, revise spelling of WORD
+	  check for derivations / variants / names etc.
   */
   let matchedEntries = [];
   if (isEmpty(exactMatches)) {
@@ -1353,7 +1364,7 @@ function getEntryById(id) {
 
 
 function buildHTMLtext(tokenArr) {
-  let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "c", "d", "y"];
+  let toWrapInHTML = ["w", "wc", "wv", "wn","wo", "wd", "c", "d", "y"];
   // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
   let htmlString = "";
   let wordIndex = 0;
@@ -1412,6 +1423,9 @@ function buildHTMLword(token, wordIndex) {
 function getSortedMatchesInfo(token) {
   let matches = token.matches;
   let idLevelArr = [];   // ** [[0:id, 1:[gept,awl, status], 2:tokenType], ...]]
+  // for (const id of matches) {
+  //   idLevelArr.push([id, getEntryById(id).levelArr, token.type])
+  // }
   for (const entry of matches) {
     idLevelArr.push([entry.id, entry.levelArr, token.type])
   }
@@ -1563,7 +1577,9 @@ function escapeHTML(text) {
 
 
 function getLevelPrefix(levelGEPT) {
-  let level = app.wordlist.levelSubs[levelGEPT];
+  // const levelNum = entry.levelGEPT;
+  let level = V.levelSubs[levelGEPT];
+  // if (isKids() && levelGEPT < V.OFFLIST) level = "k";
   if (app.state.isKids && levelGEPT < app.wordlist.offlistLevel) level = "k";
   if (!level) level = "o";
   return level[0];
@@ -1722,6 +1738,17 @@ function findBaseForm(word, subs) {
 }
 
 
+// function clearTab2() {
+//   backupSave();
+//   HTM.workingDiv.innerText = "";
+//   HTM.finalInfoDiv.innerText = "";
+//   HTM.repeatsList.innerText = "";
+//   app.wordlist.displayDbNameInTab2();
+//   V.appHasBeenReset = true;
+//   // backupReset();
+// }
+
+
 // ## SLIDER code ############################################
 
 function changeFont(e) {
@@ -1808,6 +1835,7 @@ function debug(...params) {
   console.log(`DEBUG: ${debug.caller.name}> `, params);
 }
 
+}
 
 function signalRefreshNeeded(mode) {
   if (mode === "on") {

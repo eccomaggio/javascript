@@ -26,6 +26,14 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
 */
 
 
+function indexDb(db) {
+  for (const i in db) {
+    db[i].unshift(parseInt(i));
+  }
+  return db;
+}
+
+
 const HTM = {
   root_css: document.documentElement,
   G_level: document.getElementById("t1_level"),
@@ -41,28 +49,67 @@ const HTM = {
   finalLegend: document.getElementById("t2_final_legend"),
   finalInfoDiv: document.getElementById("t2_final_info"),
   repeatsList: document.getElementById("t2_repeats_list"),
+  // tabHead: document.getElementsByTagName("tab-head")[0],
+  // tabBody: document.getElementsByTagName("tab-body")[0],
+  // textTabTag: document.getElementById("t1_tab_tag"),
+  // clearButton: document.getElementById("clear_btn"),
   resetButton: document.getElementById("reset_btn"),
   settingsMenu: document.getElementById("dropdown"),
+  // backupButton: document.getElementById("backup-btn"),
+  // backupDialog: document.getElementById("backup-dlg"),
+  // backupSave: document.getElementById("backup-save"),
+  // backupSave2: document.getElementById("backup-save2"),
   settingsContent: document.getElementById("settings-content"),
   selectDb: document.getElementById("select-db"),
   selectFontSize: document.getElementById("select-font"),
   helpAll: document.getElementById("help-all"),
   help_state: document.getElementById("help-details"),
+  // level_state: document.getElementById("level-details"),
+  // repeat_state: document.getElementById("repeat-details"),
 };
 
 // ## Global constants
 let C = {
+  isCOMPOUND: 5,
+  GEPT_LEVEL: 0,
+  AWL_LEVEL: 1,
+  STATUS: 2,
+  AWL_ONLY: 1,
+  // GEPT_ONLY: 2,
+  GEPT_ONLY: -1,
+  AWL_AND_GEPT: 3,
+  FIND_AWL_ONLY: 100,
+  FIND_GEPT_ONLY: 200,
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |)
+  // HTMLescape: { "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" },
+  // HTMLunEscape: { "&lt;" : "<", "&gt;" : ">", "&amp;" : "&", "&quot;" : "\"" },
 
   NBSP: String.fromCharCode(160),
+  // backupIDs: ["long_term", "short_term"],
+  // awl_level_offset: 37,
+  // kids_level_offset: 3,
+  // NOTE_SEP: "|",
+  // ** local storage: [name-of-storage-variable, default-value]
+  // DEFAULT_STATE: {
+  //   db_state: 0,
+  //   tab_state: 0,
+  //   limit_state: -1,
+  //   help_state: 1,
+  //   level_state: 1,
+  //   repeat_state: 1,
+  // },
+  // DEFAULT_tab: 0,
   MATCHES: {
     exact: ["^", "$"],
     contains: ["", ""],
     starts: ["^", ".*"],
     ends: [".*", "$"]
   },
+  // GEPT: 0,
+  // BESTEP: 1,
+  // Kids: 2,
   LEVEL_LIMIT_CLASS: "wrong",
   LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
   SLICE: "___",
@@ -71,17 +118,45 @@ let C = {
 
 // ## Global variables
 let V = {
+  // ## offlist word db uses negative ids (translate to positive index) so no 0
+  // offlistDb: [["unused"]],
+  // offlistDb: [new Entry("unused", "", [-1, -1, -1], "", 0)],
+  // offlistIndex: 1,
   tallyOfIDreps: {},
   setOfLemmaID: new Set(),
+  // currentDb: {},
+  // currentDbChoice: C.GEPT,
+  // OFFLIST: 0,
   levelSubs: [],
   currentTab: null,
   refreshRequired: false,
   timer: null,
+  cursorOffset: 0,
+  oldCursorOffset: 0,
+  cursorOffsetNoMarks: 0,
+  cursorIncrement: 0,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
+  // current: {
+  //   db_state: 0,
+  //   tab_state: 0,
+  //   limit_state: -1,
+  //   help_state: 1,
+  //   level_state: 1,
+  //   repeat_state: 1,
+  // },
   levelLimitStr: "",
   levelLimitActiveClassesArr: [],
   levelLimitRule: null,
+  // appHasBeenReset: true,
   idOfAM: 0,
+}
+
+const CURSOR = {
+  tag: "span",
+  id: "cursorPosHere",
+  HTMLtext: "<span id='cursorPosHere'></span>",
+  simpleText: "CRSR",
+  text: C.SLICE + "CRSR" + C.SLICE,
 }
 
 const EOL = {
@@ -91,6 +166,8 @@ const EOL = {
   text: C.SLICE + "EOL" + C.SLICE,
 }
 
+
+// if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", C.backupIDs[0]);
 if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
 
 const LOOKUP = {
@@ -105,6 +182,76 @@ const LOOKUP = {
     results: "Results",
   },
 
+
+  // ## These correlate with the numbers in the dBs
+  level_headings: [
+    "elem (A2)",
+    "int (B1)",
+    "hi-int (B2)",
+    "Animals & insects (動物/昆蟲)",
+    "Articles & determiners (冠詞/限定詞)",
+    "Be & auxiliarie (be動詞/助動詞)",
+    "Clothing & accessories (衣服/配件)",
+    "Colors (顏色)",
+    "Conjunctions (連接詞)",
+    "Family (家庭)",
+    "Food & drink (食物/飲料)",
+    "Forms of address (稱謂)",
+    "Geographical terms (地理名詞)",
+    "Health (健康)",
+    "Holidays & festivals",
+    "Houses & apartments (房子/公寓)",
+    "Interjections (感嘆詞)",
+    "Money (金錢)",
+    "Numbers (數字)",
+    "Occupations (工作)",
+    "Other adjectives (其他形容詞)",
+    "Other adverbs (其他副詞)",
+    "Other nouns (其他名詞)",
+    "Other verbs (其他動詞)",
+    "Parts of body (身體部位)",
+    "People (人)",
+    "Personal characteristics (個性/特點)",
+    "Places & directions (地點/方位)",
+    "Prepositions (介系詞)",
+    "Pronouns (代名詞)",
+    "School (學校)",
+    "Sizes & measurements (尺寸/計量)",
+    "Sports, interest & hobbies(運動 / 興趣 / 嗜好)",
+    "Tableware (餐具)",
+    "Time (時間)",
+    "Transportation (運輸)",
+    "Weather & nature (天氣/自然)",
+    "Wh-words (疑問詞)",
+    "AWL 1",
+    "AWL 2",
+    "AWL 3",
+    "AWL 4",
+    "AWL 5",
+    "AWL 6",
+    "AWL 7",
+    "AWL 8",
+    "AWL 9",
+    "AWL 10",
+  ],
+
+  // ## PoS expansions
+  pos_expansions: {
+    n: 'noun',
+    v: 'verb',
+    a: 'article',
+    d: 'determiner',
+    x: 'auxilliary verb',
+    j: 'adjective',
+    c: 'conjunction',
+    i: 'interjection',
+    m: 'number',
+    b: 'adverb',
+    p: 'preposition',
+    r: 'pronoun',
+    t: 'interjection',
+    f: 'infinitive',
+  },
 
   symbols: [
     "&",
@@ -123,6 +270,17 @@ const LOOKUP = {
     "st",
     "rd",
   ],
+
+  // ## Computed levels
+  offlist_subs: [
+    "unknown",
+    "offlist",
+    "contraction",
+    "digit",
+    "name",
+    "symbol",
+  ],
+
 
   // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
 
@@ -995,3 +1153,7 @@ const LOOKUP = {
   },
 
 }
+
+V.OFFLIST = LOOKUP.level_headings.length;
+V.levelSubs = LOOKUP.level_headings.concat(LOOKUP.offlist_subs);
+
