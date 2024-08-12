@@ -117,6 +117,19 @@ updateInputDiv() = forceUpdateInputDiv
 		displayWorkingText()
 			setCursorPos()
 
+EOLs
+textMarkup() called by forceUpdateInputDiv() & normalizePastedText()
+	textGetLatest
+		cursor.insertCursorPlaceholder
+			cursor.newlinesToPlaintext => returns nodelist (with <br> turned into ___EOL___)
+	textdivideIntoTokens
+		normalizeRawText = (\n \r\n > EOL.text i.e. "___EOL___")
+		tokenize
+			split = (splits on ___, leaving just EOL.simpleText, i.e. "EOL")
+			tokenize1 = (catches "EOL" > Token.type = "pe")
+
+	textBuildHTML = Token.type["pe"] > EOL.HTMLtext, i.e. "<hr>"
+
 
 
 Search module: Return types & workflow:

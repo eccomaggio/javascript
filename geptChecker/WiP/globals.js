@@ -13,7 +13,7 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
         3                      status++ (here: in both lists)
     ],
     OLD: "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
-		NEW: [chinese, notes, awl headword]
+    NEW: [chinese, notes, awl headword]
 ], ...
 
     + according to position in level_headings
@@ -21,8 +21,8 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
       AWL_ONLY = 1
       GEPT_ONLY = 2
       AWL_AND_GEPT = 3
-			new: OFFLIST = -1
-			new: KIDS = 4
+      new: OFFLIST = -1
+      new: KIDS = 4
 */
 
 
@@ -65,7 +65,7 @@ let C = {
   },
   LEVEL_LIMIT_CLASS: "wrong",
   LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
-  SLICE: "___",
+  SplitHere: "___",
 }
 
 
@@ -88,7 +88,7 @@ const EOL = {
   HTMLtext: "<hr>",
   tagName: "hr",
   simpleText: "EOL",
-  text: C.SLICE + "EOL" + C.SLICE,
+  text: C.SplitHere + "EOL" + C.SplitHere,
 }
 
 if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);

@@ -2072,7 +2072,7 @@ class Cursor {
   increment = 0;
 
   constructor() {
-    this.text = C.SLICE + this.simpleText + C.SLICE;
+    this.text = C.SplitHere + this.simpleText + C.SplitHere;
   }
 
   displayInputCursor() {
@@ -2081,8 +2081,10 @@ class Cursor {
   }
 
   insertPlaceholder(el, index) {
-    let plainText = this.newlinesToPlaintext(el).innerText;
+    // let plainText = this.newlinesToPlaintext(el).innerText;
+    let plainText = el.innerText;
     const updatedText = plainText.slice(0, index) + this.text + plainText.slice(index);
+    console.log("insertPH:", updatedText)
     return updatedText;
   }
 
@@ -2110,15 +2112,24 @@ class Cursor {
 
   newlinesToPlaintext(divText) {
     // ** Typing 'Enter' creates a <div>
-    const divs = divText.querySelectorAll("div");
+    // const divs = divText.querySelectorAll("div, br, hr");
+    // let divs = divText.querySelectorAll("div");
+    let divs = divText.querySelectorAll("br");
+    // if (!divs) divs = divText.querySelectorAll("hr");
     for (let el of divs) {
-      el.before(` ${EOL.text} `);
+      console.log("newlinesToPT:", el, divText.innerHTML)
+      // el.before(` ${EOL.text} `);
+      el.before(EOL.text);
+      // el.before(C.NBSP);
     }
     // ** Pasting in text creates <br> (so have to search for both!)
-    const EOLs = divText.querySelectorAll("br, hr");
-    for (let el of EOLs) {
-      el.textContent = ` ${EOL.text} `;
-    }
+    // const EOLs = divText.querySelectorAll("br, hr");
+    // for (let el of EOLs) {
+    //   console.log("newlinesToPT: found>", el)
+    //   // el.textContent = ` ${EOL.text} `;
+    //   el.before(` ${EOL.text} `);
+    //   // el.remove();
+    // }
     return divText;
   }
 
@@ -2150,7 +2161,7 @@ class Cursor {
     if (!keypress) return;
     if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
     this.oldCursorOffset = this.offset;
-      this.offset = this.getInfoInEl(HTM.workingDiv);
+    this.offset = this.getInfoInEl(HTM.workingDiv);
     if (this.refreshRequired) {
       const tags = document.querySelectorAll(":hover");
       const currTag = tags[tags.length - 1];
@@ -2654,11 +2665,18 @@ class Tag {
     if (this.name === "root") return [tmpContent];
     let tmpAttrs = "";
     if (this.attrs.length) {
-      tmpAttrs = this.attrs.map(
-        el => (el.length === 1)
-          ? ` ${el}`
-          : ` ${el[0]}="${el[1]}"`
-      ).join("");
+      // console.log("attrs:",...this.attrs)
+      for (const el of this.attrs) {
+        if (el.length) {
+          const strEl = (el.length === 1) ? el[0][0] : `${el[0]}="${el[1]}"`;
+          if (strEl) tmpAttrs += " " + strEl;
+        }
+      }
+      // tmpAttrs = this.attrs.map(
+      //   el => (el.length === 1)
+      //     ? ` ${el}`
+      //     : ` ${el[0]}="${el[1]}"`
+      // ).join("");
     }
     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;
   }
@@ -2707,7 +2725,7 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
         3                      status++ (here: in both lists)
     ],
     OLD: "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
-		NEW: [chinese, notes, awl headword]
+    NEW: [chinese, notes, awl headword]
 ], ...
 
     + according to position in level_headings
@@ -2715,8 +2733,8 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
       AWL_ONLY = 1
       GEPT_ONLY = 2
       AWL_AND_GEPT = 3
-			new: OFFLIST = -1
-			new: KIDS = 4
+      new: OFFLIST = -1
+      new: KIDS = 4
 */
 
 
@@ -2759,7 +2777,7 @@ let C = {
   },
   LEVEL_LIMIT_CLASS: "wrong",
   LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
-  SLICE: "___",
+  SplitHere: "___",
 }
 
 
@@ -2782,7 +2800,7 @@ const EOL = {
   HTMLtext: "<hr>",
   tagName: "hr",
   simpleText: "EOL",
-  text: C.SLICE + "EOL" + C.SLICE,
+  text: C.SplitHere + "EOL" + C.SplitHere,
 }
 
 if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
@@ -4330,6 +4348,7 @@ function textdivideIntoTokens(rawText) {
 }
 
 function textBuildHTML(tokenArr) {
+  debug(tokenArr)
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(tokenArr);
   const resultsHTML = buildHTMLtext(tokenArr);
   tokenArr = null;
@@ -4344,7 +4363,7 @@ function split(text) {
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
   const re = new RegExp("(\\w+)(" + app.cursor.text + ")(\\w+)", "g");  // catch cursor
   text = text.replaceAll(re, "$1$3$2");                             // move cursor to word end (to preserve word for lookup)
-  text = text.replaceAll("\n", EOL.text);                            // catch newlines
+  // text = text.replaceAll("\n", EOL.text);                  // catch newlines (already caught by normalizeRawText)
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
   text = text.trim();
   return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
@@ -4579,7 +4598,8 @@ function normalizeRawText(text) {
     .replace(/…/g, "...")
     .replace(/(\r\n|\r|\n)/g, "\n")       // encode EOLs
     .replace(/\n{2,}/g, "\n")
-    .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+    // .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+    .replace(/\n/g, `${EOL.text}`)      // encode EOLs
     .replace(/–/g, " -- ")                // pasted in em-dashes
     .replace(/—/g, " - ")
     .replace(/(\w)\/(\w)/g, "$1 / $2")    // insert spaces either side of slash
@@ -4675,7 +4695,7 @@ function buildHTMLtext(tokenArr) {
   let wordIndex = 0;
   for (let token of tokenArr) {
     const firstType = token.type;
-    if (firstType === "pe") htmlString += EOL.HTMLtext;
+    if (firstType === "pe") htmlString += `\n${EOL.HTMLtext}`;
     else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
     else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
     else {
@@ -4719,9 +4739,16 @@ function buildHTMLword(token, wordIndex) {
   let listOfLinksArr = token.matches.map(entry => `${entry.id}:${token.lemma.trim()}:${token.type}`);
   let showAsMultiple = "";
   if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
-  const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
+  let classes = [];
+  for (const term of [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]){
+    if (term) classes.push(term);
+  }
+  classes = classes.join(" ");
+  // const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
   const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
-  return displayWord.stringify();
+  const displayWordAsString = displayWord.stringify();
+  // debug(displayWordAsString)
+  return displayWordAsString;
 }
 
 
@@ -5099,13 +5126,15 @@ function normalizeTextForClipboard(e) {
 }
 
 function EOLsToNewlines(text) {
-  const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+  // const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+  const re = RegExp(EOL.text, "g");
   const noEOLs = text.replace(re, "\n");
   return noEOLs;
 }
 
 function newlinesToEOLs(text) {
-  return text.replace("\n", " " + EOL.text + " ");
+  // return text.replace("\n", " " + EOL.text + " ");
+  return text.replace("\n", EOL.text);
 }
 
 function forceUpdateInputDiv() {

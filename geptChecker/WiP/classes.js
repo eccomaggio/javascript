@@ -578,7 +578,7 @@ class Cursor {
   increment = 0;
 
   constructor() {
-    this.text = C.SLICE + this.simpleText + C.SLICE;
+    this.text = C.SplitHere + this.simpleText + C.SplitHere;
   }
 
   displayInputCursor() {
@@ -587,8 +587,10 @@ class Cursor {
   }
 
   insertPlaceholder(el, index) {
-    let plainText = this.newlinesToPlaintext(el).innerText;
+    // let plainText = this.newlinesToPlaintext(el).innerText;
+    let plainText = el.innerText;
     const updatedText = plainText.slice(0, index) + this.text + plainText.slice(index);
+    console.log("insertPH:", updatedText)
     return updatedText;
   }
 
@@ -616,15 +618,24 @@ class Cursor {
 
   newlinesToPlaintext(divText) {
     // ** Typing 'Enter' creates a <div>
-    const divs = divText.querySelectorAll("div");
+    // const divs = divText.querySelectorAll("div, br, hr");
+    // let divs = divText.querySelectorAll("div");
+    let divs = divText.querySelectorAll("br");
+    // if (!divs) divs = divText.querySelectorAll("hr");
     for (let el of divs) {
-      el.before(` ${EOL.text} `);
+      console.log("newlinesToPT:", el, divText.innerHTML)
+      // el.before(` ${EOL.text} `);
+      el.before(EOL.text);
+      // el.before(C.NBSP);
     }
     // ** Pasting in text creates <br> (so have to search for both!)
-    const EOLs = divText.querySelectorAll("br, hr");
-    for (let el of EOLs) {
-      el.textContent = ` ${EOL.text} `;
-    }
+    // const EOLs = divText.querySelectorAll("br, hr");
+    // for (let el of EOLs) {
+    //   console.log("newlinesToPT: found>", el)
+    //   // el.textContent = ` ${EOL.text} `;
+    //   el.before(` ${EOL.text} `);
+    //   // el.remove();
+    // }
     return divText;
   }
 
@@ -656,7 +667,7 @@ class Cursor {
     if (!keypress) return;
     if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
     this.oldCursorOffset = this.offset;
-      this.offset = this.getInfoInEl(HTM.workingDiv);
+    this.offset = this.getInfoInEl(HTM.workingDiv);
     if (this.refreshRequired) {
       const tags = document.querySelectorAll(":hover");
       const currTag = tags[tags.length - 1];
@@ -1160,11 +1171,18 @@ class Tag {
     if (this.name === "root") return [tmpContent];
     let tmpAttrs = "";
     if (this.attrs.length) {
-      tmpAttrs = this.attrs.map(
-        el => (el.length === 1)
-          ? ` ${el}`
-          : ` ${el[0]}="${el[1]}"`
-      ).join("");
+      // console.log("attrs:",...this.attrs)
+      for (const el of this.attrs) {
+        if (el.length) {
+          const strEl = (el.length === 1) ? el[0][0] : `${el[0]}="${el[1]}"`;
+          if (strEl) tmpAttrs += " " + strEl;
+        }
+      }
+      // tmpAttrs = this.attrs.map(
+      //   el => (el.length === 1)
+      //     ? ` ${el}`
+      //     : ` ${el[0]}="${el[1]}"`
+      // ).join("");
     }
     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;
   }

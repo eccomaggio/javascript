@@ -633,6 +633,7 @@ function textdivideIntoTokens(rawText) {
 }
 
 function textBuildHTML(tokenArr) {
+  debug(tokenArr)
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(tokenArr);
   const resultsHTML = buildHTMLtext(tokenArr);
   tokenArr = null;
@@ -647,7 +648,7 @@ function split(text) {
   text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
   const re = new RegExp("(\\w+)(" + app.cursor.text + ")(\\w+)", "g");  // catch cursor
   text = text.replaceAll(re, "$1$3$2");                             // move cursor to word end (to preserve word for lookup)
-  text = text.replaceAll("\n", EOL.text);                            // catch newlines
+  // text = text.replaceAll("\n", EOL.text);                  // catch newlines (already caught by normalizeRawText)
   text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
   text = text.trim();
   return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
@@ -882,7 +883,8 @@ function normalizeRawText(text) {
     .replace(/…/g, "...")
     .replace(/(\r\n|\r|\n)/g, "\n")       // encode EOLs
     .replace(/\n{2,}/g, "\n")
-    .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+    // .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+    .replace(/\n/g, `${EOL.text}`)      // encode EOLs
     .replace(/–/g, " -- ")                // pasted in em-dashes
     .replace(/—/g, " - ")
     .replace(/(\w)\/(\w)/g, "$1 / $2")    // insert spaces either side of slash
@@ -978,7 +980,7 @@ function buildHTMLtext(tokenArr) {
   let wordIndex = 0;
   for (let token of tokenArr) {
     const firstType = token.type;
-    if (firstType === "pe") htmlString += EOL.HTMLtext;
+    if (firstType === "pe") htmlString += `\n${EOL.HTMLtext}`;
     else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
     else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
     else {
@@ -1022,9 +1024,16 @@ function buildHTMLword(token, wordIndex) {
   let listOfLinksArr = token.matches.map(entry => `${entry.id}:${token.lemma.trim()}:${token.type}`);
   let showAsMultiple = "";
   if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
-  const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
+  let classes = [];
+  for (const term of [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]){
+    if (term) classes.push(term);
+  }
+  classes = classes.join(" ");
+  // const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
   const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
-  return displayWord.stringify();
+  const displayWordAsString = displayWord.stringify();
+  // debug(displayWordAsString)
+  return displayWordAsString;
 }
 
 
@@ -1402,13 +1411,15 @@ function normalizeTextForClipboard(e) {
 }
 
 function EOLsToNewlines(text) {
-  const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+  // const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+  const re = RegExp(EOL.text, "g");
   const noEOLs = text.replace(re, "\n");
   return noEOLs;
 }
 
 function newlinesToEOLs(text) {
-  return text.replace("\n", " " + EOL.text + " ");
+  // return text.replace("\n", " " + EOL.text + " ");
+  return text.replace("\n", EOL.text);
 }
 
 function forceUpdateInputDiv() {
