@@ -91,7 +91,7 @@ const EOL = {
   text: C.SplitHere + "EOL" + C.SplitHere,
 }
 
-if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
+// if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
 
 const LOOKUP = {
 

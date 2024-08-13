@@ -18,6 +18,7 @@ class App {
     this.state = new State();
     this.wordlist = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
+    if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
     setupEditing();
     HTM.form.reset();
     updateDropdownMenuOptions();
@@ -590,7 +591,7 @@ class Cursor {
     // let plainText = this.newlinesToPlaintext(el).innerText;
     let plainText = el.innerText;
     const updatedText = plainText.slice(0, index) + this.text + plainText.slice(index);
-    console.log("insertPH:", updatedText)
+    // console.log("insertPH:", updatedText)
     return updatedText;
   }
 
@@ -623,7 +624,7 @@ class Cursor {
     let divs = divText.querySelectorAll("br");
     // if (!divs) divs = divText.querySelectorAll("hr");
     for (let el of divs) {
-      console.log("newlinesToPT:", el, divText.innerHTML)
+      // console.log("newlinesToPT:", el, divText.innerHTML)
       // el.before(` ${EOL.text} `);
       el.before(EOL.text);
       // el.before(C.NBSP);

@@ -633,7 +633,7 @@ function textdivideIntoTokens(rawText) {
 }
 
 function textBuildHTML(tokenArr) {
-  debug(tokenArr)
+  // debug(tokenArr)
   const [totalWordCount, separateLemmasCount, levelStats] = getAllLevelStats(tokenArr);
   const resultsHTML = buildHTMLtext(tokenArr);
   tokenArr = null;
