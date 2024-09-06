@@ -63,8 +63,8 @@ let C = {
     starts: ["^", ".*"],
     ends: [".*", "$"]
   },
-  LEVEL_LIMIT_CLASS: "wrong",
-  LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
+  // LEVEL_LIMIT_CLASS: "wrong",
+  // LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
   SplitHere: "___",
 }
 
@@ -78,9 +78,6 @@ let V = {
   refreshRequired: false,
   timer: null,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
-  levelLimitStr: "",
-  levelLimitActiveClassesArr: [],
-  levelLimitRule: null,
   idOfAM: 0,
 }
 

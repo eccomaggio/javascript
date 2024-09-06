@@ -36,48 +36,52 @@ function addWordInputListeners() {
 }
 
 
-function changeDbWrapper(e) {
+function wrapper_changeDb(e) {
   app.wordlist.change(e);
 }
 
-function setTabWrapper(e) {
+function wrapper_setTab(e) {
   app.tabs.setTab(e);
 }
 
-function clearTabWrapper(e) {
+function wrapper_clearTab(e) {
   app.tabs.clearTab(e);
 }
 
-function resetWrapper(e) {
+function wrapper_reset(e) {
   app.reset(e);
 }
 
-function backupSaveWrapper(e) {
+function wrapper_backupSave(e) {
   app.backup.save(e);
 }
 
-function backupShowWrapper(e) {
+function wrapper_backupShow(e) {
   app.backup.show(e);
 }
 
-function backupLoadWrapper(e) {
+function wrapper_backupLoad(e) {
   app.backup.load(e);
 }
 
-function backupDialogCloseWrapper(e) {
+function wrapper_backupDialogClose(e) {
   app.backup.dialogClose(e);
 }
 
-function updateCursorPosWrapper(e) {
+function wrapper_updateCursorPos(e) {
   app.cursor.updatePos(e);
+}
+
+function wrapper_levelLimitToggle(e) {
+  app.limit.toggle(e);
 }
 
 function addMenuListeners() {
   // HTM.clearButton.addEventListener("click", clearTab);
-  HTM.resetButton.addEventListener("click", resetWrapper);
+  HTM.resetButton.addEventListener("click", wrapper_reset);
 
   // ## for refresh button + settings menu
-  HTM.selectDb.addEventListener("change", changeDbWrapper);
+  HTM.selectDb.addEventListener("change", wrapper_changeDb);
   HTM.selectFontSize.addEventListener("change", changeFont);
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
@@ -89,7 +93,8 @@ function addHTMLlisteners() {
 }
 
 function addDetailListeners() {
-  HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
+  // HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
+  HTM.helpAll.addEventListener("click", wrapper_levelLimitToggle);
   HTM.help_state.addEventListener("toggle", setHelpState);
 }
 
@@ -101,7 +106,7 @@ function addEditingListeners() {
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
   // HTM.workingDiv.addEventListener("keyup", updateCursorPos);
-  HTM.workingDiv.addEventListener("keyup", updateCursorPosWrapper);
+  HTM.workingDiv.addEventListener("keyup", wrapper_updateCursorPos);
   setHoverEffects();
 }
 
@@ -315,7 +320,7 @@ function wordRunSearch(searchTerms) {
   }
   if (app.state.isBESTEP && !app.tools.isEmpty(searchTerms?.awl)) {
     /*
-    el[C.LEVEL][2]:
+    el[app.limit.LEVEL][2]:
     1-in awl only
     // 2-in gept only
     -1 in gept only
@@ -497,7 +502,7 @@ function buildHTMLlemma(entry, id, word, tokenType) {
     displayLemma = [Tag.tag("em", [], "** Use "), Tag.tag("span", ["class=lemma"], entry.lemma), Tag.tag("em", [], " instead of "), Tag.tag("br"), word];
   } else if (tokenType === "wd") {
     displayLemma = [Tag.tag("span", ["class=lemma"], word), " < ", entry.lemma];
-  // } else if (tokenType === "wn") {
+    // } else if (tokenType === "wn") {
   } else if (tokenType.startsWith("wn")) {
     displayLemma = [Tag.tag("span", ["class=lemma"], word), " negative of ", entry.lemma];
   } else {
@@ -1005,7 +1010,9 @@ function buildHTMLword(token, wordIndex) {
     levelArr,
     levelClass
   ] = getLevelDetails(sortedByLevel[0][1]);
-  const limit = (V.levelLimitStr && V.levelLimitActiveClassesArr.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+  // const limit = (V.levelLimitStr && V.levelLimitActiveClassesArr.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+  // const limit = (app.limit.str && app.limit.activeClassesArr.includes(levelClass)) ? ` ${app.limit.LEVEL_LIMIT_CLASS}` : "";
+  const limit = (app.limit.classNameCSS && app.limit.exceedsLimit(levelClass)) ? app.limit.LEVEL_LIMIT_CLASS : "";
   const [
     relatedWordsClass,
     duplicateClass,
@@ -1020,7 +1027,7 @@ function buildHTMLword(token, wordIndex) {
   let showAsMultiple = "";
   if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
   let classes = [];
-  for (const term of [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]){
+  for (const term of [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]) {
     if (term) classes.push(term);
   }
   classes = classes.join(" ");
@@ -1046,99 +1053,17 @@ function getSortedMatchesInfo(token) {
   return [idLevelArr, levelsAreIdentical]
 }
 
-function visibleLevelLimitToggle(e) {
-  const [level, isValidSelection, resetPreviousSelectionRequired] = visibleLevelLimitInfo(e.target);
-  if (isValidSelection) {
-    if (resetPreviousSelectionRequired) {
-      visibleLevelLimitApply(V.levelLimitStr);
-      V.levelLimitStr = "";
-    }
-    if (V.levelLimitStr) {
-      visibleLevelLimitApply(V.levelLimitStr);
-      V.levelLimitStr = "";
-      V.levelLimitActiveClassesArr = [];
-      app.state.current.limit_state = -1;
-    } else {
-      V.levelLimitStr = level;
-      V.levelLimitActiveClassesArr = C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(V.levelLimitStr));
-      app.state.current.limit_state = C.LEVEL_LIMITS.indexOf(level);
-      visibleLevelLimitApply(V.levelLimitStr, false);
-    }
-    app.state.saveItem("limit_state", app.state.current.limit_state);
-  }
-}
-
-function visibleLevelLimitInfo(el) {
-  const level = el.className.split(" ")[0];
-  const isValidSelection = level.startsWith("level") && level !== "level-e";
-  const resetPreviousSelectionRequired = (isValidSelection && !!V.levelLimitActiveClassesArr.length && level !== V.levelLimitActiveClassesArr[0]);
-  return [level, isValidSelection, resetPreviousSelectionRequired];
-}
-
-function visibleLevelLimitApply(className, removeClass = true) {
-  const classesToChange = (app.tools.isEmpty(V.levelLimitActiveClassesArr)) ? C.LEVEL_LIMITS.slice(C.LEVEL_LIMITS.indexOf(className)) : V.levelLimitActiveClassesArr;
-  for (const level of classesToChange) {
-    const targetElements = document.getElementsByClassName(level);
-    for (const el of targetElements) {
-      if (removeClass) {
-        el.classList.remove(C.LEVEL_LIMIT_CLASS);
-      } else {
-        el.classList.add(C.LEVEL_LIMIT_CLASS);
-      }
-    }
-  }
-}
-
-function visibleLevelLimitSet(fromSaved = false) {
-  if (fromSaved) {
-    V.levelLimitStr = (app.state.current.limit_state >= 0) ? C.LEVEL_LIMITS[app.state.current.limit_state] : "";
-    V.levelLimitActiveClassesArr = (V.levelLimitStr) ? C.LEVEL_LIMITS.slice(app.state.current.limit_state) : [];
-  }
-  if (V.levelLimitStr) {
-    visibleLevelLimitApply(V.levelLimitStr, false);
-  }
-  else {
-    visibleLevelLimitApply(C.LEVEL_LIMITS[0])
-  }
-}
-
-function visibleLevelLimitReset() {
-  app.state.saveItem("limit_state", app.state.default.limit_state);
-  visibleLevelLimitSet(true);
-}
-
 
 function setHelpState(e) {
-  setDetailState(e, "help_state");
+  app.state.setDetail(e, "help_state");
 }
 
 function setRepeatState(e) {
-  setDetailState(e, "repeat_state");
+  app.state.setDetail(e, "repeat_state");
 }
 
 function setLevelState(e) {
-  setDetailState(e, "level_state");
-}
-
-
-function setDetailState(e, destination) {
-  let el, mode;
-  if (e.target) {
-    el = e.target;
-    mode = "toggle";
-  } else {
-    el = HTM[destination];
-    mode = e;
-  }
-  if (mode === "toggle") {
-    app.state.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
-  }
-  else {
-    if (mode === "reset") app.state.current[destination] = app.state.default[destination];
-    if (app.state.current[destination] && el) el.setAttribute("open", "")
-    else if (el) el.removeAttribute("open");
-  }
-  app.state.saveItem(destination, app.state.current[destination]);
+  app.state.setDetail(e, "level_state");
 }
 
 
@@ -1345,18 +1270,18 @@ function setupEditing(e) {
 }
 
 
-function jumpToDuplicate(id) {
-  // ** clean up previous highlights
-  const cssClass = "jumpHighlight";
-  for (const element of document.getElementsByClassName(cssClass)) {
-    element.classList.remove(cssClass)
-  }
-  const duplicate = document.getElementById(id);
-  if (duplicate) {
-    duplicate.classList.add(cssClass);
-    duplicate.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-}
+// function jumpToDuplicate(id) {
+//   // ** clean up previous highlights
+//   const cssClass = "jumpHighlight";
+//   for (const element of document.getElementsByClassName(cssClass)) {
+//     element.classList.remove(cssClass)
+//   }
+//   const duplicate = document.getElementById(id);
+//   if (duplicate) {
+//     duplicate.classList.add(cssClass);
+//     duplicate.scrollIntoView({ behavior: "smooth", block: "center" });
+//   }
+// }
 
 // ## COMMON ELEMENTS ######################################
 

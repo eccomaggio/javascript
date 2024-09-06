@@ -12,6 +12,7 @@ class App {
     this.tabs = new TabController();
     this.backup = new Backup();
     this.cursor = new Cursor();
+    this.limit = new ShowLevelLimit();
   }
 
   init() {
@@ -22,7 +23,7 @@ class App {
     setupEditing();
     HTM.form.reset();
     updateDropdownMenuOptions();
-    visibleLevelLimitSet(true);
+    this.limit.setLimit(true);
     setHelpState("fromSaved");
     addListeners();
     console.log("app:", this)
@@ -63,7 +64,7 @@ class State {
   default = {
     db_state: 0,
     tab_state: 0,
-    limit_state: -1,
+    limit_state: -1,  // ** index in app.limit.LEVEL_LIMITS of lowest level to show strikethrough (e.g. 1 = hi-int)
     help_state: 1,
     level_state: 1,
     repeat_state: 1,
@@ -79,6 +80,26 @@ class State {
     }
   }
 
+
+  setDetail(e, destination) {
+    let el, mode;
+    if (e.target) {
+      el = e.target;
+      mode = "toggle";
+    } else {
+      el = HTM[destination];
+      mode = e;
+    }
+    if (mode === "toggle") {
+      this.current[destination] = (el.hasAttribute("open")) ? 1 : 0;
+    }
+    else {
+      if (mode === "reset") this.current[destination] = this.default[destination];
+      if (this.current[destination] && el) el.setAttribute("open", "")
+      else if (el) el.removeAttribute("open");
+    }
+    this.saveItem(destination, this.current[destination]);
+  }
   forceDefault() {
     for (const key in this.default) {
       const defaultVal = this.default[key];
@@ -259,7 +280,8 @@ class Db {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
       HTM.root_css.style.setProperty(property, this.css[key]);
     }
-    visibleLevelLimitSet();
+    // visibleLevelLimitSet();
+    app.limit.setLimit();
     this.setDbTab2();
     this.setDbTab1();
     app.state.saveItem("db_state", app.state.current.db_state);
@@ -376,10 +398,10 @@ class TabController {
   constructor() {
     for (const el of document.getElementsByTagName("tab-tag")) {
       // el.addEventListener("click", this.setTab);
-      el.addEventListener("click", setTabWrapper);
+      el.addEventListener("click", wrapper_setTab);
     }
     // this.htm.clearButton.addEventListener("click", this.clearTab);
-    this.htm.clearButton.addEventListener("click", clearTabWrapper);
+    this.htm.clearButton.addEventListener("click", wrapper_clearTab);
   }
 
 
@@ -453,6 +475,81 @@ class TabController {
   }
 }
 
+class ShowLevelLimit {
+  LEVEL_LIMIT_CLASS = "wrong";
+  LEVEL_LIMITS = ["level-i", "level-h", "level-o"];
+  BASE_LEVEL = "level-e";
+  classNameCSS = "";
+  activeClassesArr = [];
+
+  toggle(e) {
+    const [level, isValidSelection, resetPreviousSelectionRequired] = this.info(e.target);
+    if (isValidSelection) {
+      if (resetPreviousSelectionRequired) {
+        this.apply(this.classNameCSS);
+        this.string = "";
+      }
+      if (this.classNameCSS) {
+        this.apply(this.classNameCSS);
+        this.classNameCSS = "";
+        this.activeClassesArr = [];
+        app.state.current.limit_state = -1;
+      } else {
+        this.classNameCSS = level;
+        this.activeClassesArr = this.LEVEL_LIMITS.slice(this.LEVEL_LIMITS.indexOf(this.classNameCSS));
+        app.state.current.limit_state = this.LEVEL_LIMITS.indexOf(level);
+        this.apply(this.classNameCSS, false);
+      }
+      app.state.saveItem("limit_state", app.state.current.limit_state);
+    }
+  }
+
+  info(el) {
+    const level = el.className.split(" ")[0];
+    // const isValidSelection = level.startsWith("level") && level !== "level-e";
+    const isValidSelection = level.startsWith("level") && level !== this.BASE_LEVEL;
+    const resetPreviousSelectionRequired = (isValidSelection && !!this.activeClassesArr.length && level !== this.activeClassesArr[0]);
+    return [level, isValidSelection, resetPreviousSelectionRequired];
+  }
+
+  apply(className, removeClass = true) {
+    const classesToChange = (app.tools.isEmpty(this.activeClassesArr)) ? this.LEVEL_LIMITS.slice(this.LEVEL_LIMITS.indexOf(className)) : this.activeClassesArr;
+    for (const level of classesToChange) {
+      const targetElements = document.getElementsByClassName(level);
+      for (const el of targetElements) {
+        if (removeClass) {
+          el.classList.remove(this.LEVEL_LIMIT_CLASS);
+        } else {
+          el.classList.add(this.LEVEL_LIMIT_CLASS);
+        }
+      }
+    }
+  }
+
+  setLimit(fromSaved = false) {
+    if (fromSaved) {
+      this.classNameCSS = (app.state.current.limit_state >= 0) ? this.LEVEL_LIMITS[app.state.current.limit_state] : "";
+      this.activeClassesArr = (this.classNameCSS) ? this.LEVEL_LIMITS.slice(app.state.current.limit_state) : [];
+    }
+    if (this.classNameCSS) {
+      this.apply(this.classNameCSS, false);
+    }
+    else {
+      this.apply(this.LEVEL_LIMITS[0])
+    }
+  }
+
+  exceedsLimit(className) {
+    return this.activeClassesArr.includes(className);
+  }
+
+  reset() {
+    app.state.saveItem("limit_state", app.state.default.limit_state);
+    this.setLimit(true);
+  }
+
+}
+
 class Backup {
   htm = {
     backupButton: document.getElementById("backup-btn"),
@@ -463,12 +560,12 @@ class Backup {
   backupIDs = ["long_term", "short_term"];
 
   constructor() {
-    this.htm.backupButton.addEventListener("click", backupShowWrapper);
-    this.htm.backupDialog.addEventListener("mouseleave", backupDialogCloseWrapper);
+    this.htm.backupButton.addEventListener("click", wrapper_backupShow);
+    this.htm.backupDialog.addEventListener("mouseleave", wrapper_backupDialogClose);
     // this.htm.backupSave.addEventListener("click", backupSave);
-    this.htm.backupSave2.addEventListener("click", backupSaveWrapper);
+    this.htm.backupSave2.addEventListener("click", wrapper_backupSave);
     for (const id of this.backupIDs) {
-      document.getElementById(id).addEventListener("click", backupLoadWrapper);
+      document.getElementById(id).addEventListener("click", wrapper_backupLoad);
     }
 
   }
