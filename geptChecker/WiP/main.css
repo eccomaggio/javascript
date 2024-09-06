@@ -406,8 +406,10 @@
     }
 
     .dot {
-      height: var(--radius);
-      width: var(--radius);
+      /* height: var(--radius);
+      width: var(--radius); */
+      height: 1.5em;
+      width: 1.5em;
       background-color: white;
       border-radius: 50%;
       display: inline-block;
