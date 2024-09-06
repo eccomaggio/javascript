@@ -418,12 +418,6 @@ function wordDisplayResults(resultsAsHtmlString, resultCount = 0) {
   HTM.resultsText.innerHTML = resultsAsHtmlString;
 }
 
-// function clearTab1() {
-//   HTM.form.reset();
-//   wordSearch();
-//   refreshLabels("t1_form");
-// }
-
 
 // ## TAB2 (text) SETUP ############################################
 
@@ -503,7 +497,8 @@ function buildHTMLlemma(entry, id, word, tokenType) {
     displayLemma = [Tag.tag("em", [], "** Use "), Tag.tag("span", ["class=lemma"], entry.lemma), Tag.tag("em", [], " instead of "), Tag.tag("br"), word];
   } else if (tokenType === "wd") {
     displayLemma = [Tag.tag("span", ["class=lemma"], word), " < ", entry.lemma];
-  } else if (tokenType === "wn") {
+  // } else if (tokenType === "wn") {
+  } else if (tokenType.startsWith("wn")) {
     displayLemma = [Tag.tag("span", ["class=lemma"], word), " negative of ", entry.lemma];
   } else {
     displayLemma = [Tag.tag("span", ["class=lemma"], entry.lemma)];
@@ -974,7 +969,7 @@ function lookupWord(word) {
 
 
 function buildHTMLtext(tokenArr) {
-  let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "c", "d", "y"];
+  let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "c", "d", "y", "wnd"];
   // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
   let htmlString = "";
   let wordIndex = 0;
@@ -1398,17 +1393,30 @@ function signalRefreshNeeded(mode) {
 }
 
 function normalizeTextForClipboard(e) {
+  // TODO: do we even need to capture copied text anymore, now there are no <mark>s??
   if (!e) {
     e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
   }
   const sel = document.getSelection();
-  let copiedText = sel.getRangeAt(0);
-  let normalizedText = getCopyWithoutMarks(copiedText);
-  normalizedText = normalizedText.innerText;
-  normalizedText = EOLsToNewlines(normalizedText);
+  let copiedText = sel.getRangeAt(0).toString();
+  let normalizedText = copiedText;
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
 }
+
+// function normalizeTextForClipboard(e) {
+//   if (!e) {
+//     e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
+//   }
+//   const sel = document.getSelection();
+//   let copiedText = sel.getRangeAt(0);
+//   let normalizedText = getCopyWithoutMarks(copiedText);
+//   normalizedText = normalizedText.innerText;
+//   normalizedText = EOLsToNewlines(normalizedText);
+//   e.clipboardData.setData("text/plain", normalizedText);
+//   e.preventDefault();
+// }
+
 
 function EOLsToNewlines(text) {
   // const re = RegExp("\\s*" + EOL.text + "\\s*", "g");

@@ -368,6 +368,7 @@ const LOOKUP = {
     forgot: "forget",
     forgotten: "forget",
     foresaw: "foresee",
+    foreseen: "foresee",
     fought: "fight",
     found: "find",
     froze: "freeze",
