@@ -55,7 +55,7 @@ let C = {
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |)
-
+  FONT_UNIT: "pt",
   NBSP: String.fromCharCode(160),
   MATCHES: {
     exact: ["^", "$"],
@@ -63,8 +63,6 @@ let C = {
     starts: ["^", ".*"],
     ends: [".*", "$"]
   },
-  // LEVEL_LIMIT_CLASS: "wrong",
-  // LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
   SplitHere: "___",
 }
 

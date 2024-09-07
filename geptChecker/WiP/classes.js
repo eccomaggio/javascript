@@ -26,17 +26,18 @@ class App {
     this.limit.setLimit(true);
     setHelpState("fromSaved");
     addListeners();
+    setFontState();
     console.log("app:", this)
   }
 
   reset(e) {
     this.state.forceDefault();
     this.tabs.resetTabs();
-    visibleLevelLimitReset();
     this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
     setHelpState("reset");
-    visibleLevelLimitReset();
+    this.limit.reset();
+    setFontState("reset");
   }
   static #instance;
 }
@@ -68,6 +69,7 @@ class State {
     help_state: 1,
     level_state: 1,
     repeat_state: 1,
+    font_state: "11",
   };
 
   current = {};

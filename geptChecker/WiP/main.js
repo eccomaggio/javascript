@@ -1258,8 +1258,21 @@ function findBaseForm(word, subs) {
 // ## SLIDER code ############################################
 
 function changeFont(e) {
-  const fontSize = e.target.value + "px";
-  HTM.root_css.style.setProperty("--font-size", fontSize);
+  // ** if called without parameters, defaults to app.state.current value
+  // const fontSize = e.target.value + "px";
+  // const fontSize = (e ? e.target.value : app.state.current.font_state) + C.FONT_UNIT;
+  const fontSize = (e ? e.target.value : app.state.current.font_state);
+  HTM.root_css.style.setProperty("--font-size", fontSize + C.FONT_UNIT);
+  app.state.saveItem("font_state", fontSize);
+}
+
+function setFontState(reset="") {
+  const fontSize = (reset ? app.state.default.font_state : app.state.current.font_state);
+  app.state.current.font_state = fontSize;
+  changeFont();
+  for (const el of HTM.selectFontSize.children) {
+    el.selected = (el.value == fontSize);
+  }
 }
 
 

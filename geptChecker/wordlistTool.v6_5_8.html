@@ -19,7 +19,7 @@
       --font-size: 14px;
       --sep-width: 6px;
       /* --radius: 30px; */
-      --radius: 20px;
+      /* --radius: 20px; */
 
       /* --elem: DarkOliveGreen;
       --int: DarkCyan;
@@ -445,8 +445,10 @@
     }
 
     .dot {
-      height: var(--radius);
-      width: var(--radius);
+      /* height: var(--radius);
+      width: var(--radius); */
+      height: 1.5em;
+      width: 1.5em;
       background-color: white;
       border-radius: 50%;
       display: inline-block;
@@ -1066,10 +1068,10 @@
               <option value="8">font 8pt</option>
               <option value="9">font 9pt</option>
               <option value="10">font 10pt</option>
-              <option value="11">font 11pt</option>
+              <option value="11" selected>*font 11pt*</option>
               <option value="12">font 12pt</option>
               <option value="13">font 13pt</option>
-              <option value="14" selected="">-font 14pt-</option>
+              <option value="14">font 14pt</option>
               <option value="16">font 16pt</option>
               <option value="18">font 18pt</option>
               <option value="22">font 22pt</option>
@@ -1097,7 +1099,7 @@
             <!-- <button class="dropbtn" id="reset_button" type="button">Reset</button> -->
             <!-- <button id="backup-save" style="display: block;">save backup</button> -->
             <!-- <div id="version-no">Version 4-8.4</div> -->
-            <div id="version-no" title="Key Changes:"></div>
+            <div id="version-no" title="KEY CHANGES"></div>
           </div>
         </div>
         <dialog id="backup-dlg">
@@ -1329,8 +1331,8 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    const versionNumber = "6-5.7";
-    const versionDetails = "New GEPT wordlist; edits 'in place'; advises on preferred spellings; recognizes negative prefixes and superfluous hyphens; custom level strike-through; preserves original spacing/punctuation; [all html output now funneled through Tag.stringify() to escape; implemented Token & Entry classes]";
+    const versionNumber = "6-5.8";
+    const versionDetails = "*New GEPT wordlist; edits 'in place'; *advises on preferred spellings; *recognizes negative prefixes and superfluous hyphens; *custom level strike-through; *preserves original spacing/punctuation;\n[nerdy]\n+all html output now funneled through Tag.stringify() to escape; +implemented several functions as classes; +font size now saved between sessions";
     const versionInfo = document.getElementById("version-no");
     versionInfo.innerHTML = `Version ${versionNumber}`;
     versionInfo.title += `\n${versionDetails}.`;
@@ -1520,17 +1522,18 @@ class App {
     this.limit.setLimit(true);
     setHelpState("fromSaved");
     addListeners();
+    setFontState();
     console.log("app:", this)
   }
 
   reset(e) {
     this.state.forceDefault();
     this.tabs.resetTabs();
-    visibleLevelLimitReset();
     this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
     setHelpState("reset");
-    visibleLevelLimitReset();
+    this.limit.reset();
+    setFontState("reset");
   }
   static #instance;
 }
@@ -1562,6 +1565,7 @@ class State {
     help_state: 1,
     level_state: 1,
     repeat_state: 1,
+    font_state: "11",
   };
 
   current = {};
@@ -2865,7 +2869,7 @@ let C = {
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |)
-
+  FONT_UNIT: "pt",
   NBSP: String.fromCharCode(160),
   MATCHES: {
     exact: ["^", "$"],
@@ -2873,8 +2877,6 @@ let C = {
     starts: ["^", ".*"],
     ends: [".*", "$"]
   },
-  // LEVEL_LIMIT_CLASS: "wrong",
-  // LEVEL_LIMITS: ["level-i", "level-h", "level-o"],
   SplitHere: "___",
 }
 
@@ -5069,8 +5071,21 @@ function findBaseForm(word, subs) {
 // ## SLIDER code ############################################
 
 function changeFont(e) {
-  const fontSize = e.target.value + "px";
-  HTM.root_css.style.setProperty("--font-size", fontSize);
+  // ** if called without parameters, defaults to app.state.current value
+  // const fontSize = e.target.value + "px";
+  // const fontSize = (e ? e.target.value : app.state.current.font_state) + C.FONT_UNIT;
+  const fontSize = (e ? e.target.value : app.state.current.font_state);
+  HTM.root_css.style.setProperty("--font-size", fontSize + C.FONT_UNIT);
+  app.state.saveItem("font_state", fontSize);
+}
+
+function setFontState(reset="") {
+  const fontSize = (reset ? app.state.default.font_state : app.state.current.font_state);
+  app.state.current.font_state = fontSize;
+  changeFont();
+  for (const el of HTM.selectFontSize.children) {
+    el.selected = (el.value == fontSize);
+  }
 }
 
 
