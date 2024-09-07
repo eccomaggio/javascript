@@ -399,11 +399,9 @@ class TabController {
 
   constructor() {
     for (const el of document.getElementsByTagName("tab-tag")) {
-      // el.addEventListener("click", this.setTab);
-      el.addEventListener("click", wrapper_setTab);
+      el.addEventListener("click", this.setTab.bind(this));
     }
-    // this.htm.clearButton.addEventListener("click", this.clearTab);
-    this.htm.clearButton.addEventListener("click", wrapper_clearTab);
+    this.htm.clearButton.addEventListener("click", this.clearTab.bind(this));
   }
 
 
@@ -562,12 +560,11 @@ class Backup {
   backupIDs = ["long_term", "short_term"];
 
   constructor() {
-    this.htm.backupButton.addEventListener("click", wrapper_backupShow);
-    this.htm.backupDialog.addEventListener("mouseleave", wrapper_backupDialogClose);
-    // this.htm.backupSave.addEventListener("click", backupSave);
-    this.htm.backupSave2.addEventListener("click", wrapper_backupSave);
+    this.htm.backupButton.addEventListener("click", this.show.bind(this));
+    this.htm.backupDialog.addEventListener("mouseleave", this.dialogClose.bind(this));
+    this.htm.backupSave2.addEventListener("click", this.save.bind(this));
     for (const id of this.backupIDs) {
-      document.getElementById(id).addEventListener("click", wrapper_backupLoad);
+      document.getElementById(id).addEventListener("click", this.load.bind(this));
     }
 
   }

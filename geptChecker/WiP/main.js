@@ -36,52 +36,12 @@ function addWordInputListeners() {
 }
 
 
-function wrapper_changeDb(e) {
-  app.wordlist.change(e);
-}
-
-function wrapper_setTab(e) {
-  app.tabs.setTab(e);
-}
-
-function wrapper_clearTab(e) {
-  app.tabs.clearTab(e);
-}
-
-function wrapper_reset(e) {
-  app.reset(e);
-}
-
-function wrapper_backupSave(e) {
-  app.backup.save(e);
-}
-
-function wrapper_backupShow(e) {
-  app.backup.show(e);
-}
-
-function wrapper_backupLoad(e) {
-  app.backup.load(e);
-}
-
-function wrapper_backupDialogClose(e) {
-  app.backup.dialogClose(e);
-}
-
-function wrapper_updateCursorPos(e) {
-  app.cursor.updatePos(e);
-}
-
-function wrapper_levelLimitToggle(e) {
-  app.limit.toggle(e);
-}
-
 function addMenuListeners() {
   // HTM.clearButton.addEventListener("click", clearTab);
-  HTM.resetButton.addEventListener("click", wrapper_reset);
+  HTM.resetButton.addEventListener("click", function (e) {app.reset(e)}, false);
 
   // ## for refresh button + settings menu
-  HTM.selectDb.addEventListener("change", wrapper_changeDb);
+  HTM.selectDb.addEventListener("change", function (e){app.wordlist.change(e)}, false);
   HTM.selectFontSize.addEventListener("change", changeFont);
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
@@ -93,8 +53,7 @@ function addHTMLlisteners() {
 }
 
 function addDetailListeners() {
-  // HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
-  HTM.helpAll.addEventListener("click", wrapper_levelLimitToggle);
+  HTM.helpAll.addEventListener("click", function (e) {app.limit.toggle(e)}, false);
   HTM.help_state.addEventListener("toggle", setHelpState);
 }
 
@@ -105,8 +64,7 @@ function addEditingListeners() {
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
-  // HTM.workingDiv.addEventListener("keyup", updateCursorPos);
-  HTM.workingDiv.addEventListener("keyup", wrapper_updateCursorPos);
+  HTM.workingDiv.addEventListener("keyup", function (e) {app.cursor.updatePos(e)}, false);
   setHoverEffects();
 }
 

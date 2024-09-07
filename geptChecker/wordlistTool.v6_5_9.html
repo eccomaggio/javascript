@@ -1331,7 +1331,7 @@
   <script data-title="admin.js">
     console.clear();
     "use strict";
-    const versionNumber = "6-5.8";
+    const versionNumber = "6-5.9";
     const versionDetails = "*New GEPT wordlist; edits 'in place'; *advises on preferred spellings; *recognizes negative prefixes and superfluous hyphens; *custom level strike-through; *preserves original spacing/punctuation;\n[nerdy]\n+all html output now funneled through Tag.stringify() to escape; +implemented several functions as classes; +font size now saved between sessions";
     const versionInfo = document.getElementById("version-no");
     versionInfo.innerHTML = `Version ${versionNumber}`;
@@ -1895,11 +1895,9 @@ class TabController {
 
   constructor() {
     for (const el of document.getElementsByTagName("tab-tag")) {
-      // el.addEventListener("click", this.setTab);
-      el.addEventListener("click", wrapper_setTab);
+      el.addEventListener("click", this.setTab.bind(this));
     }
-    // this.htm.clearButton.addEventListener("click", this.clearTab);
-    this.htm.clearButton.addEventListener("click", wrapper_clearTab);
+    this.htm.clearButton.addEventListener("click", this.clearTab.bind(this));
   }
 
 
@@ -2058,12 +2056,11 @@ class Backup {
   backupIDs = ["long_term", "short_term"];
 
   constructor() {
-    this.htm.backupButton.addEventListener("click", wrapper_backupShow);
-    this.htm.backupDialog.addEventListener("mouseleave", wrapper_backupDialogClose);
-    // this.htm.backupSave.addEventListener("click", backupSave);
-    this.htm.backupSave2.addEventListener("click", wrapper_backupSave);
+    this.htm.backupButton.addEventListener("click", this.show.bind(this));
+    this.htm.backupDialog.addEventListener("mouseleave", this.dialogClose.bind(this));
+    this.htm.backupSave2.addEventListener("click", this.save.bind(this));
     for (const id of this.backupIDs) {
-      document.getElementById(id).addEventListener("click", wrapper_backupLoad);
+      document.getElementById(id).addEventListener("click", this.load.bind(this));
     }
 
   }
@@ -3849,52 +3846,12 @@ function addWordInputListeners() {
 }
 
 
-function wrapper_changeDb(e) {
-  app.wordlist.change(e);
-}
-
-function wrapper_setTab(e) {
-  app.tabs.setTab(e);
-}
-
-function wrapper_clearTab(e) {
-  app.tabs.clearTab(e);
-}
-
-function wrapper_reset(e) {
-  app.reset(e);
-}
-
-function wrapper_backupSave(e) {
-  app.backup.save(e);
-}
-
-function wrapper_backupShow(e) {
-  app.backup.show(e);
-}
-
-function wrapper_backupLoad(e) {
-  app.backup.load(e);
-}
-
-function wrapper_backupDialogClose(e) {
-  app.backup.dialogClose(e);
-}
-
-function wrapper_updateCursorPos(e) {
-  app.cursor.updatePos(e);
-}
-
-function wrapper_levelLimitToggle(e) {
-  app.limit.toggle(e);
-}
-
 function addMenuListeners() {
   // HTM.clearButton.addEventListener("click", clearTab);
-  HTM.resetButton.addEventListener("click", wrapper_reset);
+  HTM.resetButton.addEventListener("click", function (e) {app.reset(e)}, false);
 
   // ## for refresh button + settings menu
-  HTM.selectDb.addEventListener("change", wrapper_changeDb);
+  HTM.selectDb.addEventListener("change", function (e){app.wordlist.change(e)}, false);
   HTM.selectFontSize.addEventListener("change", changeFont);
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
@@ -3906,8 +3863,7 @@ function addHTMLlisteners() {
 }
 
 function addDetailListeners() {
-  // HTM.helpAll.addEventListener("click", visibleLevelLimitToggle);
-  HTM.helpAll.addEventListener("click", wrapper_levelLimitToggle);
+  HTM.helpAll.addEventListener("click", function (e) {app.limit.toggle(e)}, false);
   HTM.help_state.addEventListener("toggle", setHelpState);
 }
 
@@ -3918,8 +3874,7 @@ function addEditingListeners() {
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
-  // HTM.workingDiv.addEventListener("keyup", updateCursorPos);
-  HTM.workingDiv.addEventListener("keyup", wrapper_updateCursorPos);
+  HTM.workingDiv.addEventListener("keyup", function (e) {app.cursor.updatePos(e)}, false);
   setHoverEffects();
 }
 
