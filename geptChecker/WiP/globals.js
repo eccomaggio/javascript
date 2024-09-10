@@ -55,7 +55,6 @@ let C = {
   punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
   punctuation_lite: /[,.?!'"()\[\]{}]/g,
   // INFO: removed hyphen & bar (- |)
-  FONT_UNIT: "pt",
   NBSP: String.fromCharCode(160),
   MATCHES: {
     exact: ["^", "$"],

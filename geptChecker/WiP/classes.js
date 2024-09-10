@@ -22,11 +22,14 @@ class App {
     if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
     setupEditing();
     HTM.form.reset();
-    updateDropdownMenuOptions();
+    // updateDropdownMenuOptions();
+    this.state.updateDbInMenu();
     this.limit.setLimit(true);
-    setHelpState("fromSaved");
+    // setHelpState("fromSaved");
+    this.state.setHelp("fromSaved");
     addListeners();
-    setFontState();
+    // setFontState();
+    this.state.setFont();
     console.log("app:", this)
   }
 
@@ -35,9 +38,11 @@ class App {
     this.tabs.resetTabs();
     this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
-    setHelpState("reset");
+    // setHelpState("reset");
+    this.state.setHelp("reset");
     this.limit.reset();
-    setFontState("reset");
+    // setFontState("reset");
+    this.state.setFont("reset");
   }
   static #instance;
 }
@@ -73,6 +78,8 @@ class State {
   };
 
   current = {};
+
+  FONT_UNIT = "pt";
 
   constructor() {
     const retrieved_items = this.readFromStorage();
@@ -136,6 +143,39 @@ class State {
     // isKids() {
     return app.state.current.db_state === 2;
   }
+
+  setHelp(e) {
+    this.setDetail(e, "help_state");
+  }
+
+  setRepeat(e) {
+    this.setDetail(e, "repeat_state");
+  }
+
+  setLevel(e) {
+    this.setDetail(e, "level_state");
+  }
+
+  changeFont(e) {
+    // ** if called without parameters, defaults to app.state.current value
+    const fontSize = (e ? e.target.value : app.state.current.font_state);
+    HTM.root_css.style.setProperty("--font-size", fontSize + this.FONT_UNIT);
+    this.saveItem("font_state", fontSize);
+  }
+
+  setFont(reset = "") {
+    const fontSize = (reset ? this.default.font_state : this.current.font_state);
+    this.current.font_state = fontSize;
+    this.changeFont();
+    for (const el of HTM.selectFontSize.children) {
+      el.selected = (el.value == fontSize);
+    }
+  }
+
+  updateDbInMenu() {
+    HTM.selectDb.value = this.current.db_state;
+  }
+
 }
 
 
@@ -600,7 +640,7 @@ class Backup {
     /* Get backup from chosen buffer and replace contents of workingDiv with it
     Buffer contents are then loaded with the old workingDiv content to allow undo*/
     const id = e.target.id;
-    const swap = JSON.parse(JSON.stringify(getTextFromWorkingDiv()));
+    const swap = JSON.parse(JSON.stringify(this.getTextWithoutCursor()));
     let restoredContent = localStorage.getItem(id);
     if (!restoredContent) return;
     restoredContent = newlinesToEOLs(restoredContent);
@@ -625,7 +665,7 @@ class Backup {
         save div > short_term
       ELSE: overwrite short_term with div
     */
-    let currentText = getTextFromWorkingDiv().trim();
+    let currentText = this.getTextWithoutCursor().trim();
     if (!currentText) return;
     const [shortTermID, longTermID] = this.backupIDs;
     const shortTermSavedContent = localStorage.getItem(shortTermID).trim();
@@ -655,6 +695,12 @@ class Backup {
     textMarkup();
   }
 
+  getTextWithoutCursor() {
+    let currentText = app.cursor.newlinesToPlaintext(HTM.workingDiv).innerText;
+    currentText = EOLsToNewlines(currentText);
+    currentText = currentText.trim();
+    return currentText;
+  }
 
   dialogClose(id) {
     if (id.target) id = "backup-dlg";

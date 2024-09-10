@@ -4,16 +4,11 @@
 
 const app = new App();
 app.init();
-// const app2 = new App();
 
 // TAB1 (words) CODE ## ############################################
 
 // ***** INIT FUNCTIONS
 
-
-function updateDropdownMenuOptions() {
-  HTM.selectDb.value = app.state.current.db_state;
-}
 
 
 function addListeners() {
@@ -38,11 +33,12 @@ function addWordInputListeners() {
 
 function addMenuListeners() {
   // HTM.clearButton.addEventListener("click", clearTab);
-  HTM.resetButton.addEventListener("click", function (e) {app.reset(e)}, false);
+  HTM.resetButton.addEventListener("click", function (e) { app.reset(e) }, false);
 
   // ## for refresh button + settings menu
-  HTM.selectDb.addEventListener("change", function (e){app.wordlist.change(e)}, false);
-  HTM.selectFontSize.addEventListener("change", changeFont);
+  HTM.selectDb.addEventListener("change", function (e) { app.wordlist.change(e) }, false);
+  // HTM.selectFontSize.addEventListener("change", changeFont);
+  HTM.selectFontSize.addEventListener("change", function (e) { app.state.changeFont(e) }, false);
 
   HTM.settingsMenu.addEventListener("mouseenter", dropdown);
   HTM.settingsMenu.addEventListener("mouseleave", dropdown);
@@ -53,8 +49,9 @@ function addHTMLlisteners() {
 }
 
 function addDetailListeners() {
-  HTM.helpAll.addEventListener("click", function (e) {app.limit.toggle(e)}, false);
-  HTM.help_state.addEventListener("toggle", setHelpState);
+  HTM.helpAll.addEventListener("click", function (e) { app.limit.toggle(e) }, false);
+  // HTM.help_state.addEventListener("toggle", setHelpState);
+  HTM.help_state.addEventListener("toggle", function (e) { app.state.setHelp(e) }, false);
 }
 
 function addEditingListeners() {
@@ -64,13 +61,19 @@ function addEditingListeners() {
   // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
   HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
   HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
-  HTM.workingDiv.addEventListener("keyup", function (e) {app.cursor.updatePos(e)}, false);
+  HTM.workingDiv.addEventListener("keyup", function (e) { app.cursor.updatePos(e) }, false);
   setHoverEffects();
 }
 
 function setHoverEffects() {
   HTM.workingDiv.addEventListener("mouseover", hoverEffects);
   HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+}
+
+function setupEditing(e) {
+  HTM.finalInfoDiv.classList.remove("word-detail");
+  addEditingListeners();
+  // forceUpdateInputDiv();
 }
 
 // *****  FUNCTIONS
@@ -260,6 +263,7 @@ function wordBuildSearchTerms(data) {
 }
 
 function wordRunSearch(searchTerms) {
+  // TODO: refactor using sub functions to make process clearer
   const search = new Search(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
   let matchedEntries = search.matchedEntries;
   // let [type, matchedEntries] = checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
@@ -364,10 +368,11 @@ function getNotesAsHTML(entry) {
 }
 
 
-function formatResultsAsTablerows(col1, col2, class1, class2, row) {
+// function formatResultsAsTablerows(col1, col2, class1, class2, row) {
+function formatResultsAsTablerows(col1, col2, class1, class2) {
   class1 = (class1) ? `class=${class1}` : "";
   class2 = (class2) ? `class=${class2}` : "";
-  row = (row) ? `class=${row}` : "";
+  // row = (row) ? `class=${row}` : "";
   return Tag.tag("tr", [], [
     Tag.tag("td", [class1], [col1]),
     Tag.tag("td", [class2], [...col2]),
@@ -532,7 +537,7 @@ function catchKeyboardCopyEvent(e) {
 function textMarkup(e) {
   if (!V.refreshRequired) return;
   signalRefreshNeeded("off");
-  let revisedText = textGetLatest().trim();
+  let revisedText = textGetWithCursor().trim();
   if (revisedText) {
     V.isExactMatch = true;
     V.setOfLemmaID = new Set();
@@ -551,18 +556,12 @@ function textMarkup(e) {
 }
 
 
-function textGetLatest() {
+function textGetWithCursor() {
   let revisedText = app.cursor.insertPlaceholder(HTM.workingDiv, app.cursor.offset);
   if (revisedText === app.cursor.text) revisedText = "";
   return revisedText;
 }
 
-function getTextFromWorkingDiv() {
-  let currentText = app.cursor.newlinesToPlaintext(HTM.workingDiv).innerText;
-  currentText = EOLsToNewlines(currentText);
-  currentText = currentText.trim();
-  return currentText;
-}
 
 function textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
   app.wordlist.displayDbNameInTab2(getWordCountForDisplay(wordCount));
@@ -570,9 +569,8 @@ function textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
   displayWorkingText(resultsHTML);
   // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
   const levelDetailsTag = document.getElementById("level-details");
-  if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", setLevelState);
-  // document.getElementById("level-details").addEventListener("toggle", setLevelState);
-  document.getElementById("repeat-details").addEventListener("toggle", setRepeatState);
+  if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", function (e) { app.state.setLevel(e) }, false);
+  document.getElementById("repeat-details").addEventListener("toggle", function (e) { app.state.setRepeat(e) }, false);
   // HTM.finalInfoDiv.innerText = "";
 }
 
@@ -701,8 +699,7 @@ function tokenize3(textArr) {
         acc = [acc[TOKEN] + el[TOKEN], acc[TYPE]];
         tmpTokenArr.push(new Token(...acc));
         acc = [];
-      }
-      else tmpTokenArr.push(new Token(...[el[TOKEN], el[TYPE]]));
+      } else tmpTokenArr.push(new Token(...[el[TOKEN], el[TYPE]]));
     }
   }
   return tmpTokenArr;
@@ -963,7 +960,7 @@ function buildHTMLword(token, wordIndex) {
   const firstType = sortedByLevel[0][2];
   let variantClass = (firstType.type === "wv") ? " variant" : "";
   if (firstType.startsWith("w")) V.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
-  const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
+  // const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
   const [
     levelArr,
     levelClass
@@ -1012,27 +1009,15 @@ function getSortedMatchesInfo(token) {
 }
 
 
-function setHelpState(e) {
-  app.state.setDetail(e, "help_state");
-}
 
-function setRepeatState(e) {
-  app.state.setDetail(e, "repeat_state");
-}
-
-function setLevelState(e) {
-  app.state.setDetail(e, "level_state");
-}
-
-
-function renderEOLsAsHTML(word, htmlString, wasEOL) {
-  const isEOL = word === EOL.text;
-  if (isEOL) {
-    htmlString += EOL.HTMLtext;
-    wasEOL = true;
-  }
-  return [isEOL, wasEOL, htmlString];
-}
+// function renderEOLsAsHTML(word, htmlString, wasEOL) {
+//   const isEOL = word === EOL.text;
+//   if (isEOL) {
+//     htmlString += EOL.HTMLtext;
+//     wasEOL = true;
+//   }
+//   return [isEOL, wasEOL, htmlString];
+// }
 
 function getDuplicateDetails(token, id) {
   const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
@@ -1055,17 +1040,6 @@ function getLevelDetails(levelArr) {
   return [levelArr, levelClass];
 }
 
-
-// function escapeHTML(text) {
-//   // return encodeURIComponent(text);
-//   if (/[<>&"]/.test(text)) {
-//     // text = text.replaceAll(/&/g, "&amp;");
-//     text = text.replaceAll(/</g, "&lt;");
-//     text = text.replaceAll(/>/g, "&gt;");
-//     // text = text.replaceAll(/"/g, "&quot;");
-//   }
-//   return text;
-// }
 
 
 function getLevelPrefix(levelGEPT) {
@@ -1179,15 +1153,17 @@ function compareByLemma(a, b) {
 }
 
 function getWordCountForDisplay(wordCount) {
-  const numOfWords = (wordCount > 0) ? Tag.tag("span", ["class=text-right dark"], [
-    "(",
-    wordCount,
-    " word",
-    pluralNoun(wordCount),
-    ")",
-    // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
-    Tag.tag("a", ["href=#all_repeats", "class=medium"]),
-  ]) : "";
+  const numOfWords = (wordCount > 0)
+    ? Tag.tag("span", ["class=text-right dark"], [
+      "(",
+      wordCount,
+      " word",
+      pluralNoun(wordCount),
+      ")",
+      // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
+      Tag.tag("a", ["href=#all_repeats", "class=medium"]),
+    ])
+    : "";
   return numOfWords;
 }
 
@@ -1213,46 +1189,12 @@ function findBaseForm(word, subs) {
 }
 
 
-// ## SLIDER code ############################################
-
-function changeFont(e) {
-  // ** if called without parameters, defaults to app.state.current value
-  // const fontSize = e.target.value + "px";
-  // const fontSize = (e ? e.target.value : app.state.current.font_state) + C.FONT_UNIT;
-  const fontSize = (e ? e.target.value : app.state.current.font_state);
-  HTM.root_css.style.setProperty("--font-size", fontSize + C.FONT_UNIT);
-  app.state.saveItem("font_state", fontSize);
-}
-
-function setFontState(reset="") {
-  const fontSize = (reset ? app.state.default.font_state : app.state.current.font_state);
-  app.state.current.font_state = fontSize;
-  changeFont();
-  for (const el of HTM.selectFontSize.children) {
-    el.selected = (el.value == fontSize);
-  }
-}
-
-
-function setupEditing(e) {
-  HTM.finalInfoDiv.classList.remove("word-detail");
-  addEditingListeners();
-  // forceUpdateInputDiv();
-}
-
-
-// function jumpToDuplicate(id) {
-//   // ** clean up previous highlights
-//   const cssClass = "jumpHighlight";
-//   for (const element of document.getElementsByClassName(cssClass)) {
-//     element.classList.remove(cssClass)
-//   }
-//   const duplicate = document.getElementById(id);
-//   if (duplicate) {
-//     duplicate.classList.add(cssClass);
-//     duplicate.scrollIntoView({ behavior: "smooth", block: "center" });
-//   }
+// function setupEditing(e) {
+//   HTM.finalInfoDiv.classList.remove("word-detail");
+//   addEditingListeners();
+//   // forceUpdateInputDiv();
 // }
+
 
 // ## COMMON ELEMENTS ######################################
 
@@ -1299,19 +1241,6 @@ function normalizeTextForClipboard(e) {
   e.clipboardData.setData("text/plain", normalizedText);
   e.preventDefault();
 }
-
-// function normalizeTextForClipboard(e) {
-//   if (!e) {
-//     e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
-//   }
-//   const sel = document.getSelection();
-//   let copiedText = sel.getRangeAt(0);
-//   let normalizedText = getCopyWithoutMarks(copiedText);
-//   normalizedText = normalizedText.innerText;
-//   normalizedText = EOLsToNewlines(normalizedText);
-//   e.clipboardData.setData("text/plain", normalizedText);
-//   e.preventDefault();
-// }
 
 
 function EOLsToNewlines(text) {
