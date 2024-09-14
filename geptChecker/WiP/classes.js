@@ -13,6 +13,7 @@ class App {
     this.backup = new Backup();
     this.cursor = new Cursor();
     this.limit = new ShowLevelLimit();
+    this.listeners = new EventListeners();
   }
 
   init() {
@@ -22,13 +23,10 @@ class App {
     if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
     setupEditing();
     HTM.form.reset();
-    // updateDropdownMenuOptions();
     this.state.updateDbInMenu();
     this.limit.setLimit(true);
-    // setHelpState("fromSaved");
     this.state.setHelp("fromSaved");
-    addListeners();
-    // setFontState();
+    this.listeners.addAll();
     this.state.setFont();
     console.log("app:", this)
   }
@@ -38,13 +36,77 @@ class App {
     this.tabs.resetTabs();
     this.wordlist.change(this.state.current.db_state);
     HTM.selectDb.value = this.state.current.db_state;
-    // setHelpState("reset");
     this.state.setHelp("reset");
     this.limit.reset();
-    // setFontState("reset");
     this.state.setFont("reset");
   }
   static #instance;
+}
+
+class EventListeners {
+  detailID = "repeat-details";
+  addAll() {
+    // addTabListeners();
+    this.addMenu();
+    this.addHTML();
+    this.addDetail();
+    this.addWordInput();
+    this.addEditing();
+  }
+
+  addWordInput() {
+    HTM.inputLemma.addEventListener("input", debounce(wordSearch, 500));
+    for (const el of document.getElementsByTagName("input")) {
+      if (el.type != "text") {
+        const label = el.labels[0];
+        if (label.htmlFor) label.addEventListener("click", registerLabelClick);
+      }
+    }
+  }
+
+
+  addMenu() {
+    // HTM.clearButton.addEventListener("click", clearTab);
+    HTM.resetButton.addEventListener("click", function (e) { app.reset(e) }, false);
+
+    // ## for refresh button + settings menu
+    HTM.selectDb.addEventListener("change", function (e) { app.wordlist.change(e) }, false);
+    HTM.selectFontSize.addEventListener("change", function (e) { app.state.changeFont(e) }, false);
+
+    HTM.settingsMenu.addEventListener("mouseenter", dropdown);
+    HTM.settingsMenu.addEventListener("mouseleave", dropdown);
+  }
+
+  addHTML() {
+    HTM.kidsTheme.addEventListener("change", updateKidstheme);
+  }
+
+  addDetail() {
+    HTM.helpAll.addEventListener("click", function (e) { app.limit.toggle(e) }, false);
+    HTM.help_state.addEventListener("toggle", function (e) { app.state.setHelp(e) }, false);
+  }
+
+  addEditing() {
+    HTM.workingDiv.addEventListener("paste", normalizePastedText);
+    // ## having probs removing his event listener; leave & ignore with updateInputDiv
+    // HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
+    // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
+    HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
+    HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
+    HTM.workingDiv.addEventListener("keyup", function (e) { app.cursor.updatePos(e) }, false);
+    this.setHoverEffect();
+  }
+
+  setHoverEffect() {
+    HTM.workingDiv.addEventListener("mouseover", hoverEffects);
+    HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+  }
+
+  addDetailToggle(levelDetailsTag) {
+    // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
+    if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", function (e) { app.state.setLevel(e) }, false);
+    document.getElementById("repeat-details").addEventListener("toggle", function (e) { app.state.setRepeat(e) }, false);
+  }
 }
 
 class Tools {

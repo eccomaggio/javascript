@@ -10,69 +10,9 @@ app.init();
 // ***** INIT FUNCTIONS
 
 
-
-function addListeners() {
-  // addTabListeners();
-  addMenuListeners();
-  addHTMLlisteners();
-  addDetailListeners();
-  addWordInputListeners();
-  addEditingListeners();
-}
-
-function addWordInputListeners() {
-  HTM.inputLemma.addEventListener("input", debounce(wordSearch, 500));
-  for (const el of document.getElementsByTagName("input")) {
-    if (el.type != "text") {
-      const label = el.labels[0];
-      if (label.htmlFor) label.addEventListener("click", registerLabelClick);
-    }
-  }
-}
-
-
-function addMenuListeners() {
-  // HTM.clearButton.addEventListener("click", clearTab);
-  HTM.resetButton.addEventListener("click", function (e) { app.reset(e) }, false);
-
-  // ## for refresh button + settings menu
-  HTM.selectDb.addEventListener("change", function (e) { app.wordlist.change(e) }, false);
-  // HTM.selectFontSize.addEventListener("change", changeFont);
-  HTM.selectFontSize.addEventListener("change", function (e) { app.state.changeFont(e) }, false);
-
-  HTM.settingsMenu.addEventListener("mouseenter", dropdown);
-  HTM.settingsMenu.addEventListener("mouseleave", dropdown);
-}
-
-function addHTMLlisteners() {
-  HTM.kidsTheme.addEventListener("change", updateKidstheme);
-}
-
-function addDetailListeners() {
-  HTM.helpAll.addEventListener("click", function (e) { app.limit.toggle(e) }, false);
-  // HTM.help_state.addEventListener("toggle", setHelpState);
-  HTM.help_state.addEventListener("toggle", function (e) { app.state.setHelp(e) }, false);
-}
-
-function addEditingListeners() {
-  HTM.workingDiv.addEventListener("paste", normalizePastedText);
-  // ## having probs removing his event listener; leave & ignore with updateInputDiv
-  // HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
-  // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
-  HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
-  HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
-  HTM.workingDiv.addEventListener("keyup", function (e) { app.cursor.updatePos(e) }, false);
-  setHoverEffects();
-}
-
-function setHoverEffects() {
-  HTM.workingDiv.addEventListener("mouseover", hoverEffects);
-  HTM.workingDiv.addEventListener("mouseout", hoverEffects);
-}
-
 function setupEditing(e) {
   HTM.finalInfoDiv.classList.remove("word-detail");
-  addEditingListeners();
+  app.listeners.addEditing();
   // forceUpdateInputDiv();
 }
 
@@ -567,12 +507,10 @@ function textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
   app.wordlist.displayDbNameInTab2(getWordCountForDisplay(wordCount));
   displayRepeatsList(repeatsHTML, levelStatsHTML);
   displayWorkingText(resultsHTML);
-  // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
-  const levelDetailsTag = document.getElementById("level-details");
-  if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", function (e) { app.state.setLevel(e) }, false);
-  document.getElementById("repeat-details").addEventListener("toggle", function (e) { app.state.setRepeat(e) }, false);
+  app.listeners.addDetailToggle(document.getElementById("level-details"));
   // HTM.finalInfoDiv.innerText = "";
 }
+
 
 function displayWorkingText(html) {
   HTM.workingDiv.innerHTML = html;
@@ -1086,7 +1024,7 @@ function buildHTMLrepeatList(wordCount) {
   let countAllReps = 0;
   let repeatsHeader;
   let listOfRepeats = [];
-  const idForEventListener = "repeat-details";
+  // const idForEventListener = "repeat-details";
   if (wordCount) {
     /* List of repeated lemmas
     in line with display policy, if two lemmas are identical,
@@ -1120,7 +1058,8 @@ function buildHTMLrepeatList(wordCount) {
     }
     if (countAllReps > 0) {
       const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
-      repeatsHeader = Tag.tag("details", [`id=${idForEventListener}`, toggleOpen], [
+      // repeatsHeader = Tag.tag("details", [`id=${idForEventListener}`, toggleOpen], [
+      repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
         Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
           countAllReps,
           ` significant repeated word${(countAllReps === 1) ? "" : "s"}`,
@@ -1133,7 +1072,8 @@ function buildHTMLrepeatList(wordCount) {
     }
   }
   if (!repeatsHeader) {
-    repeatsHeader = Tag.tag("p", [`id=${idForEventListener}`], [
+    // repeatsHeader = Tag.tag("p", [`id=${idForEventListener}`], [
+    repeatsHeader = Tag.tag("p", [`id=${app.listeners.detailID}`], [
       Tag.tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
   }
   return repeatsHeader.stringify();
@@ -1198,6 +1138,18 @@ function findBaseForm(word, subs) {
 
 // ## COMMON ELEMENTS ######################################
 
+function jumpToDuplicate(id) {
+  // ** clean up previous highlights
+  const cssClass = "jumpHighlight";
+  for (const element of document.getElementsByClassName(cssClass)) {
+    element.classList.remove(cssClass)
+  }
+  const duplicate = document.getElementById(id);
+  if (duplicate) {
+    duplicate.classList.add(cssClass);
+    duplicate.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
 
 function debounce(func, timeout = 500) {
   let timer;
