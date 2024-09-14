@@ -12,7 +12,7 @@ app.init();
 
 function setupEditing(e) {
   HTM.finalInfoDiv.classList.remove("word-detail");
-  app.listeners.addEditing();
+  // app.listeners.addEditing();
   // forceUpdateInputDiv();
 }
 
@@ -460,7 +460,7 @@ function normalizePastedText(e) {
   const selection = window.getSelection();
   selection.getRangeAt(0).insertNode(document.createTextNode(paste));
   signalRefreshNeeded("on");
-  textMarkup(e);
+  textRefresh(e);
 }
 
 function catchKeyboardCopyEvent(e) {
@@ -474,27 +474,28 @@ function catchKeyboardCopyEvent(e) {
 }
 
 
-function textMarkup(e) {
+function textRefresh(e) {
   if (!V.refreshRequired) return;
   signalRefreshNeeded("off");
   let revisedText = textGetWithCursor().trim();
   if (revisedText) {
-    V.isExactMatch = true;
-    V.setOfLemmaID = new Set();
-    app.wordlist.resetOfflistDb();
-    let tokenArr = textdivideIntoTokens(revisedText);
-    revisedText = null;
-    tokenArr = textLookupCompounds(tokenArr);
-    tokenArr = textLookupSimples(tokenArr);
-    // debug(taggedTokenArr)
+    const tokenArr = textMarkup(revisedText);
     textBuildHTML(tokenArr);
-    // backupSave();
     app.backup.save();
-    signalRefreshNeeded("off");
-    app.cursor.setPos(document.getElementById(app.cursor.id));
   }
 }
 
+function textMarkup(revisedText) {
+  signalRefreshNeeded("off");
+  V.isExactMatch = true;
+  V.setOfLemmaID = new Set();
+  app.wordlist.resetOfflistDb();
+  let tokenArr = textdivideIntoTokens(revisedText);
+  revisedText = null;
+  tokenArr = textLookupCompounds(tokenArr);
+  tokenArr = textLookupSimples(tokenArr);
+  return tokenArr;
+}
 
 function textGetWithCursor() {
   let revisedText = app.cursor.insertPlaceholder(HTM.workingDiv, app.cursor.offset);
@@ -534,6 +535,7 @@ function textBuildHTML(tokenArr) {
   const repeatsHTML = buildHTMLrepeatList(totalWordCount);
   const levelStatsHTML = buildHTMLlevelStats(separateLemmasCount, levelStats);
   textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount);
+  app.cursor.setPos(document.getElementById(app.cursor.id));
 }
 
 
@@ -1024,7 +1026,6 @@ function buildHTMLrepeatList(wordCount) {
   let countAllReps = 0;
   let repeatsHeader;
   let listOfRepeats = [];
-  // const idForEventListener = "repeat-details";
   if (wordCount) {
     /* List of repeated lemmas
     in line with display policy, if two lemmas are identical,
@@ -1058,7 +1059,6 @@ function buildHTMLrepeatList(wordCount) {
     }
     if (countAllReps > 0) {
       const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
-      // repeatsHeader = Tag.tag("details", [`id=${idForEventListener}`, toggleOpen], [
       repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
         Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
           countAllReps,
@@ -1072,7 +1072,6 @@ function buildHTMLrepeatList(wordCount) {
     }
   }
   if (!repeatsHeader) {
-    // repeatsHeader = Tag.tag("p", [`id=${idForEventListener}`], [
     repeatsHeader = Tag.tag("p", [`id=${app.listeners.detailID}`], [
       Tag.tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
   }
@@ -1127,13 +1126,6 @@ function findBaseForm(word, subs) {
   }
   return matchedEntries;
 }
-
-
-// function setupEditing(e) {
-//   HTM.finalInfoDiv.classList.remove("word-detail");
-//   addEditingListeners();
-//   // forceUpdateInputDiv();
-// }
 
 
 // ## COMMON ELEMENTS ######################################
@@ -1209,6 +1201,6 @@ function newlinesToEOLs(text) {
 
 function forceUpdateInputDiv() {
   V.refreshRequired = true;
-  textMarkup();
+  textRefresh();
   // V.refreshRequested = false;
 }

@@ -754,7 +754,7 @@ class Backup {
     //   HTM.backupSave.innerText = "save backup";
     //   HTM.backupSave.classList.remove("error");
     // }, 1000);
-    textMarkup();
+    textRefresh();
   }
 
   getTextWithoutCursor() {
