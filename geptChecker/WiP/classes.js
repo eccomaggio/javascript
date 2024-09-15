@@ -14,6 +14,10 @@ class App {
     this.cursor = new Cursor();
     this.limit = new ShowLevelLimit();
     this.listeners = new EventListeners();
+    this.text = new Text();
+    this.parser = new TextProcessor();
+    this.stats = new WordStatistics();
+    this.repeats = new Repeats();
   }
 
   init() {
@@ -125,6 +129,623 @@ class Tools {
     arr = [...new Set(arr)];
     // arr = arr.filter(el => el.length);
     return arr;
+  }
+
+  pluralNoun(amount) {
+    return (amount > 1) ? "s" : "";
+  }
+}
+
+class Repeats {
+  tallyOfIDreps = {};
+  setOfLemmaID = new Set();
+
+  buildHTMLrepeatList(wordCount) {
+    let countAllReps = 0;
+    let repeatsHeader;
+    let listOfRepeats = [];
+    if (wordCount) {
+      /* List of repeated lemmas
+      in line with display policy, if two lemmas are identical,
+      the id with the lowest level is linked/displayed
+      This fits with buildMarkupAsHTML()
+      same lemma, different rawWord: only first is displayed (i.e. 'learned (learns)')
+      */
+      const repeatsList = [...this.setOfLemmaID].sort();
+      let idList = [];
+      for (const el of repeatsList) {
+        const [word, id] = el.split(":");
+        if (idList.includes(id)) continue;
+        else idList.push(id);
+        const entry = app.wordlist.getEntryById(id);
+        // const totalReps = V.tallyOfIDreps[id];
+        const totalReps = this.tallyOfIDreps[id];
+        const isRepeatable = !LOOKUP.repeatableWords.includes(word);
+        if (totalReps > 0 && isRepeatable) {
+          countAllReps++;
+          let anchors = [];
+          for (let rep = 1; rep <= totalReps + 1; rep++) {
+            let display = rep;
+            let displayClass = "class=anchors";
+            if (rep === 1) {
+              display = highlightAwlWord(entry.levelArr, word);
+              displayClass = `class=level-${getLevelPrefix(entry.levelGEPT)}`;
+            }
+            // anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
+            anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
+          }
+          listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry.levelGEPT)}`], [...anchors]));
+        }
+      }
+      if (countAllReps > 0) {
+        const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
+        repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
+          Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
+            countAllReps,
+            ` significant repeated word${(countAllReps === 1) ? "" : "s"}`,
+          ]),
+          Tag.tag("p", [], [
+            Tag.tag("em", [], ["Click on word / number to jump to that occurrence."])
+          ]),
+          Tag.tag("div", ["id=repeats"], [...listOfRepeats]),
+        ]);
+      }
+    }
+    if (!repeatsHeader) {
+      repeatsHeader = Tag.tag("p", [`id=${app.listeners.detailID}`], [
+        Tag.tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
+    }
+    return repeatsHeader.stringify();
+  }
+
+  getDuplicateDetails(token, id) {
+    const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
+    // const totalReps = V.tallyOfIDreps[id];
+    const totalReps = this.tallyOfIDreps[id];
+    let duplicateClass = "";
+    let duplicateCountInfo = "";
+    let anchor = "";
+    const relatedWordsClass = `all_${id}`;
+    if (totalReps > 0 && !ignoreThisRep) {
+      duplicateClass = "duplicate";
+      duplicateCountInfo = `data-reps=${totalReps}`;
+      anchor = `id=${relatedWordsClass}_${token.count + 1}`;
+    }
+    return [relatedWordsClass, duplicateClass, duplicateCountInfo, anchor];
+  }
+  updateTallyOfIDreps(entryArr) {
+    for (const entry of entryArr) {
+      // V.tallyOfIDreps[entry.id] = V.tallyOfIDreps[entry.id] + 1 || 0;
+      this.tallyOfIDreps[entry.id] = this.tallyOfIDreps[entry.id] + 1 || 0;
+    }
+    return this.tallyOfIDreps[entryArr[0].id];
+  }
+
+  displayList(listOfRepeats, levelStatsHTML) {
+    HTM.repeatsList.innerHTML = levelStatsHTML + listOfRepeats;
+  }
+  jumpToDuplicate(id) {
+    // ** clean up previous highlights
+    const cssClass = "jumpHighlight";
+    for (const element of document.getElementsByClassName(cssClass)) {
+      element.classList.remove(cssClass)
+    }
+    const duplicate = document.getElementById(id);
+    if (duplicate) {
+      duplicate.classList.add(cssClass);
+      duplicate.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+}
+
+class WordStatistics {
+  getAllLevelStats(tokenArr) {
+    /*
+    firstAppearanceOfWord = [lemma, id, gept level, awl level]
+    */
+    const [firstAppearanceOfWord, totalWordCount] = this.getFirstAppearanceOfEachWord(tokenArr);
+    const separateLemmasCount = firstAppearanceOfWord.length;
+    let lemmasBylevel = this.getListOfFirstAppearancesByLemma(firstAppearanceOfWord);
+    let levelStats = [];
+    let awlCount = 0;
+    let awlEntries = 0;
+    for (const level in lemmasBylevel) {
+      // const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
+      const levelText = (level > -1) ? app.wordlist.level_headings[level] : "offlist";
+      const lemmasAtThisLevel = lemmasBylevel[level];
+      const currStat = this.buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount);
+      levelStats.push(currStat);
+      if (app.state.isBESTEP && level >= 38) {
+        awlCount += lemmasAtThisLevel;
+        awlEntries++;
+      }
+    }
+    if (app.state.isBESTEP && awlEntries > 1) levelStats.push(this.buildLevelStat(37, Tag.tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
+    return [totalWordCount, separateLemmasCount, levelStats];
+  }
+
+  getFirstAppearanceOfEachWord(tokenArr) {
+    const firstAppearanceOfWord = []; // [lemma, id, gept level, awl level]
+    const subsequentAppearances = []; // [lemma, id]
+    for (const token of tokenArr) {
+      // ** only need to look at the first candidate as all candidates point to same token lemma
+      if (token.type.startsWith("w")) {
+        let level;
+        let awlLevel;
+        const firstMatch = token.matches[0];
+        if (token.count === 0) {
+          // debug(token.lemma, token, firstMatch)
+          if (token.type === "wo") {
+            [level, awlLevel] = [-1, -1];
+          }
+          else {
+            // [level, awlLevel] = getEntryById(firstID).levelArr.slice(0, 2);
+            [level, awlLevel] = firstMatch.levelArr.slice(0, 2);
+          }
+          const info = [token.lemma, firstMatch.id, level, awlLevel];
+          firstAppearanceOfWord.push(info)
+        }
+        else subsequentAppearances.push([token.lemma, firstMatch.id])
+      }
+    }
+    const separateLemmasCount = firstAppearanceOfWord.length;
+    const totalWordCount = separateLemmasCount + subsequentAppearances.length;
+    return [firstAppearanceOfWord, totalWordCount];
+  }
+
+  getListOfFirstAppearancesByLemma(firstAppearanceOfWord) {
+    let lemmasBylevel = {};
+    for (const [word, id, geptLevel, awlLevel] of firstAppearanceOfWord) {
+      // ** NB awl words are also included in the GEPT level counts
+      lemmasBylevel[geptLevel] = (lemmasBylevel[geptLevel] || 0) + 1;
+      if (awlLevel > -1) lemmasBylevel[awlLevel] = (lemmasBylevel[awlLevel] || 0) + 1;
+    }
+    return lemmasBylevel;
+  }
+
+  buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount) {
+    return [level, levelText, lemmasAtThisLevel, Math.round(100 * (lemmasAtThisLevel / separateLemmasCount)) + "%"];
+  }
+
+  buildHTMLlevelStats(separateLemmasCount, levelStats) {
+    /*
+    <details id="level-details"${toggleOpen}>
+      <summary class="all-repeats">
+        Level statistics:<em> (${separateLemmasCount} headwords)</em>
+      </summary>
+      <div class="level-stats-cols">
+        <p class="level..."></p>
+      </div>
+    </details>
+    */
+    let levelStatsHTML = "";
+    // if (!separateLemmasCount || isKids()) return levelStatsHTML;
+    if (!separateLemmasCount || app.state.isKids) return levelStatsHTML;
+    let tmpStats = [];
+    for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
+      if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
+      else if (app.state.isBESTEP) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
+    }
+    const toggleOpen = (app.state.current.level_state) ? " open" : "";
+    levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
+      Tag.tag("summary", ["class=all-repeats"], [
+        "Level statistics:",
+        Tag.tag("em", [], [separateLemmasCount, " headwords"]),
+      ]),
+      Tag.tag("div", ["class=level-stats-cols"], [...tmpStats])
+    ])
+    ]);
+    return levelStatsHTML.stringify();
+  }
+}
+
+class Text {
+  refresh(e) {
+    if (!V.refreshRequired) return;
+    signalRefreshNeeded("off");
+    let revisedText = this.textGetWithCursor().trim();
+    if (revisedText) {
+      const tokenArr = app.parser.textMarkup(revisedText);
+      this.textBuildHTML(tokenArr);
+      app.backup.save();
+    }
+  }
+
+  textGetWithCursor() {
+    let revisedText = app.cursor.insertPlaceholder(HTM.workingDiv, app.cursor.offset);
+    if (revisedText === app.cursor.text) revisedText = "";
+    return revisedText;
+  }
+
+  textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
+    app.wordlist.displayDbNameInTab2(getWordCountForDisplay(wordCount));
+    // displayRepeatsList(repeatsHTML, levelStatsHTML);
+    app.repeats.displayList(repeatsHTML, levelStatsHTML);
+    this.textDisplayWorking(resultsHTML);
+    app.listeners.addDetailToggle(document.getElementById("level-details"));
+    // HTM.finalInfoDiv.innerText = "";
+  }
+
+  textDisplayWorking(html) {
+    HTM.workingDiv.innerHTML = html;
+    // setCursorPos(document.getElementById(CURSOR.id));
+  }
+
+  textBuildHTML(tokenArr) {
+    // debug(tokenArr)
+    const [totalWordCount, separateLemmasCount, levelStats] = app.stats.getAllLevelStats(tokenArr);
+    const resultsHTML = this.buildHTMLtext(tokenArr);
+    tokenArr = null;
+    // const repeatsHTML = buildHTMLrepeatList(totalWordCount);
+    const repeatsHTML = app.repeats.buildHTMLrepeatList(totalWordCount);
+    const levelStatsHTML = app.stats.buildHTMLlevelStats(separateLemmasCount, levelStats);
+    this.textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, totalWordCount);
+    app.cursor.setPos(document.getElementById(app.cursor.id));
+  }
+
+  buildHTMLtext(tokenArr) {
+    let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "c", "d", "y", "wnd"];
+    // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
+    let htmlString = "";
+    let wordIndex = 0;
+    for (let token of tokenArr) {
+      const firstType = token.type;
+      if (firstType === "pe") htmlString += `\n${EOL.HTMLtext}`;
+      else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
+      else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
+      else {
+        wordIndex++;
+        const groupedWord = this.buildHTMLword(token, wordIndex);
+        htmlString += groupedWord;
+      }
+    }
+    return htmlString;
+  }
+
+  buildHTMLword(token, wordIndex) {
+    // ** expects populated list of matches (therefore requires textLookupSimples)
+    if (!token.matches.length) console.log(`WARNING: No match for this item (${token.lemma})!!`)
+    let word = token.lemma;
+    const [
+      sortedByLevel,
+      levelsAreIdentical
+    ] = this.getSortedMatchesInfo(token);
+    const firstID = sortedByLevel[0][0];
+    // TODO: this currently doesn't look at the type of each candidate; is it worth changing?
+    const firstType = sortedByLevel[0][2];
+    let variantClass = (firstType.type === "wv") ? " variant" : "";
+    // if (firstType.startsWith("w")) V.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
+    if (firstType.startsWith("w")) app.repeats.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
+    // const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
+    const [
+      levelArr,
+      levelClass
+    ] = getLevelDetails(sortedByLevel[0][1]);
+    // const limit = (V.levelLimitStr && V.levelLimitActiveClassesArr.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
+    // const limit = (app.limit.str && app.limit.activeClassesArr.includes(levelClass)) ? ` ${app.limit.LEVEL_LIMIT_CLASS}` : "";
+    const limit = (app.limit.classNameCSS && app.limit.exceedsLimit(levelClass)) ? app.limit.LEVEL_LIMIT_CLASS : "";
+    const [
+      relatedWordsClass,
+      duplicateClass,
+      duplicateCountInfo,
+      anchor
+    ] = app.repeats.getDuplicateDetails(token, firstID);
+    // ] = getDuplicateDetails(token, firstID);
+    word = app.cursor.insertInHTML(token.length, wordIndex, word);
+    const localWord = highlightAwlWord(levelArr, word);
+    // ** listOfLinks = id:lemma:type
+    // let listOfLinksArr = token.matches.map(id => `${id}:${token.lemma.trim()}:${token.type}`);
+    let listOfLinksArr = token.matches.map(entry => `${entry.id}:${token.lemma.trim()}:${token.type}`);
+    let showAsMultiple = "";
+    if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
+    let classes = [];
+    for (const term of [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]) {
+      if (term) classes.push(term);
+    }
+    classes = classes.join(" ");
+    // const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
+    const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
+    const displayWordAsString = displayWord.stringify();
+    // debug(displayWordAsString)
+    return displayWordAsString;
+  }
+
+  getSortedMatchesInfo(token) {
+    let matches = token.matches;
+    let idLevelArr = [];   // ** [[0:id, 1:[gept,awl, status], 2:tokenType], ...]]
+    for (const entry of matches) {
+      idLevelArr.push([entry.id, entry.levelArr, token.type])
+    }
+    let levelsAreIdentical = true;
+    if (idLevelArr.length > 1) {
+      idLevelArr.sort((a, b) => a[1][0] - b[1][0]);
+      levelsAreIdentical = idLevelArr.map(el => el[1]).every(level => level[0] === idLevelArr[0][1][0]);
+    }
+    return [idLevelArr, levelsAreIdentical]
+  }
+
+}
+
+class TextProcessor {
+    expansions = {
+      c: "contraction",
+      d: "digit",
+      y: "symbol",
+    };
+
+  textMarkup(revisedText) {
+    signalRefreshNeeded("off");
+    V.isExactMatch = true;
+    // V.setOfLemmaID = new Set();
+    app.repeats.setOfLemmaID = new Set();
+    app.wordlist.resetOfflistDb();
+    let tokenArr = this.textdivideIntoTokens(revisedText);
+    revisedText = null;
+    tokenArr = this.textLookupCompounds(tokenArr);
+    tokenArr = this.textLookupSimples(tokenArr);
+    return tokenArr;
+  }
+
+  textdivideIntoTokens(rawText) {
+    signalRefreshNeeded("off");
+    if (typeof rawText === "object") return;
+    let text = this.normalizeRawText(rawText);
+    let tokenArr = this.tokenize(text);
+    return tokenArr;
+  }
+
+  tokenize(text) {
+    let textArr = this.split(text);
+    textArr = this.tokenize1(textArr);   // identify main tokens
+    textArr = this.tokenize2(textArr);   // confirm identification + prepare for grouping
+    textArr = this.tokenize3(textArr);   // fine-tune position of splits
+    textArr = this.tokenize4(textArr);
+    // debug(textArr)
+    console.log("textArr=", textArr)
+    return textArr;
+  }
+
+
+  split(text) {
+    text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");           // protect preferred A.M. / P.M.
+    text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
+    const re = new RegExp("(\\w+)(" + app.cursor.text + ")(\\w+)", "g");  // catch cursor
+    text = text.replaceAll(re, "$1$3$2");                             // move cursor to word end (to preserve word for lookup)
+    // text = text.replaceAll("\n", EOL.text);                  // catch newlines (already caught by normalizeRawText)
+    text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
+    text = text.trim();
+    return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
+  }
+
+
+  tokenize1(textArr) {
+    // Pass 1: identify possible tokens
+    let tmpArr = [];
+    for (let el of textArr) {
+      if (!el.length) continue;
+      let token = "**";
+      if (/^\s+$/.test(el)) token = "s";               // space
+      else if (el === "-") token = "s";                // hyphen
+      else if (el === "'") token = "a";                // apostrophe
+      else if (/\d/.test(el)) token = "d";             // digit
+      else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
+      else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
+      else if (/[+\-=@*<>&]/.test(el)) token = "y";  // symbols
+      else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
+      else if (el === ",") token = "@";
+      else if (/["',./?!()[\]]/.test(el)) token = "p";                // punctuation
+      else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
+      // else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // metacharacter newline
+      else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "pe"];    // punctuation newline
+      else if (el.indexOf(app.cursor.simpleText) >= 0) [el, token] = ["", "mc"]; // metacharacter cursor
+      else if (/--/.test(el)) token = "p";                                   // m-dash
+      else if (/\s/.test(el) && el.indexOf("-") >= 0) token = "p";           // dash (i.e. punctuation)
+      else if (/[a-zA-Z]/.test(el)) token = "w";                             // word
+      tmpArr.push([el, token]);
+    }
+    return tmpArr;
+  }
+
+  tokenize2(textArr) {
+    // Pass 2: use context to identify tokens & assign suitability to compound search
+    const max = textArr.length - 1;
+    const CMD = {
+      combine: "+",
+      delete: "-",
+    }
+    for (let i = 0; i <= max; i++) {
+      const prev = (i > 0) ? textArr[i - 1] : [null, "-"];
+      let next = (i < max) ? textArr[i + 1] : [null, "-"];
+      let curr = textArr[i];
+      // ** create patterns of elements for easy identification
+      const c_n = curr[1] + next[1];
+      const p_c_n = prev[1] + c_n;
+      let entry = [];
+      if (p_c_n === "waw") entry.push(CMD.combine, "c");  // contractions
+      else if (c_n === "$d") entry.push(CMD.combine, "d");  // currency signs
+      else if (c_n === "d%") entry.push(CMD.combine, "d");  // post-digit punctuation
+      else if (c_n === "d@") entry.push(CMD.combine, "d");  // decimal point / thousand separator
+      else if (p_c_n === "d@d") entry.push(CMD.combine, "d");  // decimal point / thousand separator
+      curr.push(...entry);
+    }
+    return textArr;
+  }
+
+  tokenize3(textArr) {
+    // Pass 3: Merge specified chunks
+    const TOKEN = 0;    // word or punctuation
+    const TYPE = 1;     // w (word), s (space/hypen), d (digit), p (punctuation mark)
+    const CMD = 2;      // + = combine with next; - = delete
+    const newTYPE = 3;  // if combining, what is new type
+
+    let tmpTokenArr = [];
+    let acc = [];
+    for (let el of textArr) {
+      if (el[CMD] === "-") continue;
+      const accumulatorEmpty = !!acc.length;
+      // const combineWithNext = !!el[CMD];
+      // const combineWithNext = el[CMD] === "+";
+      // if (combineWithNext) {
+      if (el[CMD] === "+") {
+        if (accumulatorEmpty) acc = [acc[TOKEN] + el[TOKEN], el[newTYPE]];
+        else acc = [el[TOKEN], el[newTYPE]];
+      }
+      else {
+        if (accumulatorEmpty) {
+          acc = [acc[TOKEN] + el[TOKEN], acc[TYPE]];
+          tmpTokenArr.push(new Token(...acc));
+          acc = [];
+        } else tmpTokenArr.push(new Token(...[el[TOKEN], el[TYPE]]));
+      }
+    }
+    return tmpTokenArr;
+  }
+
+  tokenize4(taggedTokenArr) {
+    // ** to deal with measurements i.e. num+abbrev. (no space)
+    let tmpTokenArr = [];
+    for (let token of taggedTokenArr) {
+      // for (let candidate of token.candidates) {
+      let toAdd = [];
+      if (token.type === "d") {
+        for (let el of Object.keys(LOOKUP.abbreviations)) {
+          const ending = token.lemma.slice(-el.length)
+          if (ending === el) {
+            const num = token.lemma.slice(0, -el.length)
+            toAdd.push(new Token(num, "d", []), new Token(ending, "w", []))
+            break;
+          }
+        }
+      }
+      if (!toAdd.length) toAdd.push(token)
+      tmpTokenArr.push(...toAdd);
+    }
+    return tmpTokenArr;
+  }
+
+  textLookupCompounds(tokenArr) {
+    // ** This must be the first look up done (check this is true!)
+    const len = Object.keys(tokenArr).length;
+    for (let i = 0; i < len; i++) {
+      const token = tokenArr[i];
+      if (token.type.startsWith("w")) {
+        let j = i;
+        let wordBlob = "";
+        while (j < len && !tokenArr[j].type.startsWith("p")) {
+          const tmpToken = tokenArr[j];
+          if (tmpToken.type.startsWith("w")) wordBlob += tmpToken.lemma;
+          j++;
+        }
+        wordBlob = wordBlob.toLowerCase();
+        // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
+        for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
+          if (wordBlob.startsWith(compound)) {
+            token.appendMatches(app.wordlist.getEntryById(id));
+            break;
+          }
+        }
+      }
+    }
+    return tokenArr;
+  }
+
+  normalizeRawText(text) {
+    return text
+      // .replace(/[\u2018\u2019']/g, " '")    // replace curly single quotes
+      .replace(/[\u2018\u2019']/g, "'")    // replace curly single quotes
+      .replace(/[\u201C\u201D]/g, '"')      // replace curly double  quotes
+      .replace(/…/g, "...")
+      .replace(/(\r\n|\r|\n)/g, "\n")       // encode EOLs
+      .replace(/\n{2,}/g, "\n")
+      // .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
+      .replace(/\n/g, `${EOL.text}`)      // encode EOLs
+      .replace(/–/g, " -- ")                // pasted in em-dashes
+      .replace(/—/g, " - ")
+      .replace(/(\w)\/(\w)/g, "$1 / $2")    // insert spaces either side of slash
+      .replace(/\s{2,}/gm, " ");            //
+  }
+
+  textLookupSimples(tokenArr) {
+    // Provide lookups for all non-punctuation tokens + log repetitions
+    app.repeats.tallyOfIDreps = {};
+    for (let token of tokenArr) {
+      // ** ignore compounds for now; they are dealt with separately
+      if (token.type === "w") {
+        const [revisedType, matchedEntries] = this.lookupWord(token.lemma);
+        if (!app.tools.isEmpty(matchedEntries)) {
+          token.appendMatches(matchedEntries);
+          token.type = revisedType;
+          // token.count = updateTallyOfIDreps(token.matches);
+          token.count = app.repeats.updateTallyOfIDreps(token.matches);
+        }
+      }
+      // else if (["c", "d", "y"].includes(token.type)) {
+      else if (Object.keys(this.expansions).includes(token.type)) {
+        token.overwriteMatches(this.markOfflist(token.lemma, this.expansions[token.type]));
+      }
+    }
+    return tokenArr;
+  }
+
+  markOfflist(word, offlistType) {
+    word = word.trim();
+    // ** adds entry to offlistDb & returns ID (always negative number)
+    // ** This creates a dummy dB entry for offlist words
+    let offlistEntry = [];
+    let offlistID;
+    let isUnique = true;
+    for (const entry of app.wordlist.offlistDb) {
+      if (entry.lemma === word) {
+        isUnique = false;
+        offlistEntry = entry;
+        break;
+      }
+    }
+    if (isUnique) {
+      offlistEntry = this.addNewEntryToOfflistDb([word, offlistType, [app.wordlist.offlist_subs.indexOf(offlistType) + app.wordlist.level_headings.length, -1, -1], ""]);
+    }
+    return offlistEntry;
+  }
+
+  addNewEntryToOfflistDb(entryContents) {
+    const offlistID = -(app.wordlist.offlistDb.length);
+    const newEntry = new Entry(...entryContents, offlistID);
+    app.wordlist.offlistDb.push(newEntry);
+    app.wordlist.offlistIndex++;
+    return newEntry;
+  }
+
+  lookupWord(word) {
+    // const originalWord = word;
+    word = word.toLowerCase();
+    let matchedEntries;
+    let tokenType = "w";
+    const search = new Search(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
+    tokenType = search.tokenType;
+    matchedEntries = search.matchedEntries;
+    // [tokenType, matchedEntries] = checkAgainstLookups(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
+    if (app.tools.isEmpty(matchedEntries)) {
+      matchedEntries = [this.markOfflist(word.toLowerCase(), "offlist")];
+      tokenType = "wo"   // wo=offlist word
+    }
+    const results = [tokenType, matchedEntries];
+    return results;
+  }
+
+  findBaseForm(word, subs) {
+    // ** Uses lookup tables to apply spelling rules to return underlying base HTM.form candidates
+    let matchedEntries = [];
+    for (const [ending, sub] of subs) {
+      const root = word.slice(0, -ending.length);
+      if ((root + ending) === word) {
+        const candidate = root + sub;
+        const tmp_match = app.wordlist.getEntriesByExactLemma(candidate);
+        if (!app.tools.isEmpty(tmp_match)) {
+          matchedEntries.push(...tmp_match);
+        }
+      }
+    }
+    return matchedEntries;
   }
 }
 
@@ -754,7 +1375,7 @@ class Backup {
     //   HTM.backupSave.innerText = "save backup";
     //   HTM.backupSave.classList.remove("error");
     // }, 1000);
-    textRefresh();
+    app.text.refresh();
   }
 
   getTextWithoutCursor() {
@@ -1152,7 +1773,7 @@ class Search {
     let matchedEntry = [];
     if (LOOKUP.personalNames.includes(word)) {
       // result.push(...markOfflist(word, "name"));
-      matchedEntry.push(markOfflist(word, "name"));
+      matchedEntry.push(app.parser.markOfflist(word, "name"));
     }
     return matchedEntry;
   }
@@ -1239,7 +1860,7 @@ class Search {
     // console.log("checkForSuffix:", word, suffix, lookup)
     let matchEntries = [];
     if (word.endsWith(suffix)) {
-      matchEntries.push(...this.winnowPoS(findBaseForm(word, lookup), pos));
+      matchEntries.push(...this.winnowPoS(app.parser.findBaseForm(word, lookup), pos));
     }
     // debug(">>>>>", result.length, ...result, result)
     return matchEntries;

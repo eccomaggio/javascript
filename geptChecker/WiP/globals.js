@@ -68,14 +68,12 @@ let C = {
 
 // ## Global variables
 let V = {
-  tallyOfIDreps: {},
-  setOfLemmaID: new Set(),
   levelSubs: [],
-  currentTab: null,
+  // currentTab: null,
   refreshRequired: false,
-  timer: null,
+  // timer: null,
   isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
-  idOfAM: 0,
+  // idOfAM: 0,
 }
 
 const EOL = {
