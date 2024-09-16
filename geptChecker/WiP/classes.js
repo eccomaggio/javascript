@@ -14,6 +14,8 @@ class App {
     this.cursor = new Cursor();
     this.limit = new ShowLevelLimit();
     this.listeners = new EventListeners();
+    this.ui = new UI();
+    this.word = new WordSearch();
     this.text = new Text();
     this.parser = new TextProcessor();
     this.stats = new WordStatistics();
@@ -25,7 +27,7 @@ class App {
     this.wordlist = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
     if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
-    setupEditing();
+    this.ui.setupEditing();
     HTM.form.reset();
     this.state.updateDbInMenu();
     this.limit.setLimit(true);
@@ -59,11 +61,12 @@ class EventListeners {
   }
 
   addWordInput() {
-    HTM.inputLemma.addEventListener("input", debounce(wordSearch, 500));
+    // HTM.inputLemma.addEventListener("input", debounce(app.word.wordSearch.bind(app.word), 500));
+    HTM.inputLemma.addEventListener("input", debounce(function (e) { app.word.wordSearch() }, 500));
     for (const el of document.getElementsByTagName("input")) {
       if (el.type != "text") {
         const label = el.labels[0];
-        if (label.htmlFor) label.addEventListener("click", registerLabelClick);
+        if (label.htmlFor) label.addEventListener("click", function (e) { app.ui.registerLabelClick(e) }, false);
       }
     }
   }
@@ -77,12 +80,12 @@ class EventListeners {
     HTM.selectDb.addEventListener("change", function (e) { app.wordlist.change(e) }, false);
     HTM.selectFontSize.addEventListener("change", function (e) { app.state.changeFont(e) }, false);
 
-    HTM.settingsMenu.addEventListener("mouseenter", dropdown);
-    HTM.settingsMenu.addEventListener("mouseleave", dropdown);
+    HTM.settingsMenu.addEventListener("mouseenter", function (e) { app.ui.dropdown }, false);
+    HTM.settingsMenu.addEventListener("mouseleave", function (e) { app.ui.dropdown }, false);
   }
 
   addHTML() {
-    HTM.kidsTheme.addEventListener("change", updateKidstheme);
+    HTM.kidsTheme.addEventListener("change", app.word.updateKidstheme);
   }
 
   addDetail() {
@@ -113,6 +116,93 @@ class EventListeners {
   }
 }
 
+class UI {
+  setupEditing(e) {
+    HTM.finalInfoDiv.classList.remove("word-detail");
+    // app.listeners.addEditing();
+    // forceUpdateInputDiv();
+  }
+
+  // *****  FUNCTIONS
+
+  dropdown(e) {
+    // ## toggle visibility of settings dropdown
+    // ## was originally handled in css but firefox has mouseout quirks
+    // ## https://stackoverflow.com/questions/46831247/select-triggers-mouseleave-event-on-parent-element-in-mozilla-firefox
+    if (e.relatedTarget === null) {
+      return;
+    }
+    HTM.settingsContent.style.display = (e.type == "mouseenter") ? "flex" : "none";
+  }
+
+
+  registerLabelClick(e_label) {
+    const label = e_label.target;
+    if (label.htmlFor) {
+      const input = document.getElementById(label.htmlFor);
+      let parentID = label.htmlFor.split("_")[1];
+      //console.log(`*registerLabelClick* parentID=${parentID}`);
+      if (parentID) {
+        parentID = "t1_" + parentID;
+      } else {
+        return;
+      }
+      const allInputs = document
+        .getElementById(parentID)
+        .querySelectorAll("input");
+      let defaultChecked;
+      let countChecked = 0;
+
+      allInputs.forEach((el) => {
+        const el_label = el.labels[0];
+        if (el.defaultChecked) defaultChecked = el;
+        // LOGIC:
+        // 1) clicked element must be checked
+        // 2) de-select an already-checked input
+        if (el.id == input.id) {
+          if (input.checked) {
+            input.checked = false;
+            el_label.classList.remove("selected_txt");
+          } else {
+            el.checked = true;
+            el_label.classList.add("selected_txt");
+          }
+        }
+        // LOGIC: in a group, if 1 radio checked, all others unchecked
+        // 1) if already radio selected, no others selections allowed
+        // 2) if el is radio, then it can't be selected
+        else if (input.type == "radio" || el.type == "radio") {
+          el.checked = false;
+          el_label.classList.remove("selected_txt");
+        }
+        // LOGIC: remaining checkboxes are unaffected
+        if (el.checked) countChecked += 1;
+      });
+
+      if (countChecked < 1) {
+        defaultChecked.checked = true;
+        defaultChecked.labels[0].classList.add("selected_txt");
+        this.refreshLabels(parentID);
+      }
+      app.word.wordSearch(e_label);
+    }
+  }
+
+  refreshLabels(parentID) {
+    const parent = document.getElementById(parentID);
+    if (!parent) return;
+    const allInputs = parent.querySelectorAll("input");
+    allInputs.forEach((el) => {
+      const label = el.labels[0];
+      if (label) {
+        if (el.defaultChecked) label.classList.add("selected_txt");
+        else label.classList.remove("selected_txt");
+      }
+    });
+  }
+
+}
+
 class Tools {
   isEmpty(arr) {
     // TODO: simplify to !arr.length ?
@@ -134,6 +224,224 @@ class Tools {
   pluralNoun(amount) {
     return (amount > 1) ? "s" : "";
   }
+}
+
+class WordSearch {
+  wordSearch(e) {
+    let resultsArr = [];
+    let HTMLstringToDisplay = "";
+    const data = this.wordGetFormData(e);
+    V.isExactMatch = (data.match[0] === "exact");
+    let errorMsg = this.wordValidateFormData(data);
+    if (errorMsg) {
+      HTMLstringToDisplay = this.markStringAsError(errorMsg);
+    } else {
+      const searchTerms = this.wordBuildSearchTerms(data);
+      resultsArr = this.wordRunSearch(searchTerms);
+      HTMLstringToDisplay = this.wordFormatResultsAsHTML(resultsArr);
+    }
+    this.wordDisplayResults(HTMLstringToDisplay, resultsArr.length);
+  }
+
+  markStringAsError(str) {
+    return Tag.tag("span", ["class=error"], [str]).stringify();
+  }
+
+  updateKidstheme(e) {
+    const selection = e.target;
+    debug(selection.tagName, selection.value)
+    selection.dataset.chosen = selection.value;
+    this.wordSearch();
+    // HTM.form.submit();
+  }
+
+  wordGetFormData(e) {
+    let raw_data = new FormData(HTM.form);
+    if (e) e.preventDefault();
+    let data = {
+      term: [],
+      match: [],
+      level: [],
+      theme: [],
+      awl: [],
+      pos: []
+    };
+    // ** Read & normalize raw data into 'data' object
+    for (let [key, value] of raw_data) {
+      // ## default value of html option (but screws up db lookup)
+      if (value === "-1") value = "";
+      // ## ignore form elements that aren't required for current dB
+      if (key === "level" && app.state.isKids) continue;
+      if (key === "theme" && !app.state.isKids) continue;
+      if (key === "awl" && !app.state.isBESTEP) continue;
+      const digit = parseInt(value)
+      if (Number.isInteger(digit)) data[key].push(digit);
+      else {
+        const strVal = value.trim();
+        if (strVal) data[key].push(strVal);
+      }
+    }
+    return data;
+  }
+
+  wordValidateFormData(data) {
+    let status = 3;
+    /* key for status:
+    0 = contains a valid search term outside of "match"
+    1 = contains a character other than space/apostrophe/hypen
+    2 = contains a non-default match term but no lemma (which match requires)
+    3 = contains nothing beyond the default "match=contains"
+    */
+    for (const el in data) {
+      if (el === "match") continue;
+      if (!app.tools.isEmpty(data[el])) {
+        status = 0;
+        break;
+      }
+    }
+    if (status === 3 && !data["match"].includes("contains")) status = 2;
+    const term = data.term.join().split(" ")[0].toLowerCase();
+    if (term.search(/[^a-z\-\s'\.]/g) > -1) status = 1;
+    const errorMsg = [
+      "",
+      "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.",
+      "Please enter at least one search term to restrict the number of results.",
+      "Enter a search term."
+    ][status];
+    return errorMsg;
+  }
+
+  wordBuildSearchTerms(data) {
+    // TODO: refine searchterms:
+    /*
+    .lemma (regex version)
+    .raw_lemma (non regex)
+    .db (0=gept, 1=awl, 2=kids) use C.GEPT/BESTEP/Kids
+    .level
+    .sublist (i.e. awl/gept/both/awl level)
+    */
+    let lemma = data.term.join().toLowerCase();
+    const matchType = C.MATCHES[data.match];
+    const searchTerms = {
+      lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
+      raw_lemma: lemma,
+      // level: (isKids()) ? data.theme : data.level,
+      level: (app.state.isKids) ? data.theme : data.level,
+      // awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
+      awl: data.awl.map(x => (x < 100) ? x + app.wordlist.awl_level_offset : x),
+      pos: data.pos.join("|")
+    };
+    return searchTerms;
+  }
+
+  wordRunSearch(searchTerms) {
+    // TODO: refactor using sub functions to make process clearer
+    const search = new GenericSearch(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
+    let matchedEntries = search.matchedEntries;
+    // let [type, matchedEntries] = checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
+    matchedEntries.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
+    if (Number.isInteger(searchTerms.level[0])) {
+      let tmp_matches = [];
+      for (const level of searchTerms.level) {
+        for (const entry of matchedEntries) {
+          if (entry.levelGEPT === level) tmp_matches.push(entry);
+        }
+      }
+      matchedEntries = tmp_matches;
+    }
+    if (!app.tools.isEmpty(searchTerms.pos)) {
+      matchedEntries = matchedEntries.filter(el => el.pos).filter(el => el.pos.search(searchTerms.pos) != -1);
+    }
+    if (app.state.isBESTEP && !app.tools.isEmpty(searchTerms?.awl)) {
+      /*
+      el[app.limit.LEVEL][2]:
+      1-in awl only
+      // 2-in gept only
+      -1 in gept only
+      3-in gept AND awl
+
+      from search from (awl)
+      form control returns:
+      200=GEPT words,
+      100=all AWL words,
+      1-10 AWL levels
+      */
+      if (searchTerms.awl[0] === Entry.FIND_GEPT_ONLY) {
+        matchedEntries = matchedEntries.filter(el => el.levelStatus === Entry.GEPT_ONLY);
+      }
+      else if (searchTerms.awl[0] === Entry.FIND_AWL_ONLY) {
+        matchedEntries = matchedEntries.filter(el => el.levelAWL > 0);
+      }
+      else {
+        matchedEntries = matchedEntries.filter(el => searchTerms.awl.indexOf(el.levelAWLraw) > -1);
+      }
+    }
+    matchedEntries = matchedEntries.filter(result => result.id > 0);
+    return matchedEntries;
+  }
+
+  lazyCheckAgainstCompounds(word) {
+    const tmpWord = word.replace(/-'\./g, "").split(" ").join("");
+    let result = [];
+    // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
+    for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
+      if (compound.startsWith(tmpWord)) {
+        result.push(id);
+        break;
+      }
+    }
+    return result;
+  }
+
+
+  wordFormatResultsAsHTML(results) {
+    if (app.tools.isEmpty(results)) {
+      return Tag.tag("span", ["class=warning"], ["Search returned no results."]).stringify();
+    }
+    let output = [];
+    let previousInitial = "";
+    let currentInitial = "";
+    let i = 0;
+    for (const entry of results.sort(compareByLemma)) {
+      currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
+      if (currentInitial !== previousInitial) {
+        output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
+      }
+      const awlWord = highlightAwlWord(entry.levelArr, entry.lemma);
+      const lemma = Tag.tag("strong", [], [awlWord]);
+      const pos = `[${entry.posExpansion}]`;
+      let level = app.wordlist.levelSubs[entry.levelGEPT];
+      if (entry.levelAWL >= 0) level += `; AWL${entry.levelAWL}`;
+      if (!level) continue;
+      let [note, awl_note] = getNotesAsHTML(entry);
+      const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
+      let class2 = (app.state.isKids) ? "level-e" : `level-${level[0]}`;
+      output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
+      previousInitial = currentInitial;
+      i++;
+    }
+    return Tag.tag("table", [], [...output]).stringify();
+  }
+
+
+  // function formatResultsAsTablerows(col1, col2, class1, class2, row) {
+  formatResultsAsTablerows(col1, col2, class1, class2) {
+    class1 = (class1) ? `class=${class1}` : "";
+    class2 = (class2) ? `class=${class2}` : "";
+    // row = (row) ? `class=${row}` : "";
+    return Tag.tag("tr", [], [
+      Tag.tag("td", [class1], [col1]),
+      Tag.tag("td", [class2], [...col2]),
+    ]);
+  }
+
+  wordDisplayResults(resultsAsHtmlString, resultCount = 0) {
+    let text = LOOKUP.legends.results;
+    if (resultCount) text += ` (${resultCount})`;
+    HTM.resultsLegend.innerHTML = text;
+    HTM.resultsText.innerHTML = resultsAsHtmlString;
+  }
+
 }
 
 class Repeats {
@@ -345,7 +653,7 @@ class Text {
     signalRefreshNeeded("off");
     let revisedText = this.textGetWithCursor().trim();
     if (revisedText) {
-      const tokenArr = app.parser.textMarkup(revisedText);
+      const tokenArr = app.parser.markup(revisedText);
       this.textBuildHTML(tokenArr);
       app.backup.save();
     }
@@ -467,40 +775,39 @@ class Text {
 }
 
 class TextProcessor {
-    expansions = {
-      c: "contraction",
-      d: "digit",
-      y: "symbol",
-    };
+  expansions = {
+    c: "contraction",
+    d: "digit",
+    y: "symbol",
+  };
 
-  textMarkup(revisedText) {
+  markup(revisedText) {
     signalRefreshNeeded("off");
     V.isExactMatch = true;
     // V.setOfLemmaID = new Set();
     app.repeats.setOfLemmaID = new Set();
     app.wordlist.resetOfflistDb();
-    let tokenArr = this.textdivideIntoTokens(revisedText);
+    let tokenArr = this.divideIntoTokens(revisedText);
     revisedText = null;
-    tokenArr = this.textLookupCompounds(tokenArr);
-    tokenArr = this.textLookupSimples(tokenArr);
+    tokenArr = this.lookupCompounds(tokenArr);
+    tokenArr = this.lookupSimples(tokenArr);
     return tokenArr;
   }
 
-  textdivideIntoTokens(rawText) {
+  divideIntoTokens(rawText) {
     signalRefreshNeeded("off");
     if (typeof rawText === "object") return;
     let text = this.normalizeRawText(rawText);
-    let tokenArr = this.tokenize(text);
+    let tokenArr = this.tokenizePipeline(text);
     return tokenArr;
   }
 
-  tokenize(text) {
+  tokenizePipeline(text) {
     let textArr = this.split(text);
     textArr = this.tokenize1(textArr);   // identify main tokens
     textArr = this.tokenize2(textArr);   // confirm identification + prepare for grouping
     textArr = this.tokenize3(textArr);   // fine-tune position of splits
     textArr = this.tokenize4(textArr);
-    // debug(textArr)
     console.log("textArr=", textArr)
     return textArr;
   }
@@ -623,7 +930,7 @@ class TextProcessor {
     return tmpTokenArr;
   }
 
-  textLookupCompounds(tokenArr) {
+  lookupCompounds(tokenArr) {
     // ** This must be the first look up done (check this is true!)
     const len = Object.keys(tokenArr).length;
     for (let i = 0; i < len; i++) {
@@ -665,7 +972,7 @@ class TextProcessor {
       .replace(/\s{2,}/gm, " ");            //
   }
 
-  textLookupSimples(tokenArr) {
+  lookupSimples(tokenArr) {
     // Provide lookups for all non-punctuation tokens + log repetitions
     app.repeats.tallyOfIDreps = {};
     for (let token of tokenArr) {
@@ -720,7 +1027,7 @@ class TextProcessor {
     word = word.toLowerCase();
     let matchedEntries;
     let tokenType = "w";
-    const search = new Search(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
+    const search = new GenericSearch(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
     tokenType = search.tokenType;
     matchedEntries = search.matchedEntries;
     // [tokenType, matchedEntries] = checkAgainstLookups(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
@@ -1090,7 +1397,7 @@ class Db {
     for (const el of this.hide) {
       el.style.setProperty("display", "none");
     }
-    wordSearch();
+    app.word.wordSearch();
   }
 
   setDbTab2() {
@@ -1175,8 +1482,8 @@ class TabController {
 
   clearTab1() {
     HTM.form.reset();
-    wordSearch();
-    refreshLabels("t1_form");
+    app.word.wordSearch();
+    app.ui.refreshLabels("t1_form");
   }
 
   clearTab2() {
@@ -1513,7 +1820,7 @@ class Cursor {
   }
 }
 
-class Search {
+class GenericSearch {
 
   constructor(word, preMatchedEntries, tokenType) {
     [
