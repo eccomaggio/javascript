@@ -50,42 +50,11 @@ const HTM = {
   help_state: document.getElementById("help-details"),
 };
 
-// ## Global constants
-let C = {
-  punctuation: /[!"#$%&'()*+,./:;<=>?@[\]^_`{}~]/g,
-  punctuation_lite: /[,.?!'"()\[\]{}]/g,
-  // INFO: removed hyphen & bar (- |)
-  NBSP: String.fromCharCode(160),
-  MATCHES: {
-    exact: ["^", "$"],
-    contains: ["", ""],
-    starts: ["^", ".*"],
-    ends: [".*", "$"]
-  },
-  SplitHere: "___",
-}
-
-
-// ## Global variables
-let V = {
-  levelSubs: [],
-  // currentTab: null,
-  refreshRequired: false,
-  // timer: null,
-  isExactMatch: true,   // if false, it will match partial words, e.g. an > analytical
-  // idOfAM: 0,
-}
-
-const EOL = {
-  HTMLtext: "<hr>",
-  tagName: "hr",
-  simpleText: "EOL",
-  text: C.SplitHere + "EOL" + C.SplitHere,
-}
 
 // if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", app.backup.backupIDs[0]);
 
 const LOOKUP = {
+  splitHere: "___",
 
   // ## These are used in the tab 1 GUI
   legends: {
@@ -987,4 +956,11 @@ const LOOKUP = {
     stewardess: 'steward',
   },
 
+}
+
+const EOL = {
+  HTMLtext: "<hr>",
+  tagName: "hr",
+  simpleText: "EOL",
+  text: LOOKUP.splitHere + "EOL" + LOOKUP.splitHere,
 }

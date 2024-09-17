@@ -11,10 +11,11 @@ class App {
     this.tools = new Tools();
     this.tabs = new TabController();
     this.backup = new Backup();
-    this.cursor = new Cursor();
+    // this.cursor = new Cursor();
     this.limit = new ShowLevelLimit();
     this.listeners = new EventListeners();
     this.ui = new UI();
+    this.info = new InformationPanes();
     this.word = new WordSearch();
     this.text = new Text();
     this.parser = new TextProcessor();
@@ -24,6 +25,7 @@ class App {
 
   init() {
     this.state = new State();
+    this.cursor = new Cursor();
     this.wordlist = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
     if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
@@ -80,8 +82,8 @@ class EventListeners {
     HTM.selectDb.addEventListener("change", function (e) { app.wordlist.change(e) }, false);
     HTM.selectFontSize.addEventListener("change", function (e) { app.state.changeFont(e) }, false);
 
-    HTM.settingsMenu.addEventListener("mouseenter", function (e) { app.ui.dropdown }, false);
-    HTM.settingsMenu.addEventListener("mouseleave", function (e) { app.ui.dropdown }, false);
+    HTM.settingsMenu.addEventListener("mouseenter", function (e) { app.ui.dropdown(e) }, false);
+    HTM.settingsMenu.addEventListener("mouseleave", function (e) { app.ui.dropdown(e) }, false);
   }
 
   addHTML() {
@@ -94,19 +96,19 @@ class EventListeners {
   }
 
   addEditing() {
-    HTM.workingDiv.addEventListener("paste", normalizePastedText);
+    HTM.workingDiv.addEventListener("paste", function(e) { app.tools.normalizePastedText(e)}, false);
     // ## having probs removing his event listener; leave & ignore with updateInputDiv
     // HTM.workingDiv.addEventListener("keyup", debounce(updateInputDiv, 5000));
     // ** "copy" only works from menu; add keydown listener to catch Ctrl_C
-    HTM.workingDiv.addEventListener("copy", normalizeTextForClipboard);
-    HTM.workingDiv.addEventListener("keydown", catchKeyboardCopyEvent);
+    HTM.workingDiv.addEventListener("copy", function(e) { app.tools.normalizeTextForClipboard(e) }, false);
+    HTM.workingDiv.addEventListener("keydown", function(e) { app.tools.catchKeyboardCopyEvent(e) }, false);
     HTM.workingDiv.addEventListener("keyup", function (e) { app.cursor.updatePos(e) }, false);
     this.setHoverEffect();
   }
 
   setHoverEffect() {
-    HTM.workingDiv.addEventListener("mouseover", hoverEffects);
-    HTM.workingDiv.addEventListener("mouseout", hoverEffects);
+    HTM.workingDiv.addEventListener("mouseover", function(e) { app.info.hoverEffects(e) }, false);
+    HTM.workingDiv.addEventListener("mouseout", function(e) { app.info.hoverEffects(e) }, false);
   }
 
   addDetailToggle(levelDetailsTag) {
@@ -117,6 +119,9 @@ class EventListeners {
 }
 
 class UI {
+  refreshRequired = false;
+  isExactMatch = true;   // if false, it will match partial words, e.g. an > analytical
+
   setupEditing(e) {
     HTM.finalInfoDiv.classList.remove("word-detail");
     // app.listeners.addEditing();
@@ -201,9 +206,62 @@ class UI {
     });
   }
 
+  getNotesAsHTML(entry) {
+    let note = "";
+    let awl_note = "";
+    if (entry) {
+      [note, awl_note] = entry.notes;
+      note = note ? `, ${note}` : "";
+      awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
+    }
+    return [note, awl_note];
+  }
+
+  highlightAwlWord(levelArr, word) {
+    return (app.state.isBESTEP && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
+  }
+  getLevelDetails(levelArr) {
+    const levelClass = "level-" + this.getLevelPrefix(levelArr[0]);
+    return [levelArr, levelClass];
+  }
+
+  getLevelPrefix(levelGEPT) {
+    let level = app.wordlist.levelSubs[levelGEPT];
+    if (app.state.isKids && levelGEPT < app.wordlist.offlistLevel) level = "k";
+    if (!level) level = "o";
+    return level[0];
+  }
+
+  signalRefreshNeeded(mode) {
+    if (mode === "on") {
+      this.refreshRequired = true;
+      HTM.workingDiv.style.backgroundColor = "ivory";
+      // HTM.textTabTag.style.fontStyle = "italic";
+      app.tabs.htm.textTabTag.style.fontStyle = "italic";
+      // HTM.backupSave2.style.display = "block";
+      app.backup.htm.backupSave2.style.display = "block";
+    }
+    else {
+      this.refreshRequired = false;
+      HTM.workingDiv.style.backgroundColor = "white";
+      // HTM.textTabTag.style.fontStyle = "normal";
+      app.tabs.htm.textTabTag.style.fontStyle = "normal";
+      // HTM.backupSave2.style.display = "none";
+      app.backup.htm.backupSave2.style.display = "none";
+    }
+  }
+
+  forceUpdateInputDiv() {
+    this.refreshRequired = true;
+    app.text.refresh();
+    // V.refreshRequested = false;
+  }
 }
 
 class Tools {
+  NBSP = String.fromCharCode(160);
+  // SplitHere = "___";
+
   isEmpty(arr) {
     // TODO: simplify to !arr.length ?
     // return !arr?.flat(Infinity).length;
@@ -224,14 +282,66 @@ class Tools {
   pluralNoun(amount) {
     return (amount > 1) ? "s" : "";
   }
+
+  normalizePastedText(e) {
+    // ** preventDefault needed to prevent cursor resetting to start of div at every paste
+    e.preventDefault();
+    let paste = (e.clipboardData || window.clipboardData).getData('text');
+    const selection = window.getSelection();
+    selection.getRangeAt(0).insertNode(document.createTextNode(paste));
+    app.ui.signalRefreshNeeded("on");
+    app.text.refresh(e);
+  }
+
+  catchKeyboardCopyEvent(e) {
+    // let isV = (e.keyCode === 86 || e.key === "v"); // this is to detect keyCode
+    let isC = (e.keyCode === 67 || e.key === "c"); // this is to detect keyCode
+    // let isCtrl = (e.keyCode === 17 || e.key === "Control");
+    // let isMeta = (e.keyCode === 91 || e.key === "Meta");
+    if (isC && (e.metaKey || e.ctrlKey)) {
+      this.normalizeTextForClipboard();
+    }
+  }
+
+  normalizeTextForClipboard(e) {
+    // TODO: do we even need to capture copied text anymore, now there are no <mark>s??
+    if (!e) {
+      e = new ClipboardEvent('paste', { clipboardData: new DataTransfer() });
+    }
+    const sel = document.getSelection();
+    let copiedText = sel.getRangeAt(0).toString();
+    let normalizedText = copiedText;
+    e.clipboardData.setData("text/plain", normalizedText);
+    e.preventDefault();
+  }
+
+
+  EOLsToNewlines(text) {
+    // const re = RegExp("\\s*" + EOL.text + "\\s*", "g");
+    const re = RegExp(EOL.text, "g");
+    const noEOLs = text.replace(re, "\n");
+    return noEOLs;
+  }
+
+  newlinesToEOLs(text) {
+    // return text.replace("\n", " " + EOL.text + " ");
+    return text.replace("\n", EOL.text);
+  }
 }
 
 class WordSearch {
+  MATCHES = {
+    exact: ["^", "$"],
+    contains: ["", ""],
+    starts: ["^", ".*"],
+    ends: [".*", "$"]
+  };
+
   wordSearch(e) {
     let resultsArr = [];
     let HTMLstringToDisplay = "";
     const data = this.wordGetFormData(e);
-    V.isExactMatch = (data.match[0] === "exact");
+    app.ui.isExactMatch = (data.match[0] === "exact");
     let errorMsg = this.wordValidateFormData(data);
     if (errorMsg) {
       HTMLstringToDisplay = this.markStringAsError(errorMsg);
@@ -321,7 +431,8 @@ class WordSearch {
     .sublist (i.e. awl/gept/both/awl level)
     */
     let lemma = data.term.join().toLowerCase();
-    const matchType = C.MATCHES[data.match];
+    // const matchType = C.MATCHES[data.match];
+    const matchType = this.MATCHES[data.match];
     const searchTerms = {
       lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
       raw_lemma: lemma,
@@ -402,18 +513,18 @@ class WordSearch {
     let previousInitial = "";
     let currentInitial = "";
     let i = 0;
-    for (const entry of results.sort(compareByLemma)) {
+    for (const entry of results.sort(this.compareByLemma)) {
       currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
       if (currentInitial !== previousInitial) {
         output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
       }
-      const awlWord = highlightAwlWord(entry.levelArr, entry.lemma);
+      const awlWord = app.ui.highlightAwlWord(entry.levelArr, entry.lemma);
       const lemma = Tag.tag("strong", [], [awlWord]);
       const pos = `[${entry.posExpansion}]`;
       let level = app.wordlist.levelSubs[entry.levelGEPT];
       if (entry.levelAWL >= 0) level += `; AWL${entry.levelAWL}`;
       if (!level) continue;
-      let [note, awl_note] = getNotesAsHTML(entry);
+      let [note, awl_note] = app.ui.getNotesAsHTML(entry);
       const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
       let class2 = (app.state.isKids) ? "level-e" : `level-${level[0]}`;
       output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
@@ -442,6 +553,17 @@ class WordSearch {
     HTM.resultsText.innerHTML = resultsAsHtmlString;
   }
 
+  compareByLemma(a, b) {
+    const lemmaA = a.lemma.toLowerCase();
+    const lemmaB = b.lemma.toLowerCase();
+    if (lemmaA < lemmaB) {
+      return -1;
+    }
+    if (lemmaA > lemmaB) {
+      return 1;
+    }
+    return 0;
+  }
 }
 
 class Repeats {
@@ -476,13 +598,13 @@ class Repeats {
             let display = rep;
             let displayClass = "class=anchors";
             if (rep === 1) {
-              display = highlightAwlWord(entry.levelArr, word);
-              displayClass = `class=level-${getLevelPrefix(entry.levelGEPT)}`;
+              display = app.ui.highlightAwlWord(entry.levelArr, word);
+              displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelGEPT)}`;
             }
             // anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
             anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [display]));
           }
-          listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${getLevelPrefix(entry.levelGEPT)}`], [...anchors]));
+          listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${app.ui.getLevelPrefix(entry.levelGEPT)}`], [...anchors]));
         }
       }
       if (countAllReps > 0) {
@@ -649,8 +771,8 @@ class WordStatistics {
 
 class Text {
   refresh(e) {
-    if (!V.refreshRequired) return;
-    signalRefreshNeeded("off");
+    if (!app.ui.refreshRequired) return;
+    app.ui.signalRefreshNeeded("off");
     let revisedText = this.textGetWithCursor().trim();
     if (revisedText) {
       const tokenArr = app.parser.markup(revisedText);
@@ -666,12 +788,27 @@ class Text {
   }
 
   textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
-    app.wordlist.displayDbNameInTab2(getWordCountForDisplay(wordCount));
+    app.wordlist.displayDbNameInTab2(this.getWordCountForDisplay(wordCount));
     // displayRepeatsList(repeatsHTML, levelStatsHTML);
     app.repeats.displayList(repeatsHTML, levelStatsHTML);
     this.textDisplayWorking(resultsHTML);
     app.listeners.addDetailToggle(document.getElementById("level-details"));
     // HTM.finalInfoDiv.innerText = "";
+  }
+
+  getWordCountForDisplay(wordCount) {
+    const numOfWords = (wordCount > 0)
+      ? Tag.tag("span", ["class=text-right dark"], [
+        "(",
+        wordCount,
+        " word",
+        app.tools.pluralNoun(wordCount),
+        ")",
+        // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
+        Tag.tag("a", ["href=#all_repeats", "class=medium"]),
+      ])
+      : "";
+    return numOfWords;
   }
 
   textDisplayWorking(html) {
@@ -722,15 +859,12 @@ class Text {
     // TODO: this currently doesn't look at the type of each candidate; is it worth changing?
     const firstType = sortedByLevel[0][2];
     let variantClass = (firstType.type === "wv") ? " variant" : "";
-    // if (firstType.startsWith("w")) V.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
     if (firstType.startsWith("w")) app.repeats.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
     // const ignoreThisRep = LOOKUP.repeatableWords.includes(token.lemma.toLowerCase());
     const [
       levelArr,
       levelClass
-    ] = getLevelDetails(sortedByLevel[0][1]);
-    // const limit = (V.levelLimitStr && V.levelLimitActiveClassesArr.includes(levelClass)) ? ` ${C.LEVEL_LIMIT_CLASS}` : "";
-    // const limit = (app.limit.str && app.limit.activeClassesArr.includes(levelClass)) ? ` ${app.limit.LEVEL_LIMIT_CLASS}` : "";
+    ] = app.ui.getLevelDetails(sortedByLevel[0][1]);
     const limit = (app.limit.classNameCSS && app.limit.exceedsLimit(levelClass)) ? app.limit.LEVEL_LIMIT_CLASS : "";
     const [
       relatedWordsClass,
@@ -738,11 +872,9 @@ class Text {
       duplicateCountInfo,
       anchor
     ] = app.repeats.getDuplicateDetails(token, firstID);
-    // ] = getDuplicateDetails(token, firstID);
     word = app.cursor.insertInHTML(token.length, wordIndex, word);
-    const localWord = highlightAwlWord(levelArr, word);
+    const localWord = app.ui.highlightAwlWord(levelArr, word);
     // ** listOfLinks = id:lemma:type
-    // let listOfLinksArr = token.matches.map(id => `${id}:${token.lemma.trim()}:${token.type}`);
     let listOfLinksArr = token.matches.map(entry => `${entry.id}:${token.lemma.trim()}:${token.type}`);
     let showAsMultiple = "";
     if (sortedByLevel.length > 1) showAsMultiple = (levelsAreIdentical) ? "multi-same" : "multi-diff";
@@ -754,7 +886,6 @@ class Text {
     // const classes = [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit].join(" ");
     const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
     const displayWordAsString = displayWord.stringify();
-    // debug(displayWordAsString)
     return displayWordAsString;
   }
 
@@ -781,10 +912,11 @@ class TextProcessor {
     y: "symbol",
   };
 
+  splitAtUnderscoreOrBoundary = new RegExp(`${LOOKUP.splitHere}|\\b`);
+
   markup(revisedText) {
-    signalRefreshNeeded("off");
-    V.isExactMatch = true;
-    // V.setOfLemmaID = new Set();
+    app.ui.signalRefreshNeeded("off");
+    app.ui.isExactMatch = true;
     app.repeats.setOfLemmaID = new Set();
     app.wordlist.resetOfflistDb();
     let tokenArr = this.divideIntoTokens(revisedText);
@@ -795,7 +927,7 @@ class TextProcessor {
   }
 
   divideIntoTokens(rawText) {
-    signalRefreshNeeded("off");
+    app.ui.signalRefreshNeeded("off");
     if (typeof rawText === "object") return;
     let text = this.normalizeRawText(rawText);
     let tokenArr = this.tokenizePipeline(text);
@@ -818,10 +950,11 @@ class TextProcessor {
     text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
     const re = new RegExp("(\\w+)(" + app.cursor.text + ")(\\w+)", "g");  // catch cursor
     text = text.replaceAll(re, "$1$3$2");                             // move cursor to word end (to preserve word for lookup)
-    // text = text.replaceAll("\n", EOL.text);                  // catch newlines (already caught by normalizeRawText)
+    // text = text.replaceAll("\n", EOL.text);                        // catch newlines (already caught by normalizeRawText)
     text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
     text = text.trim();
-    return text.split(/\___|\b/);                                     // use triple underscore as extra breakpoint
+    // return text.split(/\___|\b/);                                  // use triple underscore as extra breakpoint
+    return text.split(this.splitAtUnderscoreOrBoundary);              // use triple underscore as extra breakpoint
   }
 
 
@@ -981,6 +1114,7 @@ class TextProcessor {
         const [revisedType, matchedEntries] = this.lookupWord(token.lemma);
         if (!app.tools.isEmpty(matchedEntries)) {
           token.appendMatches(matchedEntries);
+          this.removeOfflistIfMatchFound(token)
           token.type = revisedType;
           // token.count = updateTallyOfIDreps(token.matches);
           token.count = app.repeats.updateTallyOfIDreps(token.matches);
@@ -992,6 +1126,13 @@ class TextProcessor {
       }
     }
     return tokenArr;
+  }
+
+  removeOfflistIfMatchFound(token) {
+    if (token.matches.some(el => el.id < 0) && token.matches.some(el => el.id > 0) ) {
+      token.overwriteMatches(token.matches.filter(el => el.id > 0));
+    }
+    return token;
   }
 
   markOfflist(word, offlistType) {
@@ -1053,6 +1194,128 @@ class TextProcessor {
       }
     }
     return matchedEntries;
+  }
+}
+
+class InformationPanes {
+  hoverEffects(e) {
+    // ** references to parent elements are to reach embedded elements
+    const el = e.target;
+    if (typeof el.classList === 'undefined') return;
+    // ** 1) show information text for elements with a 'data-entry' attribute
+    if (el.dataset.entry || el.parentElement.dataset.entry) {
+      const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
+      HTM.finalInfoDiv.innerHTML = this.displayEntryInfo(ref);
+      HTM.finalInfoDiv.style.display = "flex";
+    }
+    // ** 2) remove highlighting after a jump to a duplicate
+    el.classList.remove('jumpHighlight');
+    // ** 3) show repeated words
+    let classList = [].slice.apply(el.classList);
+    const parentCList = [].slice.apply(el.parentElement.classList);
+    if (parentCList.includes("duplicate")) classList = parentCList;
+    if (classList.includes("duplicate")) {
+      const relatedWords = classList.filter(name => name.startsWith("all_"))[0];
+      const dupes = document.getElementsByClassName(relatedWords);
+      this.toggleHighlight(dupes);
+    }
+  }
+
+  toggleHighlight(els) {
+    for (const el of els) {
+      el.classList.toggle("highlight");
+    }
+  }
+  displayEntryInfo(refs) {
+    /*
+    <div id="t2_final_info" style="display: flex;">
+      <div class="word-detail level-e">
+        <div><span class="dot">E</span> <em>elem (A2)</em><br></div>
+        <span><strong>for</strong>: [preposition], 為了、給、(時間、距離)達;</span>
+      </div>
+      <div class="word-detail level-e">
+        <div><span class="dot">E</span> <em>elem (A2)</em><br></div>
+        <span><strong>for</strong>: [conjunction], 因為;</span>
+      </div>
+    </div>
+    */
+    let html = [];
+    for (const ref of refs.split(" ")) {
+      const [id, word, tokenType] = ref.split(":");
+      const entry = app.wordlist.getEntryById(id);
+      const [levelArr, levelClass] = app.ui.getLevelDetails(entry.levelArr);
+      const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
+      const levelTagArr = this.buildHTMLlevel(entry, id, levelArr, tokenType);
+      // const levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
+      let levelTag = "";
+      // if (isKids() && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
+      if (app.state.isKids && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
+      else levelTag = Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr]);
+      const pos = `[${entry.posExpansion}]`;
+      let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
+      html.push(Tag.tag(
+        "div",
+        [`class=word-detail ${levelClass}`],
+        [levelTag, Tag.tag("span", [], [...lemma, pos, notes, awl_notes])]
+      ));
+    }
+    html = Tag.root(html);
+    return html.stringify();
+  }
+
+
+  buildHTMLlemma(entry, id, word, tokenType) {
+    let displayLemma;
+    if (entry.pos === "unknown") return displayLemma;
+    if (tokenType === "wv") {
+      displayLemma = [Tag.tag("em", [], "** Use "), Tag.tag("span", ["class=lemma"], entry.lemma), Tag.tag("em", [], " instead of "), Tag.tag("br"), word];
+    } else if (tokenType === "wd") {
+      displayLemma = [Tag.tag("span", ["class=lemma"], word), " < ", entry.lemma];
+      // } else if (tokenType === "wn") {
+    } else if (tokenType.startsWith("wn")) {
+      displayLemma = [Tag.tag("span", ["class=lemma"], word), " negative of ", entry.lemma];
+    } else {
+      displayLemma = [Tag.tag("span", ["class=lemma"], entry.lemma)];
+    }
+    return displayLemma;
+  }
+
+  buildHTMLlevel(entry, id, levelArr, tokenType) {
+    let levelStr;
+    // ** If word is offlist, use its classification (digit/name, etc.) as level
+    if (tokenType !== "wv" && app.wordlist.isInOfflistDb(id)) {
+      levelStr = entry.pos; // a string, e.g. "jn"
+    }
+    else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
+    else {
+      levelStr = app.wordlist.levelSubs[levelArr[0]];
+      if (entry.levelAWL >= 0) {
+        levelStr += `; ${app.wordlist.levelSubs[levelArr[1]]}`;
+      }
+    }
+    let level = [];
+    if (levelStr) level = [Tag.tag("em", [], level), Tag.tag("br")];
+    return level;
+  }
+
+  buildHTMLlevelDot(entry) {
+    let html = "";
+    // if (!isKids()) {
+    if (!app.state.isKids) {
+      const geptLevel = entry.levelGEPT;
+      html = (geptLevel <= 2) ? Tag.tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
+    }
+    if (app.state.isBESTEP && entry.levelAWL > 0) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
+    return html;
+  }
+
+  buildHTMLlevelAWL(entry) {
+    return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelAWL}`])];
+  }
+
+  buildHTMLlevelKids(entry) {
+    // return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
+    return [" ", Tag.tag("span", ["class=awl-level"], [app.wordlist.level_headings[entry.levelGEPT]])];
   }
 }
 
@@ -1180,6 +1443,7 @@ class Db {
   offlistLevel = 0;
   awl_level_offset = 37;
   kids_level_offset = 3;
+  levelSubs = [];
 
   // ## These correlate with the numbers in the dBs
   level_headings = [
@@ -1402,7 +1666,7 @@ class Db {
 
   setDbTab2() {
     this.displayDbNameInTab2();
-    forceUpdateInputDiv();
+    app.ui.forceUpdateInputDiv();
   }
 
 
@@ -1453,9 +1717,9 @@ class TabController {
     }
     this.setTabHead();
     app.state.saveItem("tab_state", app.state.current.tab_state);
-    forceUpdateInputDiv();
+    app.ui.forceUpdateInputDiv();
     app.cursor.displayInputCursor();
-    V.isExactMatch = !this.isFirstTab;
+    app.ui.isExactMatch = !this.isFirstTab;
   }
 
 
@@ -1633,9 +1897,9 @@ class Backup {
     const swap = JSON.parse(JSON.stringify(this.getTextWithoutCursor()));
     let restoredContent = localStorage.getItem(id);
     if (!restoredContent) return;
-    restoredContent = newlinesToEOLs(restoredContent);
+    restoredContent = app.tools.newlinesToEOLs(restoredContent);
     HTM.workingDiv.innerText = restoredContent;
-    forceUpdateInputDiv();
+    app.ui.forceUpdateInputDiv();
     // if (swap) localStorage.setItem(id, swap);
     // if (swap) appStateSaveItem(id, swap);
     if (swap) app.state.saveItem(id, swap);
@@ -1687,7 +1951,7 @@ class Backup {
 
   getTextWithoutCursor() {
     let currentText = app.cursor.newlinesToPlaintext(HTM.workingDiv).innerText;
-    currentText = EOLsToNewlines(currentText);
+    currentText = app.tools.EOLsToNewlines(currentText);
     currentText = currentText.trim();
     return currentText;
   }
@@ -1711,7 +1975,7 @@ class Cursor {
   increment = 0;
 
   constructor() {
-    this.text = C.SplitHere + this.simpleText + C.SplitHere;
+    this.text = LOOKUP.splitHere + this.simpleText + LOOKUP.splitHere;
   }
 
   displayInputCursor() {
@@ -1798,10 +2062,11 @@ class Cursor {
   updatePos(e) {
     const keypress = e.key;
     if (!keypress) return;
-    if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) signalRefreshNeeded("on");
+    if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) app.ui.signalRefreshNeeded("on");
     this.oldCursorOffset = this.offset;
     this.offset = this.getInfoInEl(HTM.workingDiv);
-    if (this.refreshRequired) {
+    // if (this.refreshRequired) {
+    if (app.ui.refreshRequired) {
       const tags = document.querySelectorAll(":hover");
       const currTag = tags[tags.length - 1];
       if (currTag) currTag.setAttribute("class", "unprocessed");
@@ -1995,7 +2260,7 @@ class GenericSearch {
     let matchedEntries = []
     for (let key of Object.keys(LOOKUP.variantWords)) {
       const truncated = word.slice(0, key.length)
-      const searchTerm = (V.isExactMatch) ? key : key.slice(0, word.length);
+      const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
       if (searchTerm === truncated) {
         match = LOOKUP.variantWords[key];
         matchedEntries = app.wordlist.getEntriesByExactLemma(match)
@@ -2022,7 +2287,7 @@ class GenericSearch {
     let matchedEntries = []
     for (let key of Object.keys(LOOKUP.gendered_nouns)) {
       const truncated = word.slice(0, key.length)
-      const searchTerm = (V.isExactMatch) ? key : key.slice(0, word.length);
+      const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
       if (searchTerm === truncated) {
         lemma = LOOKUP.gendered_nouns[key];
         matchedEntries = app.wordlist.getEntriesByExactLemma(lemma)
