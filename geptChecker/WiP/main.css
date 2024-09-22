@@ -387,7 +387,8 @@
 
     .word-detail {
       /* color: white; */
-      background-color: var(--light);
+      /* background-color: var(--light); */
+      background-color: var(--medium);
       font-weight: normal;
       border-radius: 5px;
       box-shadow: 5px 5px 5px grey;
