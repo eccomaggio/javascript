@@ -359,7 +359,7 @@ class WordSearch {
 
   updateKidstheme(e) {
     const selection = e.target;
-    debug(selection.tagName, selection.value)
+    // debug(selection.tagName, selection.value)
     selection.dataset.chosen = selection.value;
     this.wordSearch();
     // HTM.form.submit();
@@ -631,21 +631,21 @@ class Repeats {
 
   // ++++++++++++++++++++++++++++++++ more modulare approach to repeats +++++++
 
-  TEST_countReps(tokenArr) {
-    const [repsByLemma, repsByTokenID] = this.TEST_identifyRepeats(tokenArr);
+  countReps(tokenArr) {
+    const [repsByLemma, repsByTokenID] = this.identifyRepeats(tokenArr);
     for (const i in tokenArr){
       const token = tokenArr[i];
-      const info = this.TEST_buildTagInfo(token, repsByLemma, repsByTokenID, i);
+      const info = this.buildTagInfo(token, repsByLemma, repsByTokenID, i);
       token.info = info;
       if (token.type.startsWith("w") && info.totalReps > 0) {
         // const count = this.TEST_countPrevious(token, tokenArr, i);
-        token.info.thisRep = this.TEST_countPrevious(token, tokenArr, i);
+        token.info.thisRep = this.countPrevious(token, tokenArr, i);
         // console.log(">>", token.lemma, token.info);
       }
     }
   }
 
-  TEST_countPrevious(token, tokenArr, indexOfToken) {
+  countPrevious(token, tokenArr, indexOfToken) {
     let count = 0;
     const lemma = token.info.repeatedLemma;
     for (let i=0; i < indexOfToken; i++) {
@@ -655,11 +655,15 @@ class Repeats {
     return count;
   }
 
-  TEST_identifyRepeats(tokenArr) {
-    const [allFrequenciesByLemma, allLemmasByTokenID] = this.TEST_countAllOccurrences(tokenArr);
+  identifyRepeats(tokenArr) {
+    // const [allFrequenciesByLemma, allLemmasByTokenID] = this.countAllOccurrences(tokenArr);
+    const allFrequenciesByLemma = app.stats.allLemmas;
+    const allLemmasByTokenID = app.stats.allLemmasByTokenID;
+    // const [allFrequenciesByLemma, allLemmasByTokenID] = app.stats.logAllWords(tokenArr);
     let repsByLemma = {};
     for (const lemma of Object.keys(allFrequenciesByLemma)) {
-      if (allFrequenciesByLemma[lemma][0]) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
+      // if (allFrequenciesByLemma[lemma][0]) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
+      if (allFrequenciesByLemma[lemma][0] && !LOOKUP.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
     }
     this.repsByLemma = repsByLemma;
     const listOfRepeatedLemmas = Object.keys(repsByLemma);
@@ -670,26 +674,30 @@ class Repeats {
     return [repsByLemma, repsByTokenID];
   }
 
-  TEST_countAllOccurrences(tokenArr) {
-    let allFrequenciesByLemma = {}; // * {lemma : [frequency starting from 0, entry id]}
-    let allLemmasByTokenID = {};    // * {token id : lemma} to allow many (token) to 1 (lemma) linking
-    for (const i in tokenArr){
-      const token = tokenArr[i];
-      const firstEntry = token.matches[0];
-      /* LOGIC: make a list of all occurrences of first lemmas;
-      if a duplicate, add id to a second list with lemma */
-      if (firstEntry) {
-        const lemma = app.wordlist.getEntryById(firstEntry.id).lemma;
-        if (token?.type.startsWith("w") && !LOOKUP.repeatableWords.includes(lemma)) {
-          allFrequenciesByLemma[lemma] = (allFrequenciesByLemma[lemma]?.[0] >= 0) ? [allFrequenciesByLemma[lemma][0] + 1, firstEntry.id] : [0,0];
-          allLemmasByTokenID[i] = lemma;
-        }
-      }
-    }
-    return [allFrequenciesByLemma, allLemmasByTokenID];
-  }
+  // countAllOccurrences(tokenArr) {
+  //   let wordCount = 0;
+  //   let allFrequenciesByLemma = {}; // * {lemma : [frequency starting from 0, entry id]}
+  //   let allLemmasByTokenID = {};    // * {token id : lemma} to allow many (token) to 1 (lemma) linking
+  //   for (const i in tokenArr){
+  //     const token = tokenArr[i];
+  //     if (!["m", "s", "c", "p", "@"].includes(token?.type[0])) wordCount++;
+  //     const firstEntry = token.matches[0];
+  //     if (firstEntry) {
+  //       const lemma = app.wordlist.getEntryById(firstEntry.id).lemma;
+  //       if (token?.type.startsWith("w")) {
+  //         let frequency = 0;
+  //         if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
+  //         allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.levelGEPT];
+  //         allLemmasByTokenID[i] = lemma;
+  //       }
+  //     }
+  //   }
+  //   console.log("lemma count / allFrequenciesByLemma", Object.keys(allFrequenciesByLemma).length, allFrequenciesByLemma)
+  //   console.log("wordcount", wordCount)
+  //   return [allFrequenciesByLemma, allLemmasByTokenID];
+  // }
 
-  TEST_buildTagInfo(token, repsByLemma, repsByToken, indexOfToken){
+  buildTagInfo(token, repsByLemma, repsByToken, indexOfToken){
     // let info = [];
     let info = {};
     if (token.type.startsWith("w")){
@@ -697,7 +705,7 @@ class Repeats {
       // const thisRep = token.count;
       const thisRep = -1;
       const repeatedLemma = repsByToken[indexOfToken] || "";
-      const [displayLevel, isMixedLevels] = this.TEST_orderMixedLevels(token);
+      const [displayLevel, isMixedLevels] = this.orderMixedLevels(token);
       info = {
         totalReps: totalReps,
         thisRep: thisRep,
@@ -709,7 +717,7 @@ class Repeats {
     return info;
   }
 
-  TEST_orderMixedLevels(token){
+  orderMixedLevels(token){
     let listOfLevels = [];
     for (const match of token.matches) {
       listOfLevels.push(match.levelGEPT);
@@ -725,73 +733,60 @@ class Repeats {
 }
 
 class WordStatistics {
-  getAllLevelStats(tokenArr) {
-    /*
-    firstAppearanceOfWord = [lemma, id, gept level, awl level]
-    */
-    const [firstAppearanceOfWord, totalWordCount] = this.getFirstAppearanceOfEachWord(tokenArr);
-    const separateLemmasCount = firstAppearanceOfWord.length;
-    let lemmasBylevel = this.getListOfFirstAppearancesByLemma(firstAppearanceOfWord);
-    let levelStats = [];
-    let awlCount = 0;
-    let awlEntries = 0;
-    for (const level in lemmasBylevel) {
-      // const levelText = (level > -1) ? LOOKUP.level_headings[level] : "offlist";
-      const levelText = (level > -1) ? app.wordlist.level_headings[level] : "offlist";
-      const lemmasAtThisLevel = lemmasBylevel[level];
-      const currStat = this.buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount);
-      levelStats.push(currStat);
-      if (app.state.isBESTEP && level >= 38) {
-        awlCount += lemmasAtThisLevel;
-        awlEntries++;
-      }
-    }
-    if (app.state.isBESTEP && awlEntries > 1) levelStats.push(this.buildLevelStat(37, Tag.tag("b", [], ["AWL total"]), awlCount, separateLemmasCount));
-    return [totalWordCount, separateLemmasCount, levelStats];
-  }
+  allLemmas = {};  // * { lemma : [totalFrequency, entryID, GEPTlevel]}
+  allLemmasByTokenID = {};
 
-  getFirstAppearanceOfEachWord(tokenArr) {
-    const firstAppearanceOfWord = []; // [lemma, id, gept level, awl level]
-    const subsequentAppearances = []; // [lemma, id]
-    for (const token of tokenArr) {
-      // ** only need to look at the first candidate as all candidates point to same token lemma
-      if (token.type.startsWith("w")) {
-        let level;
-        let awlLevel;
-        const firstMatch = token.matches[0];
-        // if (token.count === 0) {
-        if (token.info.thisRep === 0) {
-          // debug(token.lemma, token, firstMatch)
-          if (token.type === "wo") {
-            [level, awlLevel] = [-1, -1];
-          }
-          else {
-            // [level, awlLevel] = getEntryById(firstID).levelArr.slice(0, 2);
-            [level, awlLevel] = firstMatch.levelArr.slice(0, 2);
-          }
-          const info = [token.lemma, firstMatch.id, level, awlLevel];
-          firstAppearanceOfWord.push(info)
+  totalWordCount = 0; // includes numbers etc
+  totalLemmaCount = 0; // all headwords (including offlist, but not numbers etc.)
+
+  logAllWords(tokenArr) {
+    let wordCount = 0;
+    let allFrequenciesByLemma = {}; // * {lemma : [frequency starting from 0, entry id]}
+    let allLemmasByTokenID = {};    // * {token id : lemma} to allow many (token) to 1 (lemma) linking
+    for (const i in tokenArr){
+      const token = tokenArr[i];
+      if (!["m", "s", "c", "p", "@"].includes(token?.type[0])) wordCount++;
+      const firstEntry = token.matches[0];
+      if (firstEntry) {
+        const lemma = app.wordlist.getEntryById(firstEntry.id).lemma;
+        if (token?.type.startsWith("w")) {
+          let frequency = 0;
+          if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
+          allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.levelGEPT, firstEntry.levelAWL];
+          allLemmasByTokenID[i] = lemma;
         }
-        else subsequentAppearances.push([token.lemma, firstMatch.id])
       }
     }
-    const separateLemmasCount = firstAppearanceOfWord.length;
-    const totalWordCount = separateLemmasCount + subsequentAppearances.length;
-    return [firstAppearanceOfWord, totalWordCount];
+    this.allLemmas = allFrequenciesByLemma;
+    this.allLemmasByTokenID = allLemmasByTokenID;
+    this.totalWordCount = wordCount;
+    this.totalLemmaCount = Object.keys(allFrequenciesByLemma).length;
   }
 
-  getListOfFirstAppearancesByLemma(firstAppearanceOfWord) {
-    let lemmasBylevel = {};
-    for (const [word, id, geptLevel, awlLevel] of firstAppearanceOfWord) {
-      // ** NB awl words are also included in the GEPT level counts
-      lemmasBylevel[geptLevel] = (lemmasBylevel[geptLevel] || 0) + 1;
-      if (awlLevel > -1) lemmasBylevel[awlLevel] = (lemmasBylevel[awlLevel] || 0) + 1;
+
+  getAllLevelStats(tokenArr) {
+    let lemmasByLevel = {}  // {level : [lemma, lemma, ...]}
+    for (const [lemma, [freq, id, geptLevel, rawAwl]] of Object.entries(this.allLemmas)){
+      const awlLevel = (rawAwl < 0) ? 0 : rawAwl + app.wordlist.awl_level_offset;
+      if (lemmasByLevel[geptLevel]) lemmasByLevel[geptLevel].push(lemma);
+      else lemmasByLevel[geptLevel] = [lemma];
+      if (awlLevel && app.state.isBESTEP) {
+
+        if (lemmasByLevel[awlLevel]) lemmasByLevel[geptLevel].push(lemma);
+        else lemmasByLevel[awlLevel] = [lemma];
+      }
     }
-    return lemmasBylevel;
-  }
-
-  buildLevelStat(level, levelText, lemmasAtThisLevel, separateLemmasCount) {
-    return [level, levelText, lemmasAtThisLevel, Math.round(100 * (lemmasAtThisLevel / separateLemmasCount)) + "%"];
+    let statsForThisLevel = []  // [level, levelText, lemmaSubTotal, percent of total lemmas]
+    const offlist_offset = app.wordlist.level_headings.length;
+    for (const [level, lemmaArr] of Object.entries(lemmasByLevel)) {
+      const lemmaTotalAtThisLevel = lemmaArr.length;
+      const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
+      let levelText = (app.wordlist.level_headings[level]) ? app.wordlist.level_headings[level] : app.wordlist.offlist_subs[level - offlist_offset];
+      statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
+    }
+    // console.log({lemmasByLevel})
+    // console.log({statsForThisLevel})
+    return [this.totalWordCount, this.totalLemmaCount, statsForThisLevel];
   }
 
   buildHTMLlevelStats(separateLemmasCount, levelStats) {
@@ -806,12 +801,12 @@ class WordStatistics {
     </details>
     */
     let levelStatsHTML = "";
-    // if (!separateLemmasCount || isKids()) return levelStatsHTML;
     if (!separateLemmasCount || app.state.isKids) return levelStatsHTML;
     let tmpStats = [];
-    for (const [levelID, levelText, total, percent] of levelStats.sort((a, b) => a[0] - b[0])) {
-      if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
-      else if (app.state.isBESTEP) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
+    for (const [levelID, levelText, total, percent] of levelStats) {
+      // if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
+      // else if (app.state.isBESTEP) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
+      tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
     }
     const toggleOpen = (app.state.current.level_state) ? " open" : "";
     levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
@@ -833,7 +828,7 @@ class Text {
     let revisedText = this.textGetWithCursor().trim();
     if (revisedText) {
       const tokenArr = app.parser.markup(revisedText);
-      app.repeats.TEST_countReps(tokenArr)
+      app.repeats.countReps(tokenArr)
       this.textBuildHTML(tokenArr);
       app.backup.save();
     }
@@ -913,21 +908,19 @@ class Text {
     if (firstType.startsWith("w")) app.repeats.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
     const levelArr = token.matches[0].levelArr;
     const levelClass = "level-" + app.ui.getLevelPrefix(token.matches[0].levelGEPT);
+    // console.log(">>", token.lemma, token, levelClass, ...levelArr)
     const limit = (app.limit.classNameCSS && app.limit.exceedsLimit(levelClass)) ? app.limit.LEVEL_LIMIT_CLASS : "";
     let relatedWordsClass = `all_${firstID}`;
     let duplicateClass = "";
     let duplicateCountInfo = "";
     let anchor = "";
-    // if (token.info.totalReps) console.log("info:", token.info)
     if (token.info.totalReps > 0) {
       duplicateClass = "duplicate";
       duplicateCountInfo = `data-reps=${token.info.totalReps}`;
-      // anchor = `id=${relatedWordsClass}_${token.count + 1}`;
       anchor = `id=${relatedWordsClass}_${token.info.thisRep + 1}`;
     }
     word = app.cursor.insertInHTML(token.length, wordIndex, word);
     const localWord = app.ui.highlightAwlWord(levelArr, word);
-    // ** listOfLinks = id:lemma:type
     let listOfLinksArr = token.matches.map(entry => `${entry.id}:${token.lemma.trim()}:${token.type}`);
     let showAsMultiple = "";
     if (token.matches.length > 1) showAsMultiple = (token.info.isMixedLevels) ? "multi-diff" : "multi-same";
@@ -961,6 +954,7 @@ class TextProcessor {
     revisedText = null;
     tokenArr = this.lookupCompounds(tokenArr);
     tokenArr = this.lookupSimples(tokenArr);
+    app.stats.logAllWords(tokenArr);
     console.log("textArr=", tokenArr)
     return tokenArr;
   }

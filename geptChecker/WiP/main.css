@@ -360,8 +360,9 @@
       font-weight: normal;
     }
 
-    /* contractions / numbers (digits) / symbols */
+    /* contractions / names / numbers (digits) / symbols */
     .level-c,
+    .level-n,
     .level-d,
     .level-s {
       /* color: var(--misc); */

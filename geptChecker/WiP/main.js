@@ -14,6 +14,6 @@ function debounce(func, timeout = 500) {
   };
 }
 
-function debug(...params) {
-  console.log(`DEBUG: ${debug.caller.name}> `, params);
-}
+// function debug(...params) {
+//   console.log(`DEBUG: ${debug.caller.name}> `, params);
+// }

@@ -24,12 +24,7 @@
       <tab-tools>
         <button class="dropbtn" id="backup-save2" type="button">Backup</button>
         <tab-spacer>&nbsp;</tab-spacer>
-        <!-- <button class="dropbtn" id="reset_button" type="button">Reset</button>
-        <tab-spacer>&nbsp;</tab-spacer> -->
         <button class="dropbtn" id="clear_btn" type="button">Clear</button>
-        <!-- <tab-spacer>&nbsp;</tab-spacer>
-        <button class="dropbtn" id="refresh_button" type="button">Refresh</button> -->
-        <!-- adapted from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_dropdown_right -->
         <div class="dropdown" id="dropdown">
           <button class="dropbtn" type="button">Settings</button>
           <div class="dropdown-content" id="settings-content">
@@ -53,21 +48,8 @@
               <option value="2">database: GEPTKids</option>
             </select>
 
-            <!-- <select name="select-refresh" id="select-refresh" style="display: block;">
-              <option value="1">auto refresh</option>
-              <option value="0">manual refresh</option>
-            </select> -->
-
-            <!-- <select name="select-edit-mode" id="select-edit-mode" style="display: block;">
-              <option value="1">In-place editing</option>
-              <option value="0">2-column editing</option>
-            </select> -->
-
             <button id="backup-btn" style="display: block;">backups</button>
             <button id="reset_btn" style="display: block;">Reset</button>
-            <!-- <button class="dropbtn" id="reset_button" type="button">Reset</button> -->
-            <!-- <button id="backup-save" style="display: block;">save backup</button> -->
-            <!-- <div id="version-no">Version 4-8.4</div> -->
             <div id="version-no" title="KEY CHANGES"></div>
           </div>
         </div>
@@ -96,7 +78,6 @@
             <fieldset id="t1_term">
               <legend id="t1_term_legend">Search <span id="db_name1" class="dbColor">GEPT</span> wordlist for:</legend>
               <div id="t1_term_inputs">
-                <!-- <input type="text" id="t1_term_i" name="term" autocapitalize="none" spellcheck="false" placeholder="Enter word here..."> -->
                 <input type="text" id="t1_term_i" name="term" autocapitalize="none" spellcheck="false">
               </div>
             </fieldset>
@@ -137,7 +118,6 @@
             <fieldset id="t1_theme" style="display: none;">
               <legend id="t1_theme_legend">Theme:</legend>
               <div id="t1_theme_values">
-                <!-- <select name="theme" id="t1_theme_select" onchange="this.dataset.chosen=this.value;" data-chosen="-1"> -->
                 <select name="theme" id="t1_theme_select" data-chosen="-1">
                   <option value="-1" selected class="default">any</option>
                   <option value="3">Animals &amp; insects (動物/昆蟲)</option>
@@ -245,9 +225,6 @@
                 <label for="t1_awl_10">10
                   <input type="checkbox" name="awl" id="t1_awl_10" value="10">
                 </label>
-                <!-- <label for="t1_awl_11">GEPT only
-                  <input type="checkbox" name="awl" id="t1_awl_11" value="100">
-                </label> -->
               </div>
             </fieldset>
           </form>
@@ -258,11 +235,8 @@
             <div id="t1_results_text"></div>
           </fieldset>
         </div>
-      <!-- </div>
-      <div class="tab-content" style="display: flex;"> -->
       </tab-content>
       <tab-content style="display: flex;">
-        <!-- <div id="container"> -->
         <div id="left-top">
           <div id="t2_raw_text" contenteditable="true" spellcheck="false"
             placeholder="Paste or type text here. (Choose Settings/manual-refresh if you have a lot of text.)"></div>
