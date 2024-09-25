@@ -1305,10 +1305,10 @@
   </tab-group>
 
   <script data-title="admin.js">
-    console.clear();
     "use strict";
-    const versionNumber = "6-5.13";
-    const versionDetails = "*New GEPT wordlist; edits 'in place'; *advises on preferred spellings; *recognizes negative prefixes and superfluous hyphens; *custom level strike-through; *preserves original spacing/punctuation;\n[nerdy]\n+all html output now escaped through Tag.stringify(); +implemented all functions as classes; +font size now saved between sessions";
+    console.clear();
+    const versionNumber = "6-5.14";
+    const versionDetails = "*New GEPT wordlist; edits 'in place'; *advises on preferred spellings; *recognizes negative prefixes and superfluous hyphens; *custom level strike-through; *preserves original spacing/punctuation;\n[nerdy]\n+all html output now escaped through Tag.stringify(); +implemented all functions as classes; +font size now saved between sessions; +kids now displays levelstats";
     const versionInfo = document.getElementById("version-no");
     versionInfo.innerHTML = `Version ${versionNumber}`;
     versionInfo.title += `\n${versionDetails}.`;
@@ -1537,7 +1537,7 @@ class EventListeners {
 
   addWordInput() {
     // HTM.inputLemma.addEventListener("input", debounce(app.word.wordSearch.bind(app.word), 500));
-    HTM.inputLemma.addEventListener("input", debounce(function (e) { app.word.wordSearch() }, 500));
+    HTM.inputLemma.addEventListener("input", debounce(function (e) { app.word.search() }, 500));
     for (const el of document.getElementsByTagName("input")) {
       if (el.type != "text") {
         const label = el.labels[0];
@@ -1593,6 +1593,7 @@ class EventListeners {
 
 class UI {
   refreshRequired = false;
+  refreshPermitted = true;
   isExactMatch = true;   // if false, it will match partial words, e.g. an > analytical
 
   setupEditing(e) {
@@ -1662,7 +1663,7 @@ class UI {
         defaultChecked.labels[0].classList.add("selected_txt");
         this.refreshLabels(parentID);
       }
-      app.word.wordSearch(e_label);
+      app.word.search(e_label);
     }
   }
 
@@ -1693,33 +1694,40 @@ class UI {
   highlightAwlWord(levelArr, word) {
     return (app.state.isBESTEP && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
   }
-  getLevelDetails(levelArr) {
-    const levelClass = "level-" + this.getLevelPrefix(levelArr[0]);
-    return [levelArr, levelClass];
+
+  getLevelDetails(entry) {
+    const GEPTlevel = entry.levelGEPT;
+    const levelClass = "level-" + this.getLevelPrefix(GEPTlevel);
+    return [GEPTlevel, levelClass];
   }
 
+
   getLevelPrefix(levelGEPT) {
-    let level = app.wordlist.levelSubs[levelGEPT];
-    if (app.state.isKids && levelGEPT < app.wordlist.offlistLevel) level = "k";
-    if (!level) level = "o";
-    return level[0];
+    let levelText = app.wordlist.levelSubs[levelGEPT];
+    if (app.state.isKids && levelGEPT < app.wordlist.offlistThreshold) levelText = "k";
+    levelText = (levelText) ? levelText[0] : "o";
+    return levelText;
   }
 
   signalRefreshNeeded(mode) {
     if (mode === "on") {
       this.refreshRequired = true;
       HTM.workingDiv.style.backgroundColor = "ivory";
-      // HTM.textTabTag.style.fontStyle = "italic";
       app.tabs.htm.textTabTag.style.fontStyle = "italic";
-      // HTM.backupSave2.style.display = "block";
+      app.tabs.htm.textTabTag.style.color = "grey";
       app.backup.htm.backupSave2.style.display = "block";
     }
     else {
       this.refreshRequired = false;
+      this.refreshPermitted = false;
+      // * This delay is required to stop accidental refresh requests during refresh process!
+      setTimeout(() => { this.refreshPermitted = true; }, 2000);
       HTM.workingDiv.style.backgroundColor = "white";
-      // HTM.textTabTag.style.fontStyle = "normal";
       app.tabs.htm.textTabTag.style.fontStyle = "normal";
-      // HTM.backupSave2.style.display = "none";
+      app.tabs.htm.textTabTag.style.color = "black";
+      // HTM.workingDiv.style.removeProperty("backgroundColor");
+      // app.tabs.htm.textTabTag.style.removeProperty("fontStyle");
+      // app.tabs.htm.textTabTag.style.removeProperty("color");
       app.backup.htm.backupSave2.style.display = "none";
     }
   }
@@ -1736,13 +1744,13 @@ class Tools {
   // SplitHere = "___";
 
   isEmpty(arr) {
-    // TODO: simplify to !arr.length ?
-    // return !arr?.flat(Infinity).length;
-    let hasContent;
-    if (!arr) hasContent = false;
-    else if (typeof arr !== "object") hasContent = true;
-    else hasContent = arr.length > 0;
-    return !hasContent;
+    if (typeof arr !== "object") return arr;
+    else return !arr?.flat(Infinity).length;
+    // let hasContent;
+    // if (!arr) hasContent = false;
+    // else if (typeof arr !== "object") hasContent = true;
+    // else hasContent = arr.length > 0;
+    // return !hasContent;
   }
 
   dedupeSimpleArray(arr) {
@@ -1810,20 +1818,20 @@ class WordSearch {
     ends: [".*", "$"]
   };
 
-  wordSearch(e) {
+  search(e) {
     let resultsArr = [];
     let HTMLstringToDisplay = "";
-    const data = this.wordGetFormData(e);
+    const data = this.getFormData(e);
     app.ui.isExactMatch = (data.match[0] === "exact");
-    let errorMsg = this.wordValidateFormData(data);
+    let errorMsg = this.validateFormData(data);
     if (errorMsg) {
       HTMLstringToDisplay = this.markStringAsError(errorMsg);
     } else {
-      const searchTerms = this.wordBuildSearchTerms(data);
-      resultsArr = this.wordRunSearch(searchTerms);
-      HTMLstringToDisplay = this.wordFormatResultsAsHTML(resultsArr);
+      const searchTerms = this.buildSearchTerms(data);
+      resultsArr = this.runSearch(searchTerms);
+      HTMLstringToDisplay = this.formatResultsAsHTML(resultsArr);
     }
-    this.wordDisplayResults(HTMLstringToDisplay, resultsArr.length);
+    this.displayResults(HTMLstringToDisplay, resultsArr.length);
   }
 
   markStringAsError(str) {
@@ -1834,11 +1842,11 @@ class WordSearch {
     const selection = e.target;
     // debug(selection.tagName, selection.value)
     selection.dataset.chosen = selection.value;
-    this.wordSearch();
+    this.search();
     // HTM.form.submit();
   }
 
-  wordGetFormData(e) {
+  getFormData(e) {
     let raw_data = new FormData(HTM.form);
     if (e) e.preventDefault();
     let data = {
@@ -1867,7 +1875,7 @@ class WordSearch {
     return data;
   }
 
-  wordValidateFormData(data) {
+  validateFormData(data) {
     let status = 3;
     /* key for status:
     0 = contains a valid search term outside of "match"
@@ -1884,7 +1892,8 @@ class WordSearch {
     }
     if (status === 3 && !data["match"].includes("contains")) status = 2;
     const term = data.term.join().split(" ")[0].toLowerCase();
-    if (term.search(/[^a-z\-\s'\.]/g) > -1) status = 1;
+    // if (term.search(/[^a-z\-\s'\.]/g) > -1) status = 1;
+    if (term.search(/[^a-z\-\s'.]/g) > -1) status = 1;
     const errorMsg = [
       "",
       "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.",
@@ -1894,7 +1903,7 @@ class WordSearch {
     return errorMsg;
   }
 
-  wordBuildSearchTerms(data) {
+  buildSearchTerms(data) {
     // TODO: refine searchterms:
     /*
     .lemma (regex version)
@@ -1904,25 +1913,21 @@ class WordSearch {
     .sublist (i.e. awl/gept/both/awl level)
     */
     let lemma = data.term.join().toLowerCase();
-    // const matchType = C.MATCHES[data.match];
     const matchType = this.MATCHES[data.match];
     const searchTerms = {
       lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
       raw_lemma: lemma,
-      // level: (isKids()) ? data.theme : data.level,
       level: (app.state.isKids) ? data.theme : data.level,
-      // awl: data.awl.map(x => (x < 100) ? x + C.awl_level_offset : x),
       awl: data.awl.map(x => (x < 100) ? x + app.wordlist.awl_level_offset : x),
       pos: data.pos.join("|")
     };
     return searchTerms;
   }
 
-  wordRunSearch(searchTerms) {
+  runSearch(searchTerms) {
     // TODO: refactor using sub functions to make process clearer
     const search = new GenericSearch(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     let matchedEntries = search.matchedEntries;
-    // let [type, matchedEntries] = checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     matchedEntries.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     if (Number.isInteger(searchTerms.level[0])) {
       let tmp_matches = [];
@@ -1978,11 +1983,12 @@ class WordSearch {
   }
 
 
-  wordFormatResultsAsHTML(results) {
+  formatResultsAsHTML(results) {
     let resultsAsTags;
     if (app.tools.isEmpty(results)) {
       resultsAsTags = Tag.tag("span", ["class=warning"], ["Search returned no results."]);
-    } else{
+    }
+    else {
       let output = [];
       let previousInitial = "";
       let currentInitial = "";
@@ -2000,7 +2006,8 @@ class WordSearch {
         if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
-        let class2 = (app.state.isKids) ? "level-e" : `level-${level[0]}`;
+        // let class2 = (app.state.isKids) ? "level-k" : `level-${level[0]}`;
+        let class2 = app.ui.getLevelDetails(entry)[1];
         output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
         previousInitial = currentInitial;
         i++;
@@ -2021,7 +2028,7 @@ class WordSearch {
     ]);
   }
 
-  wordDisplayResults(resultsAsHtmlString, resultCount = 0) {
+  displayResults(resultsAsHtmlString, resultCount = 0) {
     let text = LOOKUP.legends.results;
     if (resultCount) text += ` (${resultCount})`;
     HTM.resultsLegend.innerHTML = text;
@@ -2043,7 +2050,6 @@ class WordSearch {
 
 class Repeats {
   repsByLemma = {};
-  setOfLemmaID = new Set();
 
   buildHTMLrepeatList(wordCount) {
     const repeatedLemmas = Object.keys(this.repsByLemma).sort();
@@ -2102,8 +2108,6 @@ class Repeats {
     }
   }
 
-  // ++++++++++++++++++++++++++++++++ more modulare approach to repeats +++++++
-
   countReps(tokenArr) {
     const [repsByLemma, repsByTokenID] = this.identifyRepeats(tokenArr);
     for (const i in tokenArr){
@@ -2111,9 +2115,7 @@ class Repeats {
       const info = this.buildTagInfo(token, repsByLemma, repsByTokenID, i);
       token.info = info;
       if (token.type.startsWith("w") && info.totalReps > 0) {
-        // const count = this.TEST_countPrevious(token, tokenArr, i);
         token.info.thisRep = this.countPrevious(token, tokenArr, i);
-        // console.log(">>", token.lemma, token.info);
       }
     }
   }
@@ -2122,20 +2124,16 @@ class Repeats {
     let count = 0;
     const lemma = token.info.repeatedLemma;
     for (let i=0; i < indexOfToken; i++) {
-      // console.log("sanity check:", i, tokenArr[i],  tokenArr[i].info.repeatedLemma, lemma)
       if (tokenArr[i].info.repeatedLemma === lemma) count++;
     }
     return count;
   }
 
   identifyRepeats(tokenArr) {
-    // const [allFrequenciesByLemma, allLemmasByTokenID] = this.countAllOccurrences(tokenArr);
     const allFrequenciesByLemma = app.stats.allLemmas;
     const allLemmasByTokenID = app.stats.allLemmasByTokenID;
-    // const [allFrequenciesByLemma, allLemmasByTokenID] = app.stats.logAllWords(tokenArr);
     let repsByLemma = {};
     for (const lemma of Object.keys(allFrequenciesByLemma)) {
-      // if (allFrequenciesByLemma[lemma][0]) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
       if (allFrequenciesByLemma[lemma][0] && !LOOKUP.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
     }
     this.repsByLemma = repsByLemma;
@@ -2147,35 +2145,10 @@ class Repeats {
     return [repsByLemma, repsByTokenID];
   }
 
-  // countAllOccurrences(tokenArr) {
-  //   let wordCount = 0;
-  //   let allFrequenciesByLemma = {}; // * {lemma : [frequency starting from 0, entry id]}
-  //   let allLemmasByTokenID = {};    // * {token id : lemma} to allow many (token) to 1 (lemma) linking
-  //   for (const i in tokenArr){
-  //     const token = tokenArr[i];
-  //     if (!["m", "s", "c", "p", "@"].includes(token?.type[0])) wordCount++;
-  //     const firstEntry = token.matches[0];
-  //     if (firstEntry) {
-  //       const lemma = app.wordlist.getEntryById(firstEntry.id).lemma;
-  //       if (token?.type.startsWith("w")) {
-  //         let frequency = 0;
-  //         if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
-  //         allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.levelGEPT];
-  //         allLemmasByTokenID[i] = lemma;
-  //       }
-  //     }
-  //   }
-  //   console.log("lemma count / allFrequenciesByLemma", Object.keys(allFrequenciesByLemma).length, allFrequenciesByLemma)
-  //   console.log("wordcount", wordCount)
-  //   return [allFrequenciesByLemma, allLemmasByTokenID];
-  // }
-
   buildTagInfo(token, repsByLemma, repsByToken, indexOfToken){
-    // let info = [];
     let info = {};
     if (token.type.startsWith("w")){
       const totalReps = repsByLemma[repsByToken[indexOfToken]]?.[0] || 0;
-      // const thisRep = token.count;
       const thisRep = -1;
       const repeatedLemma = repsByToken[indexOfToken] || "";
       const [displayLevel, isMixedLevels] = this.orderMixedLevels(token);
@@ -2250,11 +2223,10 @@ class WordStatistics {
       }
     }
     let statsForThisLevel = []  // [level, levelText, lemmaSubTotal, percent of total lemmas]
-    const offlist_offset = app.wordlist.level_headings.length;
     for (const [level, lemmaArr] of Object.entries(lemmasByLevel)) {
       const lemmaTotalAtThisLevel = lemmaArr.length;
       const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
-      let levelText = (app.wordlist.level_headings[level]) ? app.wordlist.level_headings[level] : app.wordlist.offlist_subs[level - offlist_offset];
+      let levelText = app.wordlist.levelSubs[level];
       statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
     }
     // console.log({lemmasByLevel})
@@ -2274,12 +2246,18 @@ class WordStatistics {
     </details>
     */
     let levelStatsHTML = "";
-    if (!separateLemmasCount || app.state.isKids) return levelStatsHTML;
+    // if (!separateLemmasCount || app.state.isKids) return levelStatsHTML;
+    if (!separateLemmasCount) return levelStatsHTML;
     let tmpStats = [];
     for (const [levelID, levelText, total, percent] of levelStats) {
-      // if (levelID < 3) tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
-      // else if (app.state.isBESTEP) tmpStats.push(Tag.tag("p", ["class=level-a"], [levelText, ": ", total, " (", percent, ")"]));
-      tmpStats.push(Tag.tag("p", [`class=level-${levelText[0]}`], [levelText, ": ", total, " (", percent, ")"]));
+      let levelPrefix = app.ui.getLevelPrefix(levelID);
+      let levelDisplayText = levelText;
+      if (app.state.isKids) {
+        // * to trim kids' themes to manageable display length
+        const match = /\((.+?)\)/.exec(levelText);
+        if (match) levelDisplayText = match[1];
+      }
+      tmpStats.push(Tag.tag("p", [`class=level-${levelPrefix}`], [levelDisplayText, ": ", total, " (", percent, ")"]));
     }
     const toggleOpen = (app.state.current.level_state) ? " open" : "";
     levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
@@ -2315,11 +2293,9 @@ class Text {
 
   textDisplay(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
     app.wordlist.displayDbNameInTab2(this.getWordCountForDisplay(wordCount));
-    // displayRepeatsList(repeatsHTML, levelStatsHTML);
     app.repeats.displayList(repeatsHTML, levelStatsHTML);
     this.textDisplayWorking(resultsHTML);
     app.listeners.addDetailToggle(document.getElementById("level-details"));
-    // HTM.finalInfoDiv.innerText = "";
   }
 
   getWordCountForDisplay(wordCount) {
@@ -2339,7 +2315,6 @@ class Text {
 
   textDisplayWorking(html) {
     HTM.workingDiv.innerHTML = html;
-    // setCursorPos(document.getElementById(CURSOR.id));
   }
 
   textBuildHTML(tokenArr) {
@@ -2378,10 +2353,8 @@ class Text {
     const firstID = token.matches[0].id;
     const firstType = token.type;
     let variantClass = (firstType === "wv") ? " variant" : "";
-    if (firstType.startsWith("w")) app.repeats.setOfLemmaID.add(token.lemma.toLowerCase() + ":" + firstID);
     const levelArr = token.matches[0].levelArr;
     const levelClass = "level-" + app.ui.getLevelPrefix(token.matches[0].levelGEPT);
-    // console.log(">>", token.lemma, token, levelClass, ...levelArr)
     const limit = (app.limit.classNameCSS && app.limit.exceedsLimit(levelClass)) ? app.limit.LEVEL_LIMIT_CLASS : "";
     let relatedWordsClass = `all_${firstID}`;
     let duplicateClass = "";
@@ -2397,17 +2370,20 @@ class Text {
     let listOfLinksArr = token.matches.map(entry => `${entry.id}:${token.lemma.trim()}:${token.type}`);
     let showAsMultiple = "";
     if (token.matches.length > 1) showAsMultiple = (token.info.isMixedLevels) ? "multi-diff" : "multi-same";
-    let classes = [];
-    for (const term of [levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]) {
-      if (term) classes.push(term);
-    }
-    classes = classes.join(" ");
+    const classes = this.getSpaceSeparatedList([levelClass, relatedWordsClass, duplicateClass, showAsMultiple, variantClass, limit]);
     const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, duplicateCountInfo, anchor], [localWord]);
-    const displayWordAsString = displayWord.stringify();
-    return displayWordAsString;
+    return displayWord.stringify();
   }
 
+  getSpaceSeparatedList(list) {
+    let classes = [];
+    for (const term of list) {
+      if (term) classes.push(term);
+    }
+    return classes.join(" ");
+  }
 }
+
 
 class TextProcessor {
   tokenTypeExpansions = {
@@ -2421,14 +2397,13 @@ class TextProcessor {
   markup(revisedText) {
     app.ui.signalRefreshNeeded("off");
     app.ui.isExactMatch = true;
-    app.repeats.setOfLemmaID = new Set();
     app.wordlist.resetOfflistDb();
     let tokenArr = this.divideIntoTokens(revisedText);
     revisedText = null;
     tokenArr = this.lookupCompounds(tokenArr);
     tokenArr = this.lookupSimples(tokenArr);
     app.stats.logAllWords(tokenArr);
-    console.log("textArr=", tokenArr)
+    console.log({tokenArr});
     return tokenArr;
   }
 
@@ -2458,7 +2433,6 @@ class TextProcessor {
     // text = text.replaceAll("\n", EOL.text);                        // catch newlines (already caught by normalizeRawText)
     text = text.replaceAll(/([#\$£]\d)/g, "___$1");                   // ensure currency symbols stay with number
     text = text.trim();
-    // return text.split(/\___|\b/);                                  // use triple underscore as extra breakpoint
     return text.split(this.splitAtUnderscoreOrBoundary);              // use triple underscore as extra breakpoint
   }
 
@@ -2550,7 +2524,6 @@ class TextProcessor {
     // ** to deal with measurements i.e. num+abbrev. (no space)
     let tmpTokenArr = [];
     for (let token of taggedTokenArr) {
-      // for (let candidate of token.candidates) {
       let toAdd = [];
       if (token.type === "d") {
         for (let el of Object.keys(LOOKUP.abbreviations)) {
@@ -2582,7 +2555,6 @@ class TextProcessor {
           j++;
         }
         wordBlob = wordBlob.toLowerCase();
-        // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
         for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
           if (wordBlob.startsWith(compound)) {
             token.appendMatches(app.wordlist.getEntryById(id));
@@ -2622,7 +2594,6 @@ class TextProcessor {
           token.type = revisedType;
         }
       }
-      // else if (["c", "d", "y"].includes(token.type)) {
       else if (Object.keys(this.tokenTypeExpansions).includes(token.type)) {
         token.overwriteMatches(this.markOfflist(token.lemma, this.tokenTypeExpansions[token.type]));
       }
@@ -2666,14 +2637,12 @@ class TextProcessor {
   }
 
   lookupWord(word) {
-    // const originalWord = word;
     word = word.toLowerCase();
     let matchedEntries;
     let tokenType = "w";
     const search = new GenericSearch(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
     tokenType = search.tokenType;
     matchedEntries = search.matchedEntries;
-    // [tokenType, matchedEntries] = checkAgainstLookups(word, app.wordlist.getEntriesByExactLemma(word), tokenType);
     if (app.tools.isEmpty(matchedEntries)) {
       matchedEntries = [this.markOfflist(word.toLowerCase(), "offlist")];
       tokenType = "wo"   // wo=offlist word
@@ -2742,17 +2711,20 @@ class InformationPanes {
     </div>
     */
     let html = [];
+    // const headings_max = app.wordlist.level_headings_total + 1;
+    // const headings_max = app.wordlist.level_headings_total;
     for (const ref of refs.split(" ")) {
       const [id, word, tokenType] = ref.split(":");
       const entry = app.wordlist.getEntryById(id);
-      const [levelArr, levelClass] = app.ui.getLevelDetails(entry.levelArr);
+      // const [levelArr, levelClass] = app.ui.getLevelDetails(entry.levelArr);
+      const [levelArr, levelClass] = app.ui.getLevelDetails(entry);
       const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
       const levelTagArr = this.buildHTMLlevel(entry, id, levelArr, tokenType);
-      // const levelTag = tag("div", [], [buildHTMLlevelDot(entry), " ", ...levelTagArr]);
       let levelTag = "";
-      // if (isKids() && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
-      if (entry.levelGEPT > 49) levelTag = "";
-      else if (app.state.isKids && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], buildHTMLlevelKids(entry));
+      // if (entry.levelGEPT > 49) levelTag = "";
+      // else if (app.state.isKids && entry.levelGEPT !== 49) levelTag = Tag.tag("div", [], this.buildHTMLlevelKids(entry));
+      // if (app.state.isKids) console.log("kids:", entry.lemma, entry.levelGEPT, app.wordlist.offlistThreshold)
+      if (entry.levelGEPT > app.wordlist.offlistThreshold) levelTag = "";
       else levelTag = Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr]);
       const pos = `[${entry.posExpansion}]`;
       let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
@@ -2817,8 +2789,10 @@ class InformationPanes {
   }
 
   buildHTMLlevelKids(entry) {
-    // return [" ", Tag.tag("span", ["class=awl-level"], [LOOKUP.level_headings[entry.levelGEPT]])];
-    return [" ", Tag.tag("span", ["class=awl-level"], [app.wordlist.level_headings[entry.levelGEPT]])];
+    console.log("in kids html")
+    // console.log("kids html:", entry.lemma, app.wordlist.level_headings[entry.levelGEPT])
+    // return [" ", Tag.tag("span", ["class=awl-level"], [app.wordlist.level_headings[entry.levelGEPT]])];
+    return [" ", Tag.tag("span", ["class=awl-level"], ["level-k"])];
   }
 }
 
@@ -2943,9 +2917,10 @@ class Db {
   css;
   compounds;
   offlistDb;
-  offlistLevel = 0;
+  offlistThreshold;
   awl_level_offset = 37;
   kids_level_offset = 3;
+  // level_headings_total;
   levelSubs = [];
 
   // ## These correlate with the numbers in the dBs
@@ -2955,7 +2930,7 @@ class Db {
     "hi-int (B2)",
     "Animals & insects (動物/昆蟲)",
     "Articles & determiners (冠詞/限定詞)",
-    "Be & auxiliarie (be動詞/助動詞)",
+    "Be & auxiliaries (be動詞/助動詞)",
     "Clothing & accessories (衣服/配件)",
     "Colors (顏色)",
     "Conjunctions (連接詞)",
@@ -3031,6 +3006,8 @@ class Db {
   constructor() {
     this.change(app.state.current.db_state)
     this.levelSubs = this.level_headings.concat(this.offlist_subs);
+    // this.level_headings_total = this.level_headings.length;
+    this.offlistThreshold = this.level_headings.length;
   }
 
   change(e) {
@@ -3164,7 +3141,7 @@ class Db {
     for (const el of this.hide) {
       el.style.setProperty("display", "none");
     }
-    app.word.wordSearch();
+    app.word.search();
   }
 
   setDbTab2() {
@@ -3249,7 +3226,7 @@ class TabController {
 
   clearTab1() {
     HTM.form.reset();
-    app.word.wordSearch();
+    app.word.search();
     app.ui.refreshLabels("t1_form");
   }
 
@@ -3449,7 +3426,8 @@ class Backup {
     //   HTM.backupSave.innerText = "save backup";
     //   HTM.backupSave.classList.remove("error");
     // }, 1000);
-    app.text.refresh();
+
+    // app.text.refresh();
   }
 
   getTextWithoutCursor() {
@@ -3569,7 +3547,7 @@ class Cursor {
     this.oldCursorOffset = this.offset;
     this.offset = this.getInfoInEl(HTM.workingDiv);
     // if (this.refreshRequired) {
-    if (app.ui.refreshRequired) {
+    if (app.ui.refreshPermitted && app.ui.refreshRequired) {
       const tags = document.querySelectorAll(":hover");
       const currTag = tags[tags.length - 1];
       if (currTag) currTag.setAttribute("class", "unprocessed");
