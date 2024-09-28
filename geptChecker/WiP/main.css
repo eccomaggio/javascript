@@ -92,21 +92,14 @@
       text-wrap: nowrap;
     }
 
-    tab-tag:last-of-type[class="tab-on"]::after {
+    /* tab-tag:last-of-type[class="tab-on"]::after { */
+    tab-tag.to-refresh::after {
       content: " ↻";
       font-weight: normal;
       color: var(--medium);
       font-size: x-large;
       line-height: 60%;
     }
-
-    /* .tab-refresh { */
-    /* #refresh-icon {
-      font-weight: normal;
-      color: var(--medium);
-      font-size: x-large;
-      line-height: 60%;
-    } */
 
     /* tab-tools, .tab-tools { */
     tab-tools {
@@ -133,6 +126,11 @@
     .tab-off {
       background: var(--light);
       font-weight: normal;
+    }
+
+    .to-refresh {
+      font-weight: normal;
+      font-style: italic;
     }
 
     /* tab-body, #tab-body { */
@@ -468,10 +466,16 @@
     }
 
 
-    .multi-diff {
+    /* .multi-diff {
       text-decoration: darkgray underline double;
-      /* background-color: whitesmoke; */
       -webkit-text-decoration: darkgray underline double;
+    } */
+
+    .multi-diff::before {
+      font-size: 75%;
+      vertical-align: sub;
+      content: "??";
+      color: black;
     }
 
     .variant {
@@ -613,7 +617,8 @@
     }
 
     .wrong {
-      text-decoration: line-through;
+      /* text-decoration: line-through; */
+      text-decoration-line: line-through;
       opacity: 0.5;
     }
 
@@ -684,7 +689,9 @@
 
     .awl-word {
       /* border-bottom: 1px dotted; */
-      text-decoration: underline dotted;
+      /* text-decoration: underline dotted; */
+      text-decoration-line: underline;
+      text-decoration-style: dotted;
     }
 
     .instructions {
