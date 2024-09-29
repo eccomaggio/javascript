@@ -15,6 +15,7 @@ class App {
     this.limit = new ShowLevelLimit();
     this.listeners = new EventListeners();
     this.ui = new UI();
+    this.search = new GenericSearch();
     this.info = new InformationPanes();
     this.word = new WordSearch();
     this.text = new Text();
@@ -457,8 +458,9 @@ class WordSearch {
   runSearch(searchTerms) {
     // TODO: refactor using sub functions to make process clearer
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
-    const search = new GenericSearch(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
-    let matchedEntries = search.matchedEntries;
+    // const search = new GenericSearch(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
+    // let matchedEntries = search.matchedEntries;
+    let [tokenType, matchedEntries] = app.search.checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     matchedEntries.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     if (Number.isInteger(searchTerms.level[0])) {
       let tmp_matches = [];
@@ -498,7 +500,8 @@ class WordSearch {
     }
     matchedEntries = matchedEntries.filter(result => result.id > 0);
     // console.log("search.runSearch", searchTerms.raw_lemma, search.tokenType, search.tokenType.length)
-    return [matchedEntries, search.tokenType];
+    // return [matchedEntries, search.tokenType];
+    return [matchedEntries, tokenType];
   }
 
   removeNegativeSuffix (word) {
@@ -1196,13 +1199,11 @@ class TextProcessor {
 
   lookupWord(word) {
     word = word.toLowerCase();
-    let matchedEntries;
-    const search = new GenericSearch(word, app.wordlist.getEntriesByExactLemma(word));
-    matchedEntries = search.matchedEntries;
+    let [tokenType, matchedEntries] = app.search.checkAgainstLookups(word, app.wordlist.getEntriesByExactLemma(word));
     if (!matchedEntries.length) {
       matchedEntries = [this.markOfflist(word.toLowerCase(), "offlist")];
     }
-    const results = [search.tokenType, matchedEntries];
+    const results = [tokenType, matchedEntries];
     return results;
   }
 
@@ -2116,14 +2117,6 @@ class GenericSearch {
     ["ly", LOOKUP.ly_subs, ["j"]],
   ];
 
-  constructor(word, preMatchedEntries, tokenType) {
-    [
-      this.tokenType,
-      this.matchedEntries,
-    ] = this.checkAgainstLookups(word, preMatchedEntries, tokenType)
-  }
-
-  // checkAgainstLookups(word, exactMatches, tokenType = "") {
   checkAgainstLookups(word, exactMatches) {
     let tokenType = "w";
     let matchedEntries = [];
@@ -2159,12 +2152,8 @@ class GenericSearch {
     return [word, exactMatches, tokenType];
   }
 
-  // idSuccessfullyMatched(idArr) {
-  //   return idArr.some(id => id > 0);
-  // }
 
   checkNegativePrefix(word) {
-    // TODO: only for adj/adv
     let matchedEntries = [];
     const prefix = this.hasNegativePrefix(word);
     if (prefix) {
