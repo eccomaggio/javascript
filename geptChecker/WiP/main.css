@@ -483,6 +483,10 @@
       -webkit-text-decoration: lightpink underline wavy;
     }
 
+    .underline {
+      text-decoration: underline;
+    }
+
     /* .multi-same {
       text-decoration: underline dotted;
     } */
