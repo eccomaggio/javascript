@@ -698,30 +698,25 @@ class Repeats {
       const totalReps = repsByLemma[repsByToken[indexOfToken]]?.[0] || 0;
       const thisRep = -1;
       const repeatedLemma = repsByToken[indexOfToken] || "";
-      const [displayLevel, isMixedLevels] = this.orderMixedLevels(token);
+      const isMixedLevels = this.checkIfLevelsDiffer(token);
       info = {
         totalReps: totalReps,
         thisRep: thisRep,
         repeatedLemma: repeatedLemma,
-        displayLevel: displayLevel,
+        displayLevel: token.matches[0].levelGEPT,
         isMixedLevels: isMixedLevels,
       }
     }
     return info;
   }
 
-  orderMixedLevels(token){
-    let listOfLevels = [];
-    for (const match of token.matches) {
-      listOfLevels.push(match.levelGEPT);
-    }
-    const levelsDiffer = (token.matches.length > 1) && listOfLevels.some(el => el !== listOfLevels[0]);
-    listOfLevels.sort(this.ascending);
-    return [listOfLevels[0], levelsDiffer];
+  checkIfLevelsDiffer(token){
+    const levelsDiffer = (token.matches.length > 1) && token.matches.some(el => el.levelGEPT !== token.matches[0].levelGEPT);
+    return levelsDiffer;
   }
 
-  ascending(a, b) {a - b}
-  descending(a, b) {b - a}
+  // ascending(a, b) {a - b}
+  // descending(a, b) {b - a}
 
 }
 
@@ -963,10 +958,28 @@ class TextProcessor {
     revisedText = null;
     tokenArr = this.lookupCompounds(tokenArr);
     tokenArr = this.lookupSimples(tokenArr);
+    tokenArr = this.addfixes(tokenArr);
     app.stats.logAllWords(tokenArr);
     console.log({tokenArr});
     return tokenArr;
   }
+
+addfixes(tokenArr){
+  // * deals with annoying/misleading matches, e.g. <haven't> is not related to <haven>!
+  for (let i=0; i < tokenArr.length; i++){
+    const currToken = tokenArr[i];
+    const nextToken = (i < tokenArr.length) ? tokenArr[i + 1] : "";
+
+    if (currToken.lemma === "haven" && nextToken.lemma === "'t") {
+      const auxHaveVerb = app.wordlist.getEntriesByExactLemma("have").filter(match => match.pos.includes("x"));
+      currToken.overwriteMatches(auxHaveVerb);
+    }
+    // * Sort matches by their GEPT level (low to high)
+    const sortedByLevel = currToken.matches.sort((a,b) => a.levelGEPT - b.levelGEPT);
+    currToken.overwriteMatches(sortedByLevel);
+  }
+  return tokenArr;
+}
 
   divideIntoTokens(rawText) {
     app.ui.signalRefreshNeeded("off");
@@ -1101,6 +1114,7 @@ class TextProcessor {
     }
     return tmpTokenArr;
   }
+
 
   lookupCompounds(tokenArr) {
     // ** This must be the first look up done (check this is true!)
@@ -1294,11 +1308,11 @@ class InformationPanes {
     let displayLemma;
     if (entry.pos === "unknown") return displayLemma;
     if (tokenType === "wv") {
-      displayLemma = [Tag.tag("span", ["class=lemma"], entry.lemma), Tag.tag("em", [], ", variant of "), Tag.tag("br"), word];
+      displayLemma = [entry.lemma, " ≈ ", Tag.tag("span", ["class=lemma"], word)];
     } else if (tokenType === "wd") {
-      displayLemma = [Tag.tag("span", ["class=lemma"], word), " < ", Tag.tag("span", ["class=underline"], entry.lemma)];
+      displayLemma = [word, " < ", Tag.tag("span", ["class=lemma"], entry.lemma)];
     } else if (tokenType === "wn") {
-      displayLemma = [Tag.tag("span", ["class=lemma"], word), Tag.tag("em", [], " negative of "), Tag.tag("span", ["class=underline"], entry.lemma)];
+      displayLemma = [word, Tag.tag("em", [], " negative of "), Tag.tag("span", ["class=lemma"], entry.lemma)];
     } else displayLemma = [Tag.tag("span", ["class=lemma"], entry.lemma)];
     return displayLemma;
   }
