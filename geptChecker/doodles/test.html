@@ -8,7 +8,41 @@
   <!-- <script  type="text/javascript" src="dispatcher.js"></script> -->
 </head>
 <body>
+  <div>
+    <canvas id="myChart"></canvas>
+  </div>
+  <!-- <script  type="text/javascript" src="makeDict.js"></script> -->
+  <script  type="text/javascript" src="bdayParadox.js"></script>
 
-  <script  type="text/javascript" src="makeDict.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const ctx = document.getElementById('myChart');
+
+    console.log(Object.keys(spread).length, spread);
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        // labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+        labels: Object.keys(spread),
+        datasets: [{
+          // label: '# of Votes',
+          // data: [12, 19, 3, 5, 2, 3],
+          label: 'frequency',
+          data: Object.values(spread),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  </script>
+
 </body>
 </html>

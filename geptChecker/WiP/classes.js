@@ -942,7 +942,7 @@ class Text {
 
 
 class TextProcessor {
-  tokenTypeExpansions = {
+  wordlikeTokenTypes = {
     c: "contraction",
     d: "digit",
     y: "symbol",
@@ -963,23 +963,6 @@ class TextProcessor {
     console.log({tokenArr});
     return tokenArr;
   }
-
-addfixes(tokenArr){
-  // * deals with annoying/misleading matches, e.g. <haven't> is not related to <haven>!
-  for (let i=0; i < tokenArr.length; i++){
-    const currToken = tokenArr[i];
-    const nextToken = (i < tokenArr.length) ? tokenArr[i + 1] : "";
-
-    if (currToken.lemma === "haven" && nextToken.lemma === "'t") {
-      const auxHaveVerb = app.wordlist.getEntriesByExactLemma("have").filter(match => match.pos.includes("x"));
-      currToken.overwriteMatches(auxHaveVerb);
-    }
-    // * Sort matches by their GEPT level (low to high)
-    const sortedByLevel = currToken.matches.sort((a,b) => a.levelGEPT - b.levelGEPT);
-    currToken.overwriteMatches(sortedByLevel);
-  }
-  return tokenArr;
-}
 
   divideIntoTokens(rawText) {
     app.ui.signalRefreshNeeded("off");
@@ -1116,6 +1099,24 @@ addfixes(tokenArr){
   }
 
 
+addfixes(tokenArr){
+  // * deals with annoying/misleading matches, e.g. <haven't> is not related to <haven>!
+  for (let i=0; i < tokenArr.length; i++){
+    const currToken = tokenArr[i];
+    const nextToken = (i < tokenArr.length) ? tokenArr[i + 1] : "";
+
+    if (currToken.lemma === "haven" && nextToken.lemma === "'t") {
+      const auxHaveVerb = app.wordlist.getEntriesByExactLemma("have").filter(match => match.pos.includes("x"));
+      currToken.overwriteMatches(auxHaveVerb);
+    }
+    // * Sort matches by their GEPT level (low to high)
+    const sortedByLevel = currToken.matches.sort((a,b) => a.levelGEPT - b.levelGEPT);
+    currToken.overwriteMatches(sortedByLevel);
+  }
+  return tokenArr;
+}
+
+
   lookupCompounds(tokenArr) {
     // ** This must be the first look up done (check this is true!)
     const len = Object.keys(tokenArr).length;
@@ -1169,8 +1170,8 @@ addfixes(tokenArr){
           token.type = revisedType;
         }
       }
-      else if (Object.keys(this.tokenTypeExpansions).includes(token.type)) {
-        token.overwriteMatches(this.markOfflist(token.lemma, this.tokenTypeExpansions[token.type]));
+      else if (Object.keys(this.wordlikeTokenTypes).includes(token.type)) {
+        token.overwriteMatches(this.markOfflist(token.lemma, this.wordlikeTokenTypes[token.type]));
       }
     }
     return tokenArr;
@@ -2148,9 +2149,11 @@ class GenericSearch {
             if (matchedEntries.length) tokenType = "wn";          // negative (prefix)
           } else tokenType = "wv";                                // variant
         } else tokenType = "wd";                                  // derivation
-      } else tokenType = "wv";
+      // } else tokenType = "wv";
+      } else tokenType = "wb";                                    // british sp
     }
     if (!matchedEntries) tokenType = "wo";                        // offlist
+    if (tokenType === "wb") tokenType = "wv";
     return [tokenType, matchedEntries];
   }
 
@@ -2271,12 +2274,14 @@ class GenericSearch {
   }
 
   checkVariantWords(word) {
+    // TODO (maybe) use shared code to strip off obvious inflections [-(e)s / Ving / -(e)d] rather than this hack.
     let match = "";
     let matchedEntries = []
     for (let key of Object.keys(LOOKUP.variantWords)) {
-      const truncated = word.slice(0, key.length)
+      const truncated = word.slice(0, key.length);
       const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
-      if (searchTerm === truncated) {
+      const isPotentialVariant = word.length - truncated.length < 4;
+      if (searchTerm === truncated && isPotentialVariant) {
         match = LOOKUP.variantWords[key];
         matchedEntries = app.wordlist.getEntriesByExactLemma(match)
         break;
