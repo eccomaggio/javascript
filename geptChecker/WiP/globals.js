@@ -851,7 +851,7 @@ const LOOKUP = {
     postman: "mail carrier",
     programme: "program",
     providing: "provided",
-    pyjama: "pajama",
+    pyjama: "pajamas",
     quartette: "quartet",
     railway: "railroad",
     rhino: "rhinoceros",
