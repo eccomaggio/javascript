@@ -493,7 +493,7 @@ class WordSearch {
         matchedEntryArr = matchedEntryArr.filter(el => el.levelStatus === Entry.GEPT_ONLY);
       }
       else if (searchTerms.awl[0] === Entry.FIND_AWL_ONLY) {
-        matchedEntryArr = matchedEntryArr.filter(el => el.levelAWL > 0);
+        matchedEntryArr = matchedEntryArr.filter(el => el.levelAWL >= 1);
       }
       else {
         matchedEntryArr = matchedEntryArr.filter(el => searchTerms.awl.indexOf(el.levelAWLraw) > -1);
@@ -550,7 +550,7 @@ class WordSearch {
           console.log("PoS information missing from entry in wordlist:", entry.lemma);
         }
         let level = app.wordlist.level_headings[entry.levelGEPT];
-        if (entry.levelAWL >= 0) level += `; AWL${entry.levelAWL + 1}`;
+        if (entry.levelAWL >= 1) level += `; AWL${entry.levelAWL}`;
         if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
@@ -1335,8 +1335,9 @@ class InformationPanes {
     else {
       // levelStr = app.wordlist.level_headings[levelArr[0]];
       levelStr = app.wordlist.level_headings[entry.levelGEPT];
-      if (entry.levelAWL >= 0) {
-        levelStr += `; ${app.wordlist.level_headings[entry.levelAWL]}`;
+      if (entry.levelAWL >= 1) {
+        // levelStr += `; ${app.wordlist.level_headings[entry.levelAWL]}`;
+        levelStr += `; ${app.wordlist.level_headings[entry.levelAWLraw]}`;
       }
     }
     let level = [];
@@ -1350,12 +1351,12 @@ class InformationPanes {
       const geptLevel = entry.levelGEPT;
       html = (geptLevel <= 2) ? Tag.tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
     }
-    if (app.state.isBESTEP && entry.levelAWL >= 0) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
+    if (app.state.isBESTEP && entry.levelAWL >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
     return html;
   }
 
   buildHTMLlevelAWL(entry) {
-    return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelAWL + 1}`])];
+    return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelAWL}`])];
   }
 
   buildHTMLlevelKids(entry) {
@@ -2536,8 +2537,7 @@ class Entry {
 
   get levelArr() { return this._levelArr }
   get levelGEPT() { return this._levelArr[0] }
-  // get levelAWL() { return this._levelArr[1] - C.awl_level_offset }
-  get levelAWL() { return this._levelArr[1] - app.wordlist.awl_level_offset }
+  get levelAWL() { return this._levelArr[1] - app.wordlist.awl_level_offset + 1 }
 
   get levelAWLraw() { return this._levelArr[1] }
   get levelStatus() { return this._levelArr[1] }
