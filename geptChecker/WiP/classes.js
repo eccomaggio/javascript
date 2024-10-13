@@ -459,8 +459,6 @@ class WordSearch {
   runSearch(searchTerms) {
     // TODO: refactor using sub functions to make process clearer
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
-    // const search = new GenericSearch(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
-    // let matchedEntries = search.matchedEntries;
     let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     if (Number.isInteger(searchTerms.level[0])) {
@@ -483,7 +481,6 @@ class WordSearch {
       -1 in gept only
       3-in gept AND awl
 
-      from search from (awl)
       form control returns:
       200=GEPT words,
       100=all AWL words,
@@ -500,8 +497,6 @@ class WordSearch {
       }
     }
     matchedEntryArr = matchedEntryArr.filter(result => result.id > 0);
-    // console.log("search.runSearch", searchTerms.raw_lemma, search.tokenType, search.tokenType.length)
-    // return [matchedEntries, search.tokenType];
     return [matchedEntryArr, tokenType];
   }
 
@@ -514,7 +509,6 @@ class WordSearch {
   lazyCheckAgainstCompounds(word) {
     const tmpWord = word.replace(/-'\./g, "").split(" ").join("");
     let result = [];
-    // for (const [compound, id] of Object.entries(V.currentDb.compounds)) {
     for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
       if (compound.startsWith(tmpWord)) {
         result.push(id);
@@ -554,7 +548,6 @@ class WordSearch {
         if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
-        // let class2 = (app.state.isKids) ? "level-k" : `level-${level[0]}`;
         let class2 = app.ui.getLevelDetails(entry)[1];
         output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
         previousInitial = currentInitial;
@@ -569,7 +562,6 @@ class WordSearch {
   formatResultsAsTablerows(col1, col2, class1, class2) {
     class1 = (class1) ? `class=${class1}` : "";
     class2 = (class2) ? `class=${class2}` : "";
-    // row = (row) ? `class=${row}` : "";
     return Tag.tag("tr", [], [
       Tag.tag("td", [class1], [col1]),
       Tag.tag("td", [class2], [...col2]),
@@ -699,15 +691,11 @@ class Repeats {
       const totalReps = repsByLemma[repsByToken[indexOfToken]]?.[0] || 0;
       const thisRep = -1;
       const repeatedLemma = repsByToken[indexOfToken] || "";
-      // const isMixedLevels = this.checkIfLevelsDiffer(token);
-      // token.isMixedLevels;
       info = {
         totalReps: totalReps,
         thisRep: thisRep,
         repeatedLemma: repeatedLemma,
         displayLevel: token.matches[0].levelGEPT,
-        // isMixedLevels: isMixedLevels,
-        // token.isMixedLevels,
       }
     }
     return info;
@@ -717,9 +705,6 @@ class Repeats {
     const levelsDiffer = (token.matches.length > 1) && token.matches.some(el => el.levelGEPT !== token.matches[0].levelGEPT);
     return levelsDiffer;
   }
-
-  // ascending(a, b) {a - b}
-  // descending(a, b) {b - a}
 
 }
 
@@ -796,7 +781,7 @@ class WordStatistics {
       let levelPrefix = app.ui.getLevelPrefix(levelID);
       let levelDisplayText = levelText;
       if (app.state.isKids) {
-        // * to trim kids' themes to manageable display length
+        // * to trim kids' theme names to manageable display length
         const match = /\((.+?)\)/.exec(levelText);
         if (match) levelDisplayText = match[1];
       }
@@ -898,12 +883,10 @@ class Text {
       matchCount: token.matches.length,
       totalReps: token.info.totalReps,
       thisRep: token.info.thisRep,
-      // isMixedLevels: token.info.isMixedLevels,
       isMixedLevels: token.isMixedLevels,
     }
     if (!word.matchCount) console.log(`WARNING: unprocessed item (${word.lemma})!!`)
     const renderedWord = app.ui.highlightAwlWord(word.levelArr, word.lemma);
-    // const variantClass = (word.type === "wv") ? " variant" : "";
     const variantClass = (word.type.includes("v")) ? " variant" : "";
     const [levelClass,
       limitClass,
@@ -1010,12 +993,11 @@ class Parser {
       else if (/\d/.test(el)) token = "d";             // digit
       else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
       else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
-      else if (/[+\-=@*<>&]/.test(el)) token = "y";  // symbols
+      else if (/[+\-=@*<>&]/.test(el)) token = "y";    // symbols
       else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
       else if (el === ",") token = "@";
       else if (/["',./?!()[\]]/.test(el)) token = "p";                // punctuation
       else if (el.indexOf("qqq") >= 0) [el, token] = [el.replaceAll("qqq", "."), "w"];
-      // else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "me"];    // metacharacter newline
       else if (el.indexOf(EOL.simpleText) >= 0) [el, token] = ["", "pe"];    // punctuation newline
       else if (el.indexOf(app.cursor.simpleText) >= 0) [el, token] = ["", "mc"]; // metacharacter cursor
       else if (/--/.test(el)) token = "p";                                   // m-dash
@@ -1146,17 +1128,17 @@ addfixes(tokenArr){
   normalizeRawText(text) {
     return text
       // .replace(/[\u2018\u2019']/g, " '")    // replace curly single quotes
-      .replace(/[\u2018\u2019']/g, "'")    // replace curly single quotes
-      .replace(/[\u201C\u201D]/g, '"')      // replace curly double  quotes
+      .replace(/[\u2018\u2019']/g, "'")        // replace curly single quotes
+      .replace(/[\u201C\u201D]/g, '"')         // replace curly double  quotes
       .replace(/…/g, "...")
-      .replace(/(\r\n|\r|\n)/g, "\n")       // encode EOLs
+      .replace(/(\r\n|\r|\n)/g, "\n")          // encode EOLs
       .replace(/\n{2,}/g, "\n")
       // .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
-      .replace(/\n/g, `${EOL.text}`)      // encode EOLs
-      .replace(/–/g, " -- ")                // pasted in em-dashes
+      .replace(/\n/g, `${EOL.text}`)           // encode EOLs
+      .replace(/–/g, " -- ")                   // pasted in em-dashes
       .replace(/—/g, " - ")
-      .replace(/(\w)\/(\w)/g, "$1 / $2")    // insert spaces either side of slash
-      .replace(/\s{2,}/gm, " ");            //
+      .replace(/(\w)\/(\w)/g, "$1 / $2")       // insert spaces either side of slash
+      .replace(/\s{2,}/gm, " ");               //
   }
 
   lookupSimples(tokenArr) {
@@ -1191,7 +1173,6 @@ addfixes(tokenArr){
     // ** adds entry to offlistDb & returns ID (always negative number)
     // ** This creates a dummy dB entry for offlist words
     let offlistEntry;
-    // let offlistEntry;
     let offlistID;
     let isUnique = true;
     for (const entry of app.wordlist.offlistDb) {
@@ -1299,7 +1280,6 @@ class InformationPanes {
         : "";
       const pos = `[${entry.posExpansion}]`;
       let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
-      // console.log(">>", word, lemma, typeof lemma)
       html.push(Tag.tag(
         "div",
         [`class=word-detail ${levelClass}`],
@@ -1333,10 +1313,8 @@ class InformationPanes {
     }
     else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
     else {
-      // levelStr = app.wordlist.level_headings[levelArr[0]];
       levelStr = app.wordlist.level_headings[entry.levelGEPT];
       if (entry.levelAWL >= 1) {
-        // levelStr += `; ${app.wordlist.level_headings[entry.levelAWL]}`;
         levelStr += `; ${app.wordlist.level_headings[entry.levelAWLraw]}`;
       }
     }
@@ -1486,9 +1464,6 @@ class Db {
   compounds;
   offlistDb;
   offlistThreshold;
-  // awl_level_offset = 37;
-  // kids_level_offset = 3;
-  // level_headings_total;
 
   gept_headings = [
     "elem (A2)",
@@ -1586,7 +1561,6 @@ class Db {
   constructor() {
     this.change(app.state.current.db_state)
     this.level_headings = this.level_headings.concat(this.offlist_subs);
-    // this.offlistThreshold = this.level_headings.length;
     this.offlistThreshold = this.awl_level_offset + this.awl_headings.length;
   }
 
@@ -1636,7 +1610,6 @@ class Db {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
       HTM.root_css.style.setProperty(property, this.css[key]);
     }
-    // visibleLevelLimitSet();
     app.limit.setLimit();
     this.setDbTab2();
     this.setDbTab1();
@@ -1664,7 +1637,6 @@ class Db {
   }
 
   getEntriesByPartialLemma(lemma) {
-    // lemma = lemma.toLowerCase();
     const entryList = this.db.filter(el => el.lemma.search(lemma) !== -1)
     return entryList;
   }
@@ -1674,16 +1646,12 @@ class Db {
     let entry;
     if (id !== undefined) {
       let parsedId = parseInt(id);
-      // const dB = (isInOfflistDb(parsedId)) ? V.offlistDb : V.currentDb.db;
       const dB = (app.wordlist.isInOfflistDb(parsedId)) ? app.wordlist.offlistDb : app.wordlist.db;
       parsedId = Math.abs(parsedId);
       entry = dB[parsedId]
     }
     return entry;
   }
-  // lemmaIsInCompoundsDb(lemma) {
-  //   return app.wordlist.compounds[lemma];
-  // }
 
   buildCompoundsDb(dB) {
     /* ##
@@ -1713,7 +1681,6 @@ class Db {
 
   setDbTab1() {
     this.displayDbNameInTab1();
-    // document.getElementById('db_name1').textContent = this.name;
     // ** Allows for multiple elements to be toggled
     for (const el of this.show) {
       el.style.setProperty("display", "block");
@@ -2034,7 +2001,6 @@ class Cursor {
   id = "cursorPosHere";
   HTMLtext = "<span id='cursorPosHere'></span>";
   simpleText = "CRSR";
-  // text = C.SLICE + "CRSR" + C.SLICE;
 
   offset = 0;
   oldOffsetb = 0;
@@ -2050,10 +2016,8 @@ class Cursor {
   }
 
   insertPlaceholder(el, index) {
-    // let plainText = this.newlinesToPlaintext(el).innerText;
     let plainText = el.innerText;
     const updatedText = plainText.slice(0, index) + this.text + plainText.slice(index);
-    // console.log("insertPH:", updatedText)
     return updatedText;
   }
 
@@ -2095,9 +2059,7 @@ class Cursor {
     // const EOLs = divText.querySelectorAll("br, hr");
     // for (let el of EOLs) {
     //   console.log("newlinesToPT: found>", el)
-    //   // el.textContent = ` ${EOL.text} `;
     //   el.before(` ${EOL.text} `);
-    //   // el.remove();
     // }
     return divText;
   }
@@ -2314,22 +2276,6 @@ class GenericSearch {
     return matchedEntryArr;
   }
 
-  // checkVariantWords(word) {
-  //   // TODO (maybe) use shared code to strip off obvious inflections [-(e)s / Ving / -(e)d] rather than this hack.
-  //   let match = "";
-  //   let matchedEntries = []
-  //   for (let key of Object.keys(LOOKUP.variantWords)) {
-  //     const truncated = word.slice(0, key.length);
-  //     const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
-  //     const isPotentialVariant = word.length - truncated.length < 4;
-  //     if (searchTerm === truncated && isPotentialVariant) {
-  //       match = LOOKUP.variantWords[key];
-  //       matchedEntries = app.wordlist.getEntriesByExactLemma(match)
-  //       break;
-  //     }
-  //   }
-  //   return matchedEntries;
-  // }
 
   checkAbbreviations(word) {
     word = word.replace(".", "");
@@ -2554,11 +2500,6 @@ class Entry {
 
 
 class Token {
-  /*
-  Token{id, lemma, matches=[id] type, count}
-  CHANGED; matches now = [Entry]
-  */
-  // constructor(lemma, type = "", matches = [], count = 0) {
   constructor(lemma, type = "", matches = []) {
     this.lemma = lemma;
     this.type = type;
@@ -2637,11 +2578,6 @@ class Tag {
           if (strEl) tmpAttrs += " " + strEl;
         }
       }
-      // tmpAttrs = this.attrs.map(
-      //   el => (el.length === 1)
-      //     ? ` ${el}`
-      //     : ` ${el[0]}="${el[1]}"`
-      // ).join("");
     }
     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;
   }
@@ -2650,10 +2586,6 @@ class Tag {
   static tag(name, attrs = [], content = []) {
     return new Tag(name, attrs, content);
   }
-
-  // static attr(name, value) {
-  //   return new Attr(name, value);
-  // }
 
   static root(content = []) {
     // ** GUARD#1 accept Tags/strings/numbers as single array OR as individual arguments
@@ -2672,3 +2604,45 @@ class Tag {
     return new Tag("root", [], content);
   }
 }
+
+// class TypedArray {
+//   #contents = [];
+
+//   constructor(type, content=[]) {
+//     this.type = type;
+//     this.add(content);
+//   }
+
+//   add(content) {
+//     this.#contents = this.#contents.concat(this.validate(content));
+//   }
+
+//   validate(content){
+//     if (!Array.isArray(content)) content = [content];
+//     let buffer = [];
+//     for (const el of content) {
+//       if (el instanceof this.type) buffer.push(el);
+//       else throw new TypeError(`All elements must be of type <${this.type.name}> not *${el.constructor.name}*`);
+//     }
+//     return buffer;
+//   }
+
+//   replace(newContent){
+//     this.#contents = [];
+//     this.add(newContent);
+//   }
+
+
+//   get content() {
+//     return this.#contents;
+//   }
+
+//   get isEmpty() {
+//     return !this.#contents.length;
+//   }
+
+//   get hasContent() {
+//     return !!this.#contents.length;
+//   }
+
+// }
