@@ -743,12 +743,13 @@ class WordStatistics {
   getAllLevelStats(tokenArr) {
     let lemmasByLevel = {}  // {level : [lemma, lemma, ...]}
     for (const [lemma, [freq, id, geptLevel, rawAwl]] of Object.entries(this.allLemmas)){
-      const awlLevel = (rawAwl < 0) ? 0 : rawAwl + app.wordlist.awl_level_offset;
       if (lemmasByLevel[geptLevel]) lemmasByLevel[geptLevel].push(lemma);
       else lemmasByLevel[geptLevel] = [lemma];
-      if (awlLevel && app.state.isBESTEP) {
-
-        if (lemmasByLevel[awlLevel]) lemmasByLevel[geptLevel].push(lemma);
+      // const awlLevel = (rawAwl < 0) ? 0 : rawAwl + app.wordlist.awl_level_offset - 1;
+      // if (awlLevel && app.state.isBESTEP) {
+      if (app.state.isBESTEP && rawAwl >= 0) {
+        const awlLevel = rawAwl + app.wordlist.awl_level_offset - 1;
+        if (lemmasByLevel[awlLevel]) lemmasByLevel[awlLevel].push(lemma);
         else lemmasByLevel[awlLevel] = [lemma];
       }
     }
@@ -2483,10 +2484,11 @@ class Entry {
 
   get levelArr() { return this._levelArr }
   get levelGEPT() { return this._levelArr[0] }
-  get levelAWL() { return this._levelArr[1] - app.wordlist.awl_level_offset + 1 }
 
   get levelAWLraw() { return this._levelArr[1] }
-  get levelStatus() { return this._levelArr[1] }
+  get levelAWL() { return this._levelArr[1] - app.wordlist.awl_level_offset + 1 }
+  // get levelStatus() { return this._levelArr[1] }
+  get levelStatus() { return this._levelArr[2] }
 
   get notes() {
     let note = this._notes[0];
