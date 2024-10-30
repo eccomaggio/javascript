@@ -251,7 +251,8 @@ class UI {
       this.refreshRequired = false;
       this.refreshPermitted = false;
       // * This delay is required to stop accidental refresh requests during refresh process!
-      setTimeout(() => { this.refreshPermitted = true; }, 1500);
+      debounce(()=>this.refreshPermitted = true, 1000);
+      // setTimeout(() => { this.refreshPermitted = true; }, 1500);
       HTM.workingDiv.style.backgroundColor = "white";
       app.tabs.htm.textTabTag.classList.remove("to-refresh");
       // app.tabs.htm.textTabTag.style.fontStyle = "normal";
@@ -277,11 +278,6 @@ class Tools {
   isEmpty(arr) {
     if (typeof arr !== "object") return arr;
     else return !arr?.flat(Infinity).length;
-    // let hasContent;
-    // if (!arr) hasContent = false;
-    // else if (typeof arr !== "object") hasContent = true;
-    // else hasContent = arr.length > 0;
-    // return !hasContent;
   }
 
   dedupeSimpleArray(arr) {
@@ -743,14 +739,10 @@ class WordStatistics {
   getAllLevelStats(tokenArr) {
     let lemmasByLevel = {}  // {level : [lemma, lemma, ...]}
     for (const [lemma, [freq, id, geptLevel, rawAwl]] of Object.entries(this.allLemmas)){
-      if (lemmasByLevel[geptLevel]) lemmasByLevel[geptLevel].push(lemma);
-      else lemmasByLevel[geptLevel] = [lemma];
-      // const awlLevel = (rawAwl < 0) ? 0 : rawAwl + app.wordlist.awl_level_offset - 1;
-      // if (awlLevel && app.state.isBESTEP) {
+      lemmasByLevel[geptLevel] = this.addOrUpdate(lemmasByLevel, geptLevel, lemma);
       if (app.state.isBESTEP && rawAwl >= 0) {
         const awlLevel = rawAwl + app.wordlist.awl_level_offset - 1;
-        if (lemmasByLevel[awlLevel]) lemmasByLevel[awlLevel].push(lemma);
-        else lemmasByLevel[awlLevel] = [lemma];
+        lemmasByLevel[awlLevel] = this.addOrUpdate(lemmasByLevel, awlLevel, lemma);
       }
     }
     let statsForThisLevel = []  // [level, levelText, lemmaSubTotal, percent of total lemmas]
@@ -761,6 +753,10 @@ class WordStatistics {
       statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
     }
     return statsForThisLevel;
+  }
+
+  addOrUpdate(list, index, value) {
+    return list[index] = (list[index]) ? list[index].concat([value]) : [value];
   }
 
   buildHTMLlevelStats(tokenArr) {
@@ -821,13 +817,13 @@ class Text {
   }
 
   render(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
-    app.wordlist.displayDbNameInTab2(this.getWordCountForDisplay(wordCount));
+    app.wordlist.displayDbNameInTab2(this.getWordCountAsHTML(wordCount));
     app.repeats.displayList(repeatsHTML, levelStatsHTML);
     this.textDisplayWorking(resultsHTML);
     app.listeners.addDetailToggle(document.getElementById("level-details"));
   }
 
-  getWordCountForDisplay(wordCount) {
+  getWordCountAsHTML(wordCount) {
     const numOfWords = (wordCount > 0)
       ? Tag.tag("span", ["class=text-right dark"], [
         "(",
@@ -1147,6 +1143,7 @@ addfixes(tokenArr){
     for (let token of tokenArr) {
       // ** ignore compounds for now; they are dealt with separately
       if (token.type === "w") {
+        console.log(">>", token.lemma, token)
         const [revisedType, matchedEntryArr] = this.lookupWord(token.lemma);
         if (!app.tools.isEmpty(matchedEntryArr)) {
           token.appendMatches(matchedEntryArr);
@@ -2441,7 +2438,8 @@ class GenericSearch {
     let matchedEntryArr = [];
     for (const entry of entryList) {
       for (const pos of posArr) {
-        if (entry && entry.pos.includes(pos)) {
+        // if (entry && entry.pos?.includes(pos)) {
+        if (entry?.pos?.includes(pos)) {
           matchedEntryArr.push(entry);
         }
       }
