@@ -75,9 +75,10 @@ pos_lookup = {
     "int": "t",
     "inf": "f",
     "--": "n",  # titles are listed as 'noun' in main GEPT wordlist
-    "flexion": "",
-    "Vpp": "",
-    "DEL": "",
+    # "flexion": "",
+    # "Vpp": "",
+    # "DEL": "",
+    # "Ving": "",
 }
 
 # pov_lookup = {
@@ -190,6 +191,7 @@ LEMMA = 0
 POS = 1
 LEVEL = 2
 NOTES = 3
+TO_DELETE = 4
 
 GEPT_LEVEL = 0
 AWL_LEVEL = 1
@@ -347,22 +349,9 @@ def consolidate_with_gept(awl_list, gept_list):
                 gept_line[LEVEL] = awl_line[LEVEL] = combined_level
                 combined_notes = [*gept_line[NOTES][:2], awl_line[NOTES][2]]
                 gept_line[NOTES] = awl_line[NOTES] = combined_notes
-                # For words shared by GEPT & AWL BUT with different PoS
-                # Get any POS that isn't included in GEPT (e.g. 'advocate' = GEPT "n", AWL "nv" > "v")
-                # Remove POS shared with GEPT & any DEL instruction
-                # awl_only_POS = "".join(set(minimize_pos(awl_line[POS])).difference(set(gept_line[POS])))
-                # if awl_only_POS and Pos.DEL.value not in awl_line[POS]:
-                #     awl_line[POS] = awl_only_POS
-                #     gloss, notes, headword = gept_line[NOTES]
-                #     awl_line[NOTES] = ["", notes, headword]
-                #     if awl_line[LEMMA].startswith("a"):
-                #         print(f"PoS change: {gept_line[LEMMA]} PoS: <{gept_line[POS]}> <{minimize_pos(awl_line[POS])}> -> {awl_only_POS}\n\t{awl_line}")
-                # else:
-                #     tmp_shared_entries.append(awl_line)
-                #     shared_words[gept_line[LEMMA]] = 1
-                # awl_line, tmp_shared_entries = catch_AWL_with_additional_PoS(gept_line, awl_line, tmp_shared_entries)
-                tmp_shared_entries.append(awl_line)
-                shared_words[gept_line[LEMMA]] = 1
+                awl_line, tmp_shared_entries = catch_AWL_with_additional_PoS(gept_line, awl_line, tmp_shared_entries)
+                # tmp_shared_entries.append(awl_line)
+                # shared_words[gept_line[LEMMA]] = 1
     print(f"\t{len(tmp_shared_entries)} entries are shared between AWL & GEPT.")
     tmp_shared_del = [entry for entry in tmp_shared_entries if Pos.DEL.value in entry[POS]]
     tmp_shared = [entry for entry in tmp_shared_entries if Pos.DEL.value not in entry[POS]]
@@ -372,30 +361,28 @@ def consolidate_with_gept(awl_list, gept_list):
             gept_line[LEVEL] = [gept_line[LEVEL][0], Pos.OFFLIST.value, Pos.GEPT_ONLY.value]
     return (awl_list, gept_list, tmp_shared)
 
-# def catch_AWL_with_additional_PoS(gept_line, awl_line, tmp_shared_entries):
-#     awl_only_POS = "".join(set(minimize_pos(awl_line[POS])).difference(set(gept_line[POS])))
-#     if awl_only_POS and Pos.DEL.value not in awl_line[POS]:
-#         awl_line[POS] = awl_only_POS
-#         gloss, notes, headword = gept_line[NOTES]
-#         awl_line[NOTES] = ["", notes, headword]
-#         if awl_line[LEMMA].startswith("a"):
-#             print(f"PoS change: {gept_line[LEMMA]} PoS: <{gept_line[POS]}> <{minimize_pos(awl_line[POS])}> -> {awl_only_POS}\n\t{awl_line}")
-#     else:
-#         tmp_shared_entries.append(awl_line)
-#         shared_words[gept_line[LEMMA]] = 1
-#     return(awl_line, tmp_shared_entries)
+def catch_AWL_with_additional_PoS(gept_line, awl_line, tmp_shared_entries):
+    awl_only_POS = "".join(set(awl_line[POS]).difference(set(gept_line[POS])))
+    # if awl_only_POS and Pos.DEL.value not in awl_line[POS]:
+    if awl_only_POS and not gept_line[TO_DELETE]:
+        awl_line[POS] = awl_only_POS
+        gloss, notes, headword = gept_line[NOTES]
+        awl_line[NOTES] = ["", notes, headword]
+        awl_line[LEVEL][STATUS] = Pos.AWL_ONLY.value
+        if awl_line[LEMMA].startswith("a"):
+            print(f"PoS change: {gept_line[LEMMA]} PoS: <{gept_line[POS]}> <{awl_line[POS]}> -> {awl_only_POS}\n\t{awl_line}")
+    else:
+        tmp_shared_entries.append(awl_line)
+        shared_words[gept_line[LEMMA]] = 1
+    return(awl_line, tmp_shared_entries)
 
 
-# def remove_AWL_with_shared_PoS(awl_list, gept_list):
-#     """
-#     issue:rethink algorithm for adding lemmas that are shared by GEPT & AWL
-#     BUT where awl has addition PoS (e.g. advocate adds verb)
-#     """
-#     for awl_line in awl_list:
-#         for gept_line in gept_list:
-#             if gept_line[LEMMA] == awl_line[LEMMA]:
-#                 print(f">>>{gept_line[LEMMA]} G<{gept_line[POS]}>, A<{minimize_pos(awl_line[POS])}>")
-#     return (awl_list, gept_list)
+def remove_AWL_with_shared_PoS(awl_list, gept_list):
+    for awl_line in awl_list:
+        for gept_line in gept_list:
+            if gept_line[LEMMA] == awl_line[LEMMA]:
+                print(f">>>{gept_line[LEMMA]} G<{gept_line[POS]}>, A<{awl_line[POS]}>")
+    return (awl_list, gept_list)
 
 # def add_pos_corrections(list, pos_corrections_filename):
 def add_pos_corrections(list, pos_corrections_dict_file):
@@ -426,7 +413,8 @@ def add_pos_corrections(list, pos_corrections_dict_file):
 def remove_deleted_entries(list):
     print("**Removing entries marked for deletion...")
     reduced_list = [
-        entry for entry in list if Pos.DEL.value not in entry[POS].split(" ")
+        # entry for entry in list if Pos.DEL.value not in entry[POS].split(" ")
+        entry for entry in list if entry[TO_DELETE]
     ]
     return reduced_list
 
@@ -471,8 +459,9 @@ def minimize_pos(pos):
         pos = pos.replace(".", "")
         pos = re.sub(r"[()/,]", " ", pos)
         pos = re.sub(r"\s{2,}", " ", pos).strip()
-        return "".join([pos_lookup[item] if pos_lookup.get(item) else item for item in pos.split(" ")])
-        # return "".join([pov_lookup[item] for item in pos.split(" ")])
+        shortForm = "".join([pos_lookup.get(item,"") for item in pos.split(" ")]).strip()
+        # print(f"> {pos.split(" ")} => {shortForm}")
+        return shortForm
 
 
 def get_list_from_json(json_filename):
@@ -537,10 +526,33 @@ if __name__ == "__main__":
     awl_corrected = add_pos_corrections(awl_raw, pos_corrections_dict_file)
     print(f"\tawl_corrected has {len(awl_corrected)} entries.")
 
+    # print(awl_corrected)
+    awl_prepare_POS = []
+    for entry in awl_corrected:
+        toDelete = True if Pos.DEL.value in entry[POS] else False
+        shortPos = minimize_pos(entry[POS])
+        awl_prepare_POS.append([entry[LEMMA], shortPos, entry[LEVEL], entry[NOTES], toDelete])
+    print(awl_prepare_POS)
+
+    quit()
+    """
+    DONE:
+    abbrieviated AWL PoS (removing flexion/Vpp/Ving/DEL)
+    added new boolean field 'to_delete' to awl
+
+    TO DO:
+    update following functions to reflect these changes
+    check that this doesn't leave any significant AWL entries without PoS
+    remove any AWL entries that have the same lemma & PoS as GEPT
+    remove "TO_DELETE" field when combining with GEPT / exporting as .js/.json
+
+    ... this should ensure that, e.g. 'advocate' is listed in GEPT as noun and repeated in AWL as verb
+    """
+
     awl_consolidated, gept_json_file, tmp_shared_1 = consolidate_with_gept(awl_corrected, gept_list)
     print(f"\tawl_consolidated has {len(awl_consolidated)} entries")
 
-    # awl_consolidated = remove_AWL_with_shared_PoS(awl_consolidated, gept_list)
+    awl_consolidated = remove_AWL_with_shared_PoS(awl_consolidated, gept_list)
 
     awl_slim = remove_deleted_entries(awl_consolidated)
     print(f"\tawl_slim has {len(awl_slim)} entries, with {len(awl_consolidated) - len(awl_slim)} entries removed.")

@@ -1455,44 +1455,13 @@ class State {
 
 class Db {
   name;
-  factory;
   db;
-  toShow;
-  toHide = [HTM.G_level, HTM.K_theme, HTM.B_AWL, HTM.GZ_level];
+  show;
+  hide;
   css;
   compounds;
   offlistDb;
   offlistThreshold;
-  // defaults = [];
-  defaults = [
-    {name: "GEPT",
-    factory: makeGEPTdb,
-    toShow: [HTM.G_level],
-    css: {
-      _light: "#cfe0e8",
-      _medium: "#87bdd8",
-      _dark: "#3F7FBF",
-      _accent: "#daebe8"
-    }},
-    {name: "BESTEP",
-    factory: this.mergeGEPT_AWL,
-    toShow: [HTM.G_level, HTM.B_AWL],
-    css: {
-      _light: "#e1e5bb",
-      _medium: "#d6c373",
-      _dark: "#3e4820",
-      _accent: "#d98284"
-    }},
-    {name: "GEPTKids",
-    factory: makeKIDSdb,
-    toShow: [HTM.K_theme],
-    css: {
-      _light: "#f9ccac",
-      _medium: "#f4a688",
-      _dark: "#c1502e",
-      _accent: "#fbefcc"
-    }},
-  ];
 
   gept_headings = [
     "elem (A2)",
@@ -1598,12 +1567,42 @@ class Db {
     app.state.current.db_state = parseInt(choice);
     Entry.resetID();
     this.resetOfflistDb();
-    const currentDb = this.defaults[app.state.current.db_state];
-    for (const key of Object.keys(currentDb)) {
-      // console.log(key, "=>", currentDb[key])
-      this[key] = currentDb[key];
+    // this.offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
+    if (app.state.current.db_state === 0) {
+      this.name = "GEPT";
+      this.db = this.createDbfromArray(makeGEPTdb());
+      this.show = [HTM.G_level];
+      this.hide = [HTM.K_theme, HTM.B_AWL, HTM.GZ_level];
+      this.css = {
+        _light: "#cfe0e8",
+        _medium: "#87bdd8",
+        _dark: "#3F7FBF",
+        _accent: "#daebe8"
+      };
+    } else if (app.state.current.db_state === 1) {
+      this.name = "BESTEP";
+      let tmpDb = makeGEPTdb();
+      this.db = this.createDbfromArray(tmpDb.concat(makeAWLdb()));
+      this.show = [HTM.G_level, HTM.B_AWL];
+      this.hide = [HTM.K_theme, HTM.GZ_level];
+      this.css = {
+        _light: "#e1e5bb",
+        _medium: "#d6c373",
+        _dark: "#3e4820",
+        _accent: "#d98284"
+      };
+    } else {
+      this.name = "GEPTKids";
+      this.db = this.createDbfromArray(makeKIDSdb());
+      this.show = [HTM.K_theme];
+      this.hide = [HTM.G_level, HTM.B_AWL, HTM.GZ_level];
+      this.css = {
+        _light: "#f9ccac",
+        _medium: "#f4a688",
+        _dark: "#c1502e",
+        _accent: "#fbefcc"
+      };
     }
-    this.db = this.createDbfromArray(this.factory());
     this.compounds = this.buildCompoundsDb(this.db);
     for (const key in this.css) {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
@@ -1617,12 +1616,6 @@ class Db {
 
   createDbfromArray(db) {
     return db.map(entry => new Entry(...entry));
-  }
-
-  mergeGEPT_AWL() {
-      // const tmpDb = makeGEPTdb();
-      // return tmpDb.concat(makeAWLdb());
-      return makeGEPTdb().concat(makeAWLdb());
   }
 
   resetOfflistDb() {
@@ -1687,11 +1680,11 @@ class Db {
   setDbTab1() {
     this.displayDbNameInTab1();
     // ** Allows for multiple elements to be toggled
-    for (const el of this.toHide) {
-      el.style.setProperty("display", "none");
-    }
-    for (const el of this.toShow) {
+    for (const el of this.show) {
       el.style.setProperty("display", "block");
+    }
+    for (const el of this.hide) {
+      el.style.setProperty("display", "none");
     }
     app.word.search();
   }
