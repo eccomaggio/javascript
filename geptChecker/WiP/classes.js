@@ -88,7 +88,7 @@ class EventListeners {
   }
 
   addHTML() {
-    HTM.kidsTheme.addEventListener("change", app.word.updateKidstheme);
+    HTM.kidsTheme.addEventListener("change", function (e) { app.word.updateKidstheme(e) }, false);
   }
 
   addDetail() {
@@ -370,7 +370,7 @@ class WordSearch {
     const selection = e.target;
     // debug(selection.tagName, selection.value)
     selection.dataset.chosen = selection.value;
-    this.search();
+    this.search(e);
     // HTM.form.submit();
   }
 

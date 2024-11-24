@@ -1,5 +1,7 @@
 // console.log("supplement found!")
 // <option value="3">高中6K字-108版</option>
+// import { makeGZ6Kdb } from "./dbGZ6K.js";
+
 const gz6k_option = document.createElement("option");
 const gz6k_text = document.createTextNode("高中6K字-108版");
 gz6k_option.appendChild(gz6k_text);
@@ -31,3 +33,18 @@ HTM.GZ_level.innerHTML = '<fieldset id="t1_gz6k">\
                 </label>\
               </div>\
             </fieldset>';
+
+// app.wordlist.defaults.push(
+const extras = [
+    {name: "GZ6K",
+    factory: makeGZ6Kdb,
+    toShow: [HTM.GZ_level],
+    css: {
+      _light: "#42b883",
+      _medium: "#347474",
+      _dark: "#35495e",
+      _accent: "#ff7e67"
+    }}
+];
+
+console.log("debug >>",app.wordlist.defaults)

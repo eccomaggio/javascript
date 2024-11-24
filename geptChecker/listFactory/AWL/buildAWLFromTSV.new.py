@@ -205,16 +205,6 @@ shared_words = {}
 
 def create_awl_from_tsv(tsv_filename):
     awl_list = []
-    ## Not required due to newly Americanized wordlist
-    # headword_corrections = {
-    #     "utilise": "utilize",
-    #     "maximise": "maximize",
-    #     "minimise": "minimize",
-    #     "licence": "license",
-    #     "labour": "labor",
-    #     "criteria": "criterion",
-    # }
-    # with open(os.path.join(os.getcwd(),tsv_filename), "r") as tsv_file, open(os.path.join(os.getcwd(),"out.json"),"w") as out_file:
     with open(os.path.join(os.getcwd(), tsv_filename), "r") as tsv_file:
         tsv_reader = csv.reader(tsv_file, delimiter="\t")
         for row in tsv_reader:
@@ -459,9 +449,9 @@ def minimize_pos(pos):
         pos = pos.replace(".", "")
         pos = re.sub(r"[()/,]", " ", pos)
         pos = re.sub(r"\s{2,}", " ", pos).strip()
-        shortForm = "".join([pos_lookup.get(item,"") for item in pos.split(" ")]).strip()
+        short_form = "".join([pos_lookup.get(item,"") for item in pos.split(" ")]).strip()
         # print(f"> {pos.split(" ")} => {shortForm}")
-        return shortForm
+        return short_form
 
 
 def get_list_from_json(json_filename):
