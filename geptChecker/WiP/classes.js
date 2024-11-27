@@ -224,17 +224,35 @@ class UI {
     return (app.state.isBESTEP && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
   }
 
-  getLevelDetails(entry) {
-    const GEPTlevel = entry.levelGEPT;
-    const levelClass = "level-" + this.getLevelPrefix(GEPTlevel);
-    return [GEPTlevel, levelClass];
-  }
+  // getLevelDetails(entry) {
+  //   const GEPTlevel = entry.levelGEPT;
+  //   const levelClass = "level-" + this.getLevelPrefix(GEPTlevel);
+  //   return [GEPTlevel, levelClass];
+  // }
 
 
-  getLevelPrefix(levelGEPT) {
-    let levelText = app.wordlist.level_headings[levelGEPT];
-    if (app.state.isKids && levelGEPT < app.wordlist.offlistThreshold) levelText = "k";
-    levelText = (levelText) ? levelText[0] : "o";
+  getLevelPrefix(levelArr) {
+    // TODO: very dangerous; 'word' is not an entry; it is a cludge made at app.text.builtHTMLword()
+    const levelGEPT = levelArr[0];
+    let msg = "nowt";
+    let levelText;
+    if (app.state.isGEPT || app.state.isBESTEP) {
+      msg = "gept/bestep";
+      if (app.wordlist.level_headings[levelGEPT]) levelText = app.wordlist.level_headings[levelGEPT][0];
+    }
+    else if (app.state.isKids){
+      msg = "kids";
+      if (levelGEPT < app.wordlist.offlistThreshold) levelText = "k";
+    }
+    // else if (app.state.isBESTEP) {
+    //   msg = "bestep";
+    // }
+    else if (app.state.isGZ6K) {
+      msg = "gz6k";
+      if (levelArr?.[1] > 0) levelText = `gz${levelArr[1]}`;
+    }
+    if (!levelText) levelText = "o";
+    // console.log("level prefix:", msg, levelText, word.lemma)
     return levelText;
   }
 
@@ -380,9 +398,10 @@ class WordSearch {
     let data = {
       term: [],
       match: [],
+      glevel: [],
       level: [],
-      theme: [],
-      awl: [],
+      // theme: [],
+      // awl: [],
       pos: []
     };
     // ** Read & normalize raw data into 'data' object
@@ -390,9 +409,9 @@ class WordSearch {
       // ## default value of html option (but screws up db lookup)
       if (value === "-1") value = "";
       // ## ignore form elements that aren't required for current dB
-      if (key === "level" && app.state.isKids) continue;
-      if (key === "theme" && !app.state.isKids) continue;
-      if (key === "awl" && !app.state.isBESTEP) continue;
+      // if (key === "level" && app.state.isKids) continue;
+      // if (key === "theme" && !app.state.isKids) continue;
+      // if (key === "awl" && !app.state.isBESTEP) continue;
       const digit = parseInt(value)
       if (Number.isInteger(digit)) data[key].push(digit);
       else {
@@ -400,6 +419,7 @@ class WordSearch {
         if (strVal) data[key].push(strVal);
       }
     }
+    // console.log("form data>>", data)
     return data;
   }
 
@@ -442,13 +462,16 @@ class WordSearch {
     */
     let lemma = data.term.join().toLowerCase();
     const matchType = this.MATCHES[data.match];
+    let modifiedLevel = data.level;
+    if (app.state.isBESTEP) modifiedLevel = data.level.map( x => (x < 100) ? x + app.wordlist.awl_level_offset : x);
     const searchTerms = {
       lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
       raw_lemma: lemma,
-      level: (app.state.isKids) ? data.theme : data.level,
-      awl: data.awl.map(x => (x < 100) ? x + app.wordlist.awl_level_offset : x),
+      glevel: data.glevel,
+      level: modifiedLevel,
       pos: data.pos.join("|")
     };
+    // console.log("s terms>>", searchTerms, "isGZ6K",app.state.isGZ6K)
     return searchTerms;
   }
 
@@ -457,9 +480,9 @@ class WordSearch {
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
     let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
-    if (Number.isInteger(searchTerms.level[0])) {
+    if (Number.isInteger(searchTerms.glevel[0])) {
       let tmp_matches = [];
-      for (const level of searchTerms.level) {
+      for (const level of searchTerms.glevel) {
         for (const entry of matchedEntryArr) {
           if (entry.levelGEPT === level) tmp_matches.push(entry);
         }
@@ -467,30 +490,32 @@ class WordSearch {
       matchedEntryArr = tmp_matches;
     }
     if (searchTerms.pos.length) {
-      matchedEntryArr = matchedEntryArr.filter(el => el.pos).filter(el => el.pos.search(searchTerms.pos) != -1);
+      matchedEntryArr = matchedEntryArr.filter(el => el.pos?.search(searchTerms.pos) != -1);
     }
-    if (app.state.isBESTEP && !app.tools.isEmpty(searchTerms?.awl)) {
-      /*
-      el[app.limit.LEVEL][2]:
-      1-in awl only
-      // 2-in gept only
-      -1 in gept only
-      3-in gept AND awl
+    if (searchTerms?.level.length){
+      if (app.state.isBESTEP) {
+        console.log("******IN BESTEP")
+        /*
+        el[app.limit.LEVEL][2]:
+        1-in awl only; -1 in gept only; 3-in gept AND awl
 
-      form control returns:
-      200=GEPT words,
-      100=all AWL words,
-      1-10 AWL levels
-      */
-      if (searchTerms.awl[0] === Entry.FIND_GEPT_ONLY) {
-        matchedEntryArr = matchedEntryArr.filter(el => el.levelStatus === Entry.GEPT_ONLY);
+        form control returns:
+        200=GEPT words, 100=all AWL words, 1-10 AWL levels
+        */
+        if (searchTerms.level[0] === Entry.FIND_GEPT_ONLY) {
+          matchedEntryArr = matchedEntryArr.filter(el => el.levelStatus === Entry.GEPT_ONLY);
+        }
+        else if (searchTerms.level[0] === Entry.FIND_AWL_ONLY) {
+          matchedEntryArr = matchedEntryArr.filter(el => el.levelAWL >= 1);
+        }
+        else {
+          matchedEntryArr = matchedEntryArr.filter(el => searchTerms.awl.indexOf(el.levelAWLraw) > -1);
+        }
       }
-      else if (searchTerms.awl[0] === Entry.FIND_AWL_ONLY) {
-        matchedEntryArr = matchedEntryArr.filter(el => el.levelAWL >= 1);
+      else if (app.state.isGZ6K) {
+        matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.includes(el.levelAWLraw));
       }
-      else {
-        matchedEntryArr = matchedEntryArr.filter(el => searchTerms.awl.indexOf(el.levelAWLraw) > -1);
-      }
+
     }
     matchedEntryArr = matchedEntryArr.filter(result => result.id > 0);
     return [matchedEntryArr, tokenType];
@@ -539,12 +564,15 @@ class WordSearch {
           pos = "";
           console.log("PoS information missing from entry in wordlist:", entry.lemma);
         }
-        let level = app.wordlist.level_headings[entry.levelGEPT];
+        // TODO: generalize this for all levels, maybe using separate level heading list in defaults
+        let level = (app.state.isGZ6K) ? entry.levelAWLraw : app.wordlist.level_headings[entry.levelGEPT];
         if (entry.levelAWL >= 1) level += `; AWL${entry.levelAWL}`;
+        // console.log(entry.lemma, ">>", level, entry.levelArr, entry.levelAWLraw)
         if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
-        let class2 = app.ui.getLevelDetails(entry)[1];
+        // let class2 = app.ui.getLevelDetails(entry)[1];
+        let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
         output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
         previousInitial = currentInitial;
         i++;
@@ -602,11 +630,12 @@ class Repeats {
           let displayClass = "class=anchors";
           if (rep === 1) {
             displayText = app.ui.highlightAwlWord(entry.levelArr, lemma);
-            displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelGEPT)}`;
+            // displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelGEPT)}`;
+            displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelArr)}`;
           }
           anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [displayText]));
         }
-        listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${app.ui.getLevelPrefix(entry.levelGEPT)}`], [...anchors]));
+        listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${app.ui.getLevelPrefix(entry.levelArr)}`], [...anchors]));
       }
       const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
       repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
@@ -712,6 +741,7 @@ class WordStatistics {
   totalLemmaCount = 0; // all headwords (including offlist, but not numbers etc.)
 
   logAllWords(tokenArr) {
+    // TODO: generalize logging for different wordlists here
     let wordCount = 0;
     let allFrequenciesByLemma = {}; // * {lemma : [frequency starting from 0, entry id]}
     let allLemmasByTokenID = {};    // * {token id : lemma} to allow many (token) to 1 (lemma) linking
@@ -724,7 +754,9 @@ class WordStatistics {
         if (token?.type.startsWith("w")) {
           let frequency = 0;
           if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
-          allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.levelGEPT, firstEntry.levelAWL];
+          const majorLevel = (app.state.isGZ6K) ? firstEntry.levelAWL + app.wordlist.awl_level_offset - 1 : firstEntry.levelGEPT;
+          // allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.levelGEPT, firstEntry.levelAWL];
+          allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, majorLevel, firstEntry.levelAWL];
           allLemmasByTokenID[i] = lemma;
         }
       }
@@ -737,8 +769,9 @@ class WordStatistics {
 
 
   getAllLevelStats(tokenArr) {
+    // TODO: generalize the horrible cludge for gz6k list
     let lemmasByLevel = {}  // {level : [lemma, lemma, ...]}
-    for (const [lemma, [freq, id, geptLevel, rawAwl]] of Object.entries(this.allLemmas)){
+    for (let [lemma, [freq, id, geptLevel, rawAwl]] of Object.entries(this.allLemmas)){
       lemmasByLevel[geptLevel] = this.addOrUpdate(lemmasByLevel, geptLevel, lemma);
       if (app.state.isBESTEP && rawAwl >= 0) {
         const awlLevel = rawAwl + app.wordlist.awl_level_offset - 1;
@@ -749,7 +782,8 @@ class WordStatistics {
     for (const [level, lemmaArr] of Object.entries(lemmasByLevel)) {
       const lemmaTotalAtThisLevel = lemmaArr.length;
       const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
-      let levelText = app.wordlist.level_headings[level];
+      // let levelText = app.wordlist.level_headings[level];
+      let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.level_headings[level];
       statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
     }
     return statsForThisLevel;
@@ -775,6 +809,7 @@ class WordStatistics {
     if (!this.totalLemmaCount) return levelStatsHTML;
     let tmpStats = [];
     for (const [levelID, levelText, total, percent] of levelStats) {
+      // TODO: getlevelprefix requires an entry not an ID -- FIX!!
       let levelPrefix = app.ui.getLevelPrefix(levelID);
       let levelDisplayText = levelText;
       if (app.state.isKids) {
@@ -912,7 +947,7 @@ class Text {
   }
 
   renderLevelInfo(word) {
-    const levelClass = "level-" + app.ui.getLevelPrefix(word.level);
+    const levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
     const limitClass = app.limit.renderAsCSS(levelClass);
     let multiLevelStatusClass = "";
     if (word.matchCount > 1) multiLevelStatusClass = (word.isMixedLevels) ? "multi-diff" : "multi-same";
@@ -1270,7 +1305,8 @@ class InformationPanes {
     for (const ref of refs.split(" ")) {
       const [id, word, tokenType] = ref.split(":");
       const entry = app.wordlist.getEntryById(id);
-      const [levelArr, levelClass] = app.ui.getLevelDetails(entry);
+      const levelClass = "level-" + app.ui.getLevelPrefix(entry.levelArr);
+      // const [levelArr, levelClass] = app.ui.getLevelDetails(entry);
       const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
       const levelTagArr = this.buildHTMLlevel(entry, id, tokenType);
       const levelTag = (entry.levelGEPT <= app.wordlist.offlistThreshold)
@@ -1323,9 +1359,19 @@ class InformationPanes {
 
   buildHTMLlevelDot(entry) {
     let html = "";
+    let dotText;
+    let geptLevel;
     if (!app.state.isKids) {
-      const geptLevel = entry.levelGEPT;
-      html = (geptLevel <= 2) ? Tag.tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
+      if (app.state.isGZ6K) {
+        // console.log(">>>",entry.lemma, entry.levelArr, entry.levelAWLraw)
+        dotText = entry.levelAWLraw;
+      }
+      else {
+        geptLevel = entry.levelGEPT;
+        if (geptLevel >=0 && geptLevel <= 2) dotText = ["E", "I", "H"][geptLevel];
+      }
+      // html = (geptLevel <= 2) ? Tag.tag("span", ["class=dot"], [["E", "I", "H"][geptLevel]]) : "";
+      html = (dotText) ? Tag.tag("span", ["class=dot"], [dotText]) : "";
     }
     if (app.state.isBESTEP && entry.levelAWL >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
     return html;
@@ -1418,6 +1464,10 @@ class State {
     return app.state.current.db_state === 2;
   }
 
+  get isGZ6K() {
+    return app.state.current.db_state === 3;
+  }
+
   setHelp(e) {
     this.setDetail(e, "help_state");
   }
@@ -1492,6 +1542,15 @@ class Db {
       _dark: "#c1502e",
       _accent: "#fbefcc"
     }},
+    {name: "GZ6K",
+    factory: makeGZ6Kdb,
+    toShow: [HTM.GZ_level],
+    css: {
+      _light: "#cbbcf6",
+      _medium: "#a06ee1",
+      _dark: "#421b9b",
+      _accent: "#72b896"
+    }}
   ];
 
   gept_headings = [
@@ -1549,6 +1608,15 @@ class Db {
     "AWL 8",
     "AWL 9",
     "AWL 10",
+  ];
+
+  gz6k_headings = [
+    "level 1",
+    "level 2",
+    "level 3",
+    "level 4",
+    "level 5",
+    "level 6",
   ];
 
   // ## Computed levels

@@ -99,51 +99,27 @@
                 </label>
               </div>
             </fieldset>
-            <fieldset id="t1_pos">
-              <legend id="t1_pos_legend">Part of Speech:</legend>
-              <div id="t1_pos_inputs" class="line-el line">
-                <label for="t1_pos_a" class="selected_txt default">any
-                  <input type="radio" name="pos" id="t1_pos_a" value=" " checked="">
-                </label>
-                <label for="t1_pos_n">noun
-                  <input type="checkbox" name="pos" id="t1_pos_n" value="n">
-                </label>
-                <label for="t1_pos_v">verb
-                  <input type="checkbox" name="pos" id="t1_pos_v" value="v">
-                </label>
-                <label for="t1_pos_j">adj.
-                  <input type="checkbox" name="pos" id="t1_pos_j" value="j">
-                </label>
-                <label for="t1_pos_d">adv.
-                  <input type="checkbox" name="pos" id="t1_pos_d" value="b">
-                </label>
-                <label for="t1_pos_o">other
-                  <!-- <input type="checkbox" name="pos" id="t1_pos_o" value="prep|conj|inf|det|terj|pron|aux|art"> -->
-                  <input type="checkbox" name="pos" id="t1_pos_o" value="p|c|f|d|i|r|x|a|t|f">
-                </label>
-              </div>
-            </fieldset>
             <fieldset id="t1_level" style="display: block;">
               <legend id="t1_level_legend">Level:</legend>
               <div id="t1_level_inputs" class="line-el line">
                 <label for="t1_level_a" class="selected_txt default">any
-                  <input type="radio" name="glevel" id="t1_level_a" value="" checked="">
+                  <input type="radio" name="level" id="t1_level_a" value="" checked="">
                 </label>
                 <label for="t1_level_e">elem.
-                  <input type="checkbox" name="glevel" id="t1_level_e" value="0">
+                  <input type="checkbox" name="level" id="t1_level_e" value="0">
                 </label>
                 <label for="t1_level_i">int.
-                  <input type="checkbox" name="glevel" id="t1_level_i" value="1">
+                  <input type="checkbox" name="level" id="t1_level_i" value="1">
                 </label>
                 <label for="t1_level_h">hi-int.
-                  <input type="checkbox" name="glevel" id="t1_level_h" value="2">
+                  <input type="checkbox" name="level" id="t1_level_h" value="2">
                 </label>
               </div>
             </fieldset>
             <fieldset id="t1_theme" style="display: none;">
               <legend id="t1_theme_legend">Theme:</legend>
               <div id="t1_theme_values">
-                <select name="level" id="t1_theme_select" data-chosen="-1">
+                <select name="theme" id="t1_theme_select" data-chosen="-1">
                   <option value="-1" selected class="default">any</option>
                   <option value="3">Animals &amp; insects (動物/昆蟲)</option>
                   <option value="4">Articles &amp; determiners (冠詞/限定詞)</option>
@@ -183,74 +159,98 @@
                 </select>
               </div>
             </fieldset>
+            <fieldset id="t1_pos">
+              <legend id="t1_pos_legend">Part of Speech:</legend>
+              <div id="t1_pos_inputs" class="line-el line">
+                <label for="t1_pos_a" class="selected_txt default">any
+                  <input type="radio" name="pos" id="t1_pos_a" value=" " checked="">
+                </label>
+                <label for="t1_pos_n">noun
+                  <input type="checkbox" name="pos" id="t1_pos_n" value="n">
+                </label>
+                <label for="t1_pos_v">verb
+                  <input type="checkbox" name="pos" id="t1_pos_v" value="v">
+                </label>
+                <label for="t1_pos_j">adj.
+                  <input type="checkbox" name="pos" id="t1_pos_j" value="j">
+                </label>
+                <label for="t1_pos_d">adv.
+                  <input type="checkbox" name="pos" id="t1_pos_d" value="b">
+                </label>
+                <label for="t1_pos_o">other
+                  <!-- <input type="checkbox" name="pos" id="t1_pos_o" value="prep|conj|inf|det|terj|pron|aux|art"> -->
+                  <input type="checkbox" name="pos" id="t1_pos_o" value="p|c|f|d|i|r|x|a|t|f">
+                </label>
+              </div>
+            </fieldset>
             <!-- <fieldset id="t1_awl" style="display: none;"> -->
             <fieldset id="t1_awl">
               <legend id="t1_awl_legend">AWL sublist</legend>
               <div id="t1_awl_inputs" class="line-el line">
                 <label for="t1_awl_0" class="selected_txt default">all
-                  <input type="radio" name="level" id="t1_awl_0" value="-1" checked="">
+                  <input type="radio" name="awl" id="t1_awl_0" value="-1" checked="">
                 </label>
                 <label for="t1_awl_12">GEPT
-                  <input type="radio" name="level" id="t1_awl_12" value="200">
+                  <input type="radio" name="awl" id="t1_awl_12" value="200">
                 </label>
                 <label for="t1_awl_11">AWL
-                  <input type="radio" name="level" id="t1_awl_11" value="100">
+                  <input type="radio" name="awl" id="t1_awl_11" value="100">
                 </label>
                 <label for="t1_awl_1">1
-                  <input type="checkbox" name="level" id="t1_awl_1" value="1">
+                  <input type="checkbox" name="awl" id="t1_awl_1" value="1">
                 </label>
                 <label for="t1_awl_2">2
-                  <input type="checkbox" name="level" id="t1_awl_2" value="2">
+                  <input type="checkbox" name="awl" id="t1_awl_2" value="2">
                 </label>
                 <label for="t1_awl_3">3
-                  <input type="checkbox" name="level" id="t1_awl_3" value="3">
+                  <input type="checkbox" name="awl" id="t1_awl_3" value="3">
                 </label>
                 <label for="t1_awl_4">4
-                  <input type="checkbox" name="level" id="t1_awl_4" value="4">
+                  <input type="checkbox" name="awl" id="t1_awl_4" value="4">
                 </label>
                 <label for="t1_awl_5">5
-                  <input type="checkbox" name="level" id="t1_awl_5" value="5">
+                  <input type="checkbox" name="awl" id="t1_awl_5" value="5">
                 </label>
                 <label for="t1_awl_6">6
-                  <input type="checkbox" name="level" id="t1_awl_6" value="6">
+                  <input type="checkbox" name="awl" id="t1_awl_6" value="6">
                 </label>
                 <label for="t1_awl_7">7
-                  <input type="checkbox" name="level" id="t1_awl_7" value="7">
+                  <input type="checkbox" name="awl" id="t1_awl_7" value="7">
                 </label>
                 <label for="t1_awl_8">8
-                  <input type="checkbox" name="level" id="t1_awl_8" value="8">
+                  <input type="checkbox" name="awl" id="t1_awl_8" value="8">
                 </label>
                 <label for="t1_awl_9">9
-                  <input type="checkbox" name="level" id="t1_awl_9" value="9">
+                  <input type="checkbox" name="awl" id="t1_awl_9" value="9">
                 </label>
                 <label for="t1_awl_10">10
-                  <input type="checkbox" name="level" id="t1_awl_10" value="10">
+                  <input type="checkbox" name="awl" id="t1_awl_10" value="10">
                 </label>
               </div>
             </fieldset>
             <fieldset id="t1_gz6k">
-              <legend id="t1_gz6k_legend">高中6K字 level</legend>
+              <legend id="t1_gz6k_legend">高中6K字</legend>
               <div id="t1_gz6k_inputs" class="line-el line">
-                <label for="t1_gz6k_0" class="selected_txt default">all
-                  <input type="radio" name="level" id="t1_gz6k_0" value="-1" checked="">
+                <label for="t1_gz6k_11" class="selected_txt default">all
+                  <input type="radio" name="gz6k" id="t1_gz6k_0" value="-1" checked="">
                 </label>
                 <label for="t1_gz6k_1">1
-                  <input type="checkbox" name="level" id="t1_gz6k_1" value="1">
+                  <input type="checkbox" name="gz6k" id="t1_gz6k_1" value="1">
                 </label>
                 <label for="t1_gz6k_2">2
-                  <input type="checkbox" name="level" id="t1_gz6k_2" value="2">
+                  <input type="checkbox" name="gz6k" id="t1_gz6k_2" value="2">
                 </label>
                 <label for="t1_gz6k_3">3
-                  <input type="checkbox" name="level" id="t1_gz6k_3" value="3">
+                  <input type="checkbox" name="gz6k" id="t1_gz6k_3" value="3">
                 </label>
                 <label for="t1_gz6k_4">4
-                  <input type="checkbox" name="level" id="t1_gz6k_4" value="4">
+                  <input type="checkbox" name="gz6k" id="t1_gz6k_4" value="4">
                 </label>
                 <label for="t1_gz6k_5">5
-                  <input type="checkbox" name="level" id="t1_gz6k_5" value="5">
+                  <input type="checkbox" name="gz6k" id="t1_gz6k_5" value="5">
                 </label>
                 <label for="t1_gz6k_6">6
-                  <input type="checkbox" name="level" id="t1_gz6k_6" value="6">
+                  <input type="checkbox" name="gz6k" id="t1_gz6k_6" value="6">
                 </label>
               </div>
             </fieldset>
