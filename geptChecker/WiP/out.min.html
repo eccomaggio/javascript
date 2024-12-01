@@ -28,6 +28,13 @@
         <div class="dropdown" id="dropdown">
           <button class="dropbtn" type="button">Settings</button>
           <div class="dropdown-content" id="settings-content">
+            <select name="select-db" id="select-db">
+              <option value="0">GEPT list</option>
+              <option value="1">BESTEP list</option>
+              <option value="2">GEPTKids list</option>
+              <option value="3">高中6K字-108版</option>
+            </select>
+
             <select name="select-font" id="select-font">
               <option value="8">font 8pt</option>
               <option value="9">font 9pt</option>
@@ -40,13 +47,6 @@
               <option value="18">font 18pt</option>
               <option value="22">font 22pt</option>
               <option value="24">font 24pt</option>
-            </select>
-
-            <select name="select-db" id="select-db">
-              <option value="0">GEPT list</option>
-              <option value="1">BESTEP list</option>
-              <option value="2">GEPTKids list</option>
-              <option value="3">高中6K字-108版</option>
             </select>
 
             <button id="backup-btn" style="display: block;">backups</button>
@@ -279,6 +279,14 @@
                   <span class="level-e">elem (A2)</span>,
                   <span class="level-i">int (B1)</span>,
                   <span class="level-h">hi-int (B2)</span>
+                </li>
+                <li id="help-gz6k">高中6K字 levels:
+                  <span class="level-gz1">1</span>,
+                  <span class="level-gz2">2</span>,
+                  <span class="level-gz3">3</span>,
+                  <span class="level-gz4">4</span>,
+                  <span class="level-gz5">5</span>,
+                  <span class="level-gz6">6</span>,
                 </li>
                 <li id="help-kids"><span class="level-k">on-list</span></li>
                 <li id="help-offlist"><span class="level-o" id="l-o">off-list</span></li>

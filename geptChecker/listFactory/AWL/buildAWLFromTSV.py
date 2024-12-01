@@ -297,7 +297,8 @@ def create_awl_from_tsv(tsv_filename):
                         [
                             display.strip(),
                             " ".join(pos),
-                            [gept_level, 37 + level, Pos.AWL_ONLY.value],
+                            # [gept_level, AWL_INDEX + level, Pos.AWL_ONLY.value],
+                            [gept_level, level, Pos.AWL_ONLY.value],
                             # " ".join(notes),
                             ["", "", headword]
                         ]

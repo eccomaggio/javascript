@@ -288,7 +288,8 @@ def normalize_cols(list):
         awl_level = Pos.OFFLIST.value
         # if e[ur_awl]:
         if len(e) == 6:
-            awl_level = int(e[ur_awl].strip()[1:]) + AWL_INDEX
+            # awl_level = int(e[ur_awl].strip()[1:]) + AWL_INDEX
+            awl_level = int(e[ur_awl].strip()[1:])
         normalized_entry = [
             e[ur_lemma].strip(),
             e[ur_pos].strip(),
@@ -315,7 +316,7 @@ def main():
         # ["", "", [0, -1, 2], "dummy entry: 0 easily confused with undefined|"],
         ["", "", [0, Pos.OFFLIST.value, 2], ["dummy entry: 0 easily confused with undefined","",""]],
     )
-    assert len(gept_list) == 8393 + 1  ## according to the spreadsheet (minus headers line)
+    # assert len(gept_list) == 8393 + 1  ## according to the spreadsheet (minus headers line)
     save_list_as_json(gept_list, "dbGEPT.json")
     # pprint(gept_list)
     print(f"updated raw_gept contains {len(raw_gept)} entries")

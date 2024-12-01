@@ -373,12 +373,12 @@
       color: var(--lowlight);
     }
 
-    .level-gz1 { color: var(--gz1); }
-    .level-gz2 { color: var(--gz2); }
-    .level-gz3 { color: var(--gz3); }
-    .level-gz4 { color: var(--gz4); }
-    .level-gz5 { color: var(--gz5); }
-    .level-gz6 { color: var(--gz6); }
+    .level-gz1 { color: var(--gz1);}
+    .level-gz2 { color: var(--gz2); font-weight: bold;}
+    .level-gz3 { color: var(--gz3); font-weight: bold;}
+    .level-gz4 { color: var(--gz4); font-weight: bold;}
+    .level-gz5 { color: var(--gz5); font-weight: bold;}
+    .level-gz6 { color: var(--gz6); font-weight: bold;}
 
     td.level-o,
     td.level-h,

@@ -169,11 +169,11 @@ checkAgainstLookups - [entry] —>
 
 	*****
 Todo:
-1) make all AWL levels count from zero (and same with kids?)
-2) ?put level headings in with defaults? i.e. load once at start
+1) make all AWL levels count from zero (and same with kids?) - OK
+2) ?put level headings in with defaults? i.e. load once at start - CONSIDERING
 3) rename entry.levelAWL / AWLraw to levelLocal
 4) make general purpose lookups for:
 	getLevelDigit
 	getLevelHeading
 	getLevelShort
-5) think of a way to generically use color for 'color' OR 'background-color' (for info panes with gz6k)
+5) think of a way to generically use color for 'color' OR 'background-color' (for info panes with gz6k) - DONE (slightly cludgily)

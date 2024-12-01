@@ -12,8 +12,7 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
         43,                    AWL level (6+)
         3                      status++ (here: in both lists)
     ],
-    OLD: "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
-    NEW: [chinese, notes, awl headword]
+    [chinese, notes, awl headword]
 ], ...
 
     + according to position in level_headings
