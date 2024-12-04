@@ -151,7 +151,6 @@ class UI {
     if (label.htmlFor) {
       const input = document.getElementById(label.htmlFor);
       let parentID = label.htmlFor.split("_")[1];
-      //console.log(`*registerLabelClick* parentID=${parentID}`);
       if (parentID) {
         parentID = "t1_" + parentID;
       } else {
@@ -259,7 +258,7 @@ class UI {
         const GZ6K_level = (levelArr.length === 1) ? levelArr : levelArr[1];
         if (GZ6K_level >= 1 && GZ6K_level <= 6) levelText = `gz${GZ6K_level}`;
         else {
-          levelText = app.wordlist.level_headings[levelArr[0]];
+          levelText = app.wordlist.level_headings[levelArr[0]][0];
         }
       }
       if (!levelText) levelText = "o";
@@ -376,7 +375,6 @@ class WordSearch {
       HTMLstringToDisplay = this.markStringAsError(errorMsg);
     } else {
       const searchTerms = this.buildSearchTerms(data);
-      console.log("search terms:", searchTerms);
       [resultsArr, resultType] = this.runSearch(searchTerms);
       HTMLstringToDisplay = this.formatResultsAsHTML(resultsArr, resultType);
     }
@@ -422,7 +420,6 @@ class WordSearch {
         if (strVal) data[key].push(strVal);
       }
     }
-    // console.log("form data>>", data)
     return data;
   }
 
@@ -474,7 +471,6 @@ class WordSearch {
       level: modifiedLevel,
       pos: data.pos.join("|")
     };
-    // console.log("s terms>>", searchTerms, "isGZ6K",app.state.isGZ6K)
     return searchTerms;
   }
 
@@ -814,7 +810,6 @@ class WordStatistics {
     </details>
     */
     const levelStats = this.getAllLevelStats(tokenArr);
-    // console.log({levelStats})
     let levelStatsHTML = "";
     if (!this.totalLemmaCount) return levelStatsHTML;
     let tmpStats = [];
@@ -957,7 +952,6 @@ class Text {
   }
 
   renderLevelInfo(word) {
-    // console.log(">>>", word.lemma, word.levelArr)
     const levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
     const limitClass = app.limit.renderAsCSS(levelClass);
     let multiLevelStatusClass = "";
@@ -1170,13 +1164,12 @@ addfixes(tokenArr){
 
   normalizeRawText(text) {
     return text
-      // .replace(/[\u2018\u2019']/g, " '")    // replace curly single quotes
-      .replace(/[\u2018\u2019']/g, "'")        // replace curly single quotes
-      .replace(/[\u201C\u201D]/g, '"')         // replace curly double  quotes
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/,/g, ",")        // replace curly comma
       .replace(/…/g, "...")
       .replace(/(\r\n|\r|\n)/g, "\n")          // encode EOLs
       .replace(/\n{2,}/g, "\n")
-      // .replace(/\n/g, ` ${EOL.text} `)      // encode EOLs
       .replace(/\n/g, `${EOL.text}`)           // encode EOLs
       .replace(/–/g, " -- ")                   // pasted in em-dashes
       .replace(/—/g, " - ")
@@ -1189,9 +1182,9 @@ addfixes(tokenArr){
     for (let token of tokenArr) {
       // ** ignore compounds for now; they are dealt with separately
       if (token.type === "w") {
-        // console.log(">>", token.lemma, token)
         const [revisedType, matchedEntryArr] = this.lookupWord(token.lemma);
-        if (!app.tools.isEmpty(matchedEntryArr)) {
+        // if (!app.tools.isEmpty(matchedEntryArr)) {
+        if (matchedEntryArr.length) {
           token.appendMatches(matchedEntryArr);
           this.removeOfflistIfMatchFound(token)
           token.type = revisedType;
@@ -1375,8 +1368,6 @@ class InformationPanes {
     let geptLevel;
     if (!app.state.isKids) {
       if (app.state.isGZ6K) {
-        // console.log(">>>",entry.lemma, entry.levelArr, entry.levelAWLraw)
-        // dotText = entry.levelAWLraw;
         dotText = entry.levelOther;
       }
       else {
@@ -1395,7 +1386,6 @@ class InformationPanes {
   }
 
   buildHTMLlevelKids(entry) {
-    console.log("in kids html")
     return [" ", Tag.tag("span", ["class=awl-level"], ["level-k"])];
   }
 }
@@ -1712,10 +1702,6 @@ class Db {
   }
 
   mergeGEPT_AWL() {
-      // const tmpDb = makeGEPTdb();
-      // return tmpDb.concat(makeAWLdb());
-      // return makeGEPTdb().concat(makeAWLdb());
-      // let tmpDb = makeGEPTdb();
       let tmpDb1 = makeAWLdb();
       // tmpDb1 = this.tweakAWLlevel(tmpDb1);
       // console.log(">>>",tmpDb1)
@@ -2267,7 +2253,6 @@ class GenericSearch {
       } else tokenType = "wb";                                    // british sp
     }
     if (!matchedEntryArr) tokenType = "wo";                        // offlist
-    // console.log(">>", word, tokenType)
     if (tokenType === "wb") tokenType = "wv";
     return [tokenType, matchedEntryArr];
   }
@@ -2505,7 +2490,7 @@ class GenericSearch {
         const auxiliaryVerb = entries.filter(entry => entry.pos.includes("x"));
         matchedEntryArr.push(...auxiliaryVerb);
       }
-      else matchedEntryArr.push(entries[0]);
+      else if (entries.length) matchedEntryArr.push(entries[0]);
     }
     return matchedEntryArr;
   }
@@ -2603,7 +2588,6 @@ class Entry {
     this._levelArr = levelArr;
     this._notes = notes;
     // if (lemma === "advocate") console.log("****", lemma, pos)
-    // this._compound =
   }
 
   get id() { return this._id }
@@ -2707,7 +2691,6 @@ class Tag {
     if (this.name === "root") return [tmpContent];
     let tmpAttrs = "";
     if (this.attrs.length) {
-      // console.log("attrs:",...this.attrs)
       for (const el of this.attrs) {
         if (el.length) {
           const strEl = (el.length === 1) ? el[0][0] : `${el[0]}="${el[1]}"`;
