@@ -11,6 +11,8 @@ class App {
     this.tools = new Tools();
     this.tabs = new TabController();
     this.backup = new Backup();
+    // this.cursor = new Cursor();
+    // this.limit = new ShowLevelLimit();
     this.listeners = new EventListeners();
     this.ui = new UI();
     this.search = new GenericSearch();
@@ -26,15 +28,15 @@ class App {
     this.state = new State();
     this.cursor = new Cursor();
     this.limit = new ShowLevelLimit();
+    // this.limit.setLimit(true);
     this.wordlist = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
     if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
     this.ui.setupEditing();
     HTM.form.reset();
     this.state.updateDbInMenu();
-    // console.log("from app init:", this.wordlist)
-    // this.limit.loadLimits(this.wordlist.levelLimits);
-    // this.limit.setLimits(true);
+    // this.limit = new ShowLevelLimit();
+    this.limit.setLimit(true);
     this.state.setHelp("fromSaved");
     this.listeners.addAll();
     this.state.setFont();
@@ -239,33 +241,25 @@ class UI {
 
 
   getLevelPrefix(levelArr) {
-    // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
-    // console.log("levelarr:",levelArr)
     // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, not a list with 3 elements
     let levelText;
     if (levelArr.length === 1 && ([-1, 55].includes(levelArr))) {
       levelText = "o";
     }
-    else if (levelArr[0] >= 100) levelText = app.wordlist.offlist_subs[levelArr[0] - 100][0];
     else {
-      // console.log(">>", levelArr)
       const levelGEPT = levelArr[0];
       if (app.state.isGEPT || app.state.isBESTEP) {
-        // if (app.wordlist.level_headings[levelGEPT]) levelText = app.wordlist.level_headings[levelGEPT][0];
-        if (app.wordlist.gept_headings[levelGEPT]) levelText = app.wordlist.gept_headings[levelGEPT][0];
+        if (app.wordlist.level_headings[levelGEPT]) levelText = app.wordlist.level_headings[levelGEPT][0];
       }
       else if (app.state.isKids){
-        // if (levelGEPT < app.wordlist.offlistThreshold) levelText = "k";
-        if (levelGEPT < app.wordlist.kids_headings.length) levelText = "k";
+        if (levelGEPT < app.wordlist.offlistThreshold) levelText = "k";
       }
       else if (app.state.isGZ6K) {
         const GZ6K_level = (levelArr.length === 1) ? levelArr : levelArr[1];
-        levelText = `gz${GZ6K_level}`;
-        // if (GZ6K_level >= 1 && GZ6K_level <= 6) levelText = `gz${GZ6K_level}`;
-        // else {
-        //   const offlist_type = levelArr[0] - 100;
-        //   levelText = app.wordlist.offlist_subs[offlist_type][0];
-        // }
+        if (GZ6K_level >= 1 && GZ6K_level <= 6) levelText = `gz${GZ6K_level}`;
+        else {
+          levelText = app.wordlist.level_headings[levelArr[0]][0];
+        }
       }
       if (!levelText) levelText = "o";
     }
@@ -571,8 +565,7 @@ class WordSearch {
           console.log("PoS information missing from entry in wordlist:", entry.lemma);
         }
         // TODO: generalize this for all levels, maybe using separate level heading list in defaults
-        // let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.level_headings[entry.levelGEPT];
-        let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.gept_headings[entry.levelGEPT];
+        let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.level_headings[entry.levelGEPT];
         if (entry.levelOther >= 1 && app.state.isBESTEP) level += `; AWL${entry.levelOther}`;
         if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
@@ -794,8 +787,7 @@ class WordStatistics {
       const lemmaTotalAtThisLevel = lemmaArr.length;
       const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
       // let levelText = app.wordlist.level_headings[level];
-      // let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.level_headings[level];
-      let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.gept_headings[level];
+      let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.level_headings[level];
       if (!levelText) levelText = "offlist"
       statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
     }
@@ -1228,12 +1220,7 @@ addfixes(tokenArr){
       }
     }
     if (isUnique) {
-      // offlistEntry = this.addNewEntryToOfflistDb([word, offlistType, [app.wordlist.level_headings.indexOf(offlistType), -1, -1], ""]);
-      // offlistEntry = this.addNewEntryToOfflistDb([word, offlistType, [100 + ["u", "o","c", "d", "y"].indexOf(offlistType[0]), -1, -1], ""]);
-      // TODO: this catches offlist/contractions etc. - make the workings more integrated/transparent
-      const offlistTypeShortForm = (offlistType === "symbol") ? "y" : offlistType[0];
-      offlistEntry = this.addNewEntryToOfflistDb([word, offlistType, [100 + ["u", "o","c", "d", "y"].indexOf(offlistTypeShortForm), -1, -1], ""]);
-      // console.log("!>>>", offlistEntry, offlistType, offlistTypeShortForm)
+      offlistEntry = this.addNewEntryToOfflistDb([word, offlistType, [app.wordlist.level_headings.indexOf(offlistType), -1, -1], ""]);
     }
     return offlistEntry;
   }
@@ -1326,9 +1313,7 @@ class InformationPanes {
       // const [levelArr, levelClass] = app.ui.getLevelDetails(entry);
       const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
       const levelTagArr = this.buildHTMLlevel(entry, id, tokenType);
-      console.log("???", entry.levelGEPT)
-      // const levelTag = (entry.levelGEPT <= app.wordlist.offlistThreshold)
-      const levelTag = (entry.levelGEPT <= 99)
+      const levelTag = (entry.levelGEPT <= app.wordlist.offlistThreshold)
         ? Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr])
         : "";
       const pos = `[${entry.posExpansion}]`;
@@ -1366,8 +1351,7 @@ class InformationPanes {
     }
     else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
     else {
-      // levelStr = app.wordlist.level_headings[entry.levelGEPT];
-      levelStr = app.wordlist.gept_headings[entry.levelGEPT];
+      levelStr = app.wordlist.level_headings[entry.levelGEPT];
       if (entry.levelOther >= 1) {
         // levelStr += `; ${app.wordlist.level_headings[entry.levelAWLraw]}`;
         levelStr += `; ${app.wordlist.awl_headings[entry.levelOther]}`;
@@ -1526,18 +1510,16 @@ class Db {
   factory;
   db;
   toShow;
-  levelLimits;
   toHide = [HTM.G_level, HTM.K_theme, HTM.B_AWL, HTM.GZ_level];
   css;
   compounds;
   offlistDb;
-  // offlistThreshold;
+  offlistThreshold;
   // defaults = [];
   defaults = [
     {name: "GEPT",
     factory: makeGEPTdb,
     toShow: [HTM.G_level],
-    levelLimits: ["level-e", "level-i", "level-h", "level-o"],
     css: {
       _light: "#cfe0e8",
       _medium: "#87bdd8",
@@ -1547,7 +1529,6 @@ class Db {
     {name: "BESTEP",
     factory: this.mergeGEPT_AWL,
     toShow: [HTM.G_level, HTM.B_AWL],
-    levelLimits: ["level-e", "level-i", "level-h", "level-o"],
     css: {
       _light: "#e1e5bb",
       _medium: "#d6c373",
@@ -1557,7 +1538,6 @@ class Db {
     {name: "GEPTKids",
     factory: makeKIDSdb,
     toShow: [HTM.K_theme],
-    levelLimits: ["level-k", "level-o"],
     css: {
       _light: "#f9ccac",
       _medium: "#f4a688",
@@ -1567,7 +1547,6 @@ class Db {
     {name: "GZ6K",
     factory: makeGZ6Kdb,
     toShow: [HTM.GZ_level],
-    levelLimits: ["level-gz1", "level-gz2", "level-gz3", "level-gz4", "level-gz5", "level-gz6", "level-o"],
     css: {
       /*_light: "#cbbcf6",
       _medium: "#a06ee1",
@@ -1656,7 +1635,8 @@ class Db {
     "symbol",
   ];
 
-  // level_headings = [].concat(this.gept_headings, this.kids_headings, this.awl_headings, this.gz6k_headings, this.offlist_subs);
+  // level_headings = [].concat(this.gept_headings, this.kids_headings, this.awl_headings, this.offlist_subs);
+  level_headings = [].concat(this.gept_headings, this.kids_headings, this.awl_headings, this.gz6k_headings, this.offlist_subs);
 
   kids_level_offset = this.gept_headings.length;
 
@@ -1686,9 +1666,8 @@ class Db {
 
   constructor() {
     this.change(app.state.current.db_state)
-    // this.level_headings = this.level_headings.concat(this.offlist_subs);
-    // nb dbKids.js currently uses GEPTlevel for its theme number & -1 for levelOther (need to change)
-    // this.offlistThreshold = this.awl_level_offset + this.awl_headings.length;
+    this.level_headings = this.level_headings.concat(this.offlist_subs);
+    this.offlistThreshold = this.awl_level_offset + this.awl_headings.length;
   }
 
   change(e) {
@@ -1710,8 +1689,8 @@ class Db {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
       HTM.root_css.style.setProperty(property, this.css[key]);
     }
-    app.limit.loadLimits(this.levelLimits);
-    app.limit.setLimits();
+    app.limit.loadLimits();
+    app.limit.setLimit();
     this.setDbTab2();
     this.setDbTab1();
     app.state.saveItem("db_state", app.state.current.db_state);
@@ -1928,27 +1907,17 @@ class ShowLevelLimit {
   LEVEL_LIMIT_CLASS = "wrong";
   // LEVEL_LIMITS = ["level-i", "level-h", "level-o"];
   LEVEL_LIMITS;
-  // BASE_LEVEL = "level-e";
-  BASE_LEVEL;
+  BASE_LEVEL = "level-e";
   classNameCSS = "";
   activeClassesArr = [];
-  requiresInitialization = true;
 
-  // constructor() {
-  //   // this.loadLimits();
-  //   this.setLimit(true);
-  // }
+  constructor() {
+    this.loadLimits();
+  }
 
-  // loadLimits() {
-  //   // if (app.state.isGZ6K) this.LEVEL_LIMITS =  ["level-gz1", "level-gz2", "level-gz3", "level-gz4", "level-gz5", "level-gz6", "level-o"];
-  //   // else this.LEVEL_LIMITS = ["level-i", "level-h", "level-o"];
-  //   // this.LEVEL_LIMITS = app.wordlist.levelLimits;
-  // }
-
-  loadLimits(limitArr) {
-    // console.log("limits:", limitArr)
-    this.LEVEL_LIMITS = limitArr;
-    this.BASE_LEVEL = limitArr[0];
+  loadLimits() {
+    if (app.state.isGZ6K) this.LEVEL_LIMITS =  ["level-gz1", "level-gz2", "level-gz3", "level-gz4", "level-gz5", "level-gz6", "level-o"];
+    else this.LEVEL_LIMITS = ["level-i", "level-h", "level-o"];
   }
 
   toggle(e) {
@@ -2000,13 +1969,10 @@ class ShowLevelLimit {
     }
   }
 
-  // setLimits(fromSaved = false) {
-  //   if (fromSaved) {
-  setLimits() {
-    if (this.requiresInitialization) {
+  setLimit(fromSaved = false) {
+    if (fromSaved) {
       this.classNameCSS = (app.state.current.limit_state >= 0) ? this.LEVEL_LIMITS[app.state.current.limit_state] : "";
       this.activeClassesArr = (this.classNameCSS) ? this.LEVEL_LIMITS.slice(app.state.current.limit_state) : [];
-      this.requiresInitialization = false;
     }
     if (this.classNameCSS) {
       this.apply(this.classNameCSS, false);
@@ -2022,7 +1988,7 @@ class ShowLevelLimit {
 
   reset() {
     app.state.saveItem("limit_state", app.state.default.limit_state);
-    this.setLimits(true);
+    this.setLimit(true);
   }
 
 }
