@@ -182,7 +182,7 @@ def get_normalized_list(filename, header=True):
     wip_list = get_list_from_json(filename) if filename.endswith(".json") else get_list_from_tsv(filename)
     if header:
         wip_list = wip_list[1:]
-    wip_list = parse_lists_and_ints(wip_list)
+    # wip_list = parse_lists_and_ints(wip_list)
     # pprint(wip_list)
     # quit()
     # wip_list = [line for line in wip_list if weed_out_blanks_and_comments(line)]
@@ -195,18 +195,18 @@ def get_normalized_list(filename, header=True):
 
 
 def weed_out_blanks_and_comments(wip_list):
-    return [line for line in wip_list if is_blank_or_comment(line)]
+    return [line for line in wip_list if not is_blank_or_comment(line)]
 
 
 def is_blank_or_comment(line):
     comment_markers = "*/#"
     if not line or not line[0]:
-        return False
+        return True
     if line[0][0] in comment_markers:
-        return False
+        return True
     if isinstance(line[0], list) and line[0][0][0] in comment_markers:
-        return False
-    return True
+        return True
+    return False
 
 def has_pos(field_count):
     return field_count > 2
@@ -370,8 +370,9 @@ def get_list_from_json(json_filename):
 
 def get_list_from_tsv(file, sep="\t"):
     with open(file, mode="r") as f:
-        reader = list(csv.reader(f, delimiter=sep))
-    return reader
+        result = list(csv.reader(f, delimiter=sep))
+        result = parse_lists_and_ints(result)
+    return result
 
 
 def save_list_as_json(list, out_filename, top="", tail=""):
@@ -391,7 +392,11 @@ def save_list_as_tsv(list, out_filename):
 def parse_lists_and_ints(wip_list):
     tmp = []
     for i, row in enumerate(wip_list):
-        if row:
+        # if row:
+        if is_blank_or_comment(row):
+            print(f"yep, row {i + 1} is blank or a comment: {row}")
+            tmp.append(row)
+        else:
             # print(f"row {i}: ({len(row)} entries)")
             new_row = []
             for j, field in enumerate(row):
@@ -415,7 +420,7 @@ def process_from_raw():
     kids_json_file = "../Kids/dbKids.json"
 
     gz6k_1_tsv = "111學年度起適用.A-Z.tsv"
-    gz6k_2_tsv = "../gaozhong6k/gz6k.tsv"
+    # gz6k_2_tsv = "../gaozhong6k/gz6k.tsv"
     combo_2k_tsv = "2000_combo.tsv"
     comp_file = "(2024更新版)GEPT各級.國高中字表對照-中高級.tsv"
 
@@ -442,8 +447,8 @@ def process_from_raw():
 
     # print_sample(lists)
 
-    ref2k_from_gept = [[*entry[0:3], entry[6]] for entry in comp_gept if entry[6]]
-    gz6k_from_gept = [[*entry[0:3], entry[7]] for entry in comp_gept if entry[7]]
+    # ref2k_from_gept = [[*entry[0:3], entry[6]] for entry in comp_gept if entry[6]]
+    # gz6k_from_gept = [[*entry[0:3], entry[7]] for entry in comp_gept if entry[7]]
 
     # print_sample({"ref2k_from_gept" : ref2k_from_gept, "gz6k_from_gept" : gz6k_from_gept})
     # compare_two_lists(ref2k_raw, ref2k_from_gept, "ref2k", "ref2k from GEPT")
@@ -462,8 +467,6 @@ def process_from_raw():
     #     print([entry[0], entry[1], entry[2]])
 
     awl = [[entry[0], entry[1], entry[2][1], entry[3][2]] for entry in awl]
-    # awl = [[entry[0], entry[1], entry[2][1], entry[3]] for entry in awl]
-    # awl = [entry for entry in awl]
     gept = [[entry[0], entry[1], entry[2][0], entry[3]] for entry in gept]
     kids = [[entry[0], entry[1], entry[2][0], entry[3]] for entry in kids]
 
@@ -514,7 +517,8 @@ def compile_master_list(word_lists):
     for i, (name, list) in enumerate(word_lists):
         for entry in list:
             lemma, pos, level = entry[:3]
-            notes = entry[3] if (len(entry) == 4) else ""
+            # notes = entry[3] if (len(entry) == 4) else ""
+            notes = ["","",""] # [chinese gloss, english note, awl headword]
             headword = make_unique_headword(entry)
             levels = [[] for _ in range(len(word_lists))]
             master_list_as_dict[headword] =[lemma, pos, levels, notes]
@@ -522,13 +526,24 @@ def compile_master_list(word_lists):
     return sorted(master_list_as_dict.values())
 
 
-
 def add_levels_to_master_by_list(word_lists, master_list_as_dict):
     for i, (name, list) in enumerate(word_lists):
         for entry in list:
             if master_list_as_dict.get(headword := make_unique_headword(entry)):
                 master_list_as_dict[headword][2][i] = [entry[2]]
+                master_list_as_dict[headword][3] = compile_master_notes(name, master_list_as_dict[headword][3], entry)
     return master_list_as_dict
+
+
+def compile_master_notes(name, unfinished_note, new_entry):
+    if name == "gept":
+        unfinished_note[:2] = new_entry[3][:2]
+    elif name == "kids" and not unfinished_note[0]:
+        unfinished_note[0] = new_entry[3][0]
+    elif name == "awl":
+        unfinished_note[2] = new_entry[3]
+    return unfinished_note
+
 
 
 def make_unique_headword(entry):
@@ -536,6 +551,13 @@ def make_unique_headword(entry):
     return f"{lemma}_{pos}"
 
 
+def get_repeated_lemmas(list):
+    freqencies = {}
+    for entry in list:
+        freqencies[entry[0]] = freqencies.get(entry[0], 0) + 1
+    freqencies = { key:value for key, value in freqencies.items() if value > 1}
+    result = freqencies.keys()
+    return result
 
 
 
@@ -549,8 +571,15 @@ if __name__ == "__main__":
     word_lists = load_lists_from_master_tsvs()
     print_sample(word_lists)
 
+    # duplicate_gept_lemmas = list(get_repeated_lemmas(word_lists[0][1]))
+    # duplicate_gept_entries = [entry for entry in word_lists[0][1] if entry[0] in duplicate_gept_lemmas]
+    # pprint(duplicate_gept_entries)
+    # print(f"{len(duplicate_gept_entries)} duplicate entries in gept list (under {len(duplicate_gept_lemmas)} lemmas)")
+    # save_list_as_tsv(duplicate_gept_entries, "duplicate_gept_entries.tsv")
+
+
     master_list = compile_master_list(word_lists)
-    save_list_as_tsv(master_list, "master_list.tsv")
+    save_list_as_tsv(master_list, "../masterWordlists/master_list.tsv")
     print(f"The master list has {len(master_list)} entries.")
 
 
