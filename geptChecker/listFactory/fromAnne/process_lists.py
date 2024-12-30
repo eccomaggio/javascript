@@ -302,7 +302,7 @@ def count_duplicates(list):
 
 def expand_ref2k_using_gept(ref2k, gept):
     """
-    dupe_check adds a stringified version of the entry to weed out entries
+    dupe_check adds a stringified version of the entry to weed out entries because gept distinguishes by meaning
     (like 'break') which distinguished lemmas with same PoS but different glosses.
     the ref2k list does not distinguish these
     """
@@ -316,7 +316,8 @@ def expand_ref2k_using_gept(ref2k, gept):
         lemma, levels = entry_2k
         match_found = False
         for entry_gept in gept:
-            lemma_gept, pos_gept, levels_gept, *rest = entry_gept
+            # lemma_gept, pos_gept, levels_gept, *rest = entry_gept
+            lemma_gept, pos_gept = entry_gept[:2]
             if lemma.lower() == lemma_gept.lower():
                 # print(f"{lemma} = {lemma_gept}")
                 match_found = True
@@ -333,6 +334,8 @@ def expand_ref2k_using_gept(ref2k, gept):
                 result.append(missing)
                 missing_from_gept.append(missing)
     # save_list_as_json(missing_from_gept, "missing_from_gept.tmp.json")
+    if missing_from_gept:
+        print(f"These entries are missing from GEPT:\n{missing_from_gept}")
     return result
 
 
@@ -512,21 +515,49 @@ def load_lists_from_master_tsvs():
         ]
 
 
+# def compile_master_list(word_lists):
+#     master_list_as_dict = {}
+#     for i, (name, list) in enumerate(word_lists):
+#         for entry in list:
+#             lemma, pos, level = entry[:3]
+#             # notes = entry[3] if (len(entry) == 4) else ""
+#             notes = ["","",""] # [chinese gloss, english note, awl headword]
+#             headword = make_unique_headword(entry)
+#             levels = [[] for _ in range(len(word_lists))]
+#             master_list_as_dict[headword] =[lemma, pos, levels, notes]
+#     master_list_as_dict = add_levels_to_master_by_list(word_lists, master_list_as_dict)
+#     return sorted(master_list_as_dict.values())
+
 def compile_master_list(word_lists):
+    """
+    The list is compiled in two passes:
+    1) create unique entries according to the lemma & pos
+    2) compile the differing levels and notes from each list by lemma-pos
+
+    The gept list has many entries like 'bear, nv' which split the lemma into
+    'bear, n' and 'bear, v' because their senses are different;
+    the non-gept lists don't specify the sense, so they treat 'nv' lemmas as one;
+    to save space (c.150 entries), the non-gept nv-entries are split and added to the
+    relevant gept entry.
+    """
+    gept_split_nv_lemmas = get_gept_split_nv_entries(word_lists[0][1])
     master_list_as_dict = {}
     for i, (name, list) in enumerate(word_lists):
         for entry in list:
-            lemma, pos, level = entry[:3]
-            # notes = entry[3] if (len(entry) == 4) else ""
-            notes = ["","",""] # [chinese gloss, english note, awl headword]
-            headword = make_unique_headword(entry)
+            lemma, pos = entry[:2]
+            notes = ["","",""] # [chinese gloss, english note, awl headword] to be added later
             levels = [[] for _ in range(len(word_lists))]
-            master_list_as_dict[headword] =[lemma, pos, levels, notes]
-    master_list_as_dict = add_levels_to_master_by_list(word_lists, master_list_as_dict)
+            # headword = make_unique_headword(entry)
+            # master_list_as_dict[headword] =[lemma, pos, levels, notes]
+            to_add_to_master = [[lemma, pos, levels, notes]]
+            if name != "gept" and lemma in gept_split_nv_lemmas and pos == "nv":
+                to_add_to_master = [[lemma, "n", levels, notes], [lemma, "v", levels, notes]]
+            for revised_entry in to_add_to_master:
+                master_list_as_dict[make_unique_headword(revised_entry)] = revised_entry
+    master_list_as_dict = add_levels_and_notes_to_master(word_lists, master_list_as_dict)
     return sorted(master_list_as_dict.values())
 
-
-def add_levels_to_master_by_list(word_lists, master_list_as_dict):
+def add_levels_and_notes_to_master(word_lists, master_list_as_dict):
     for i, (name, list) in enumerate(word_lists):
         for entry in list:
             if master_list_as_dict.get(headword := make_unique_headword(entry)):
@@ -550,17 +581,41 @@ def make_unique_headword(entry):
     lemma, pos, *_ = entry
     return f"{lemma}_{pos}"
 
+# def make_unique_headword(entry, override=""):
+#     lemma, pos, *_ = entry
+#     suffix = override if override else pos
+#     return f"{lemma}_{suffix}"
+
 
 def get_repeated_lemmas(list):
     freqencies = {}
     for entry in list:
         freqencies[entry[0]] = freqencies.get(entry[0], 0) + 1
     freqencies = { key:value for key, value in freqencies.items() if value > 1}
-    result = freqencies.keys()
+    result = [*freqencies.keys()]
+    # result = list(result)
+    # return list(result)
     return result
 
+# def get_gept_nv_entries(gept):
+#     # gept = word_lists[0][1]
+#     duplicate_gept_lemmas = list(get_repeated_lemmas(gept))
+#     duplicate_gept_entries = [entry for entry in word_lists[0][1] if entry[0] in duplicate_gept_lemmas]
+#     pprint(duplicate_gept_entries)
+#     print(f"{len(duplicate_gept_entries)} duplicate entries in gept list (under {len(duplicate_gept_lemmas)} lemmas)")
+#     # save_list_as_tsv(duplicate_gept_entries, "duplicate_gept_entries.tsv")
+#     gept_nv_entries = [entry[0] for entry in gept if entry[1] == "nv"]
+#     pprint(gept_nv_entries)
+#     return gept_nv_entries
 
-
+def get_gept_split_nv_entries(gept):
+    duplicate_gept_lemmas = get_repeated_lemmas(gept)
+    duplicate_gept_n_lemmas = [entry[0] for entry in word_lists[0][1] if entry[0] in duplicate_gept_lemmas and entry[1] == "n"]
+    duplicate_gept_v_lemmas = [entry[0] for entry in word_lists[0][1] if entry[0] in duplicate_gept_lemmas and entry[1] == "v"]
+    gept_split_nv_lemmas = [entry for entry in duplicate_gept_lemmas if entry in duplicate_gept_n_lemmas and entry in duplicate_gept_v_lemmas]
+    # pprint(gept_split_nv_lemmas)
+    print(f"There are {len(gept_split_nv_lemmas)} split nv lemmas in gept.")
+    return gept_split_nv_lemmas
 
 
 
@@ -571,11 +626,14 @@ if __name__ == "__main__":
     word_lists = load_lists_from_master_tsvs()
     print_sample(word_lists)
 
-    # duplicate_gept_lemmas = list(get_repeated_lemmas(word_lists[0][1]))
+    # gept = word_lists[0][1]
+    # duplicate_gept_lemmas = list(get_repeated_lemmas(gept))
     # duplicate_gept_entries = [entry for entry in word_lists[0][1] if entry[0] in duplicate_gept_lemmas]
     # pprint(duplicate_gept_entries)
     # print(f"{len(duplicate_gept_entries)} duplicate entries in gept list (under {len(duplicate_gept_lemmas)} lemmas)")
-    # save_list_as_tsv(duplicate_gept_entries, "duplicate_gept_entries.tsv")
+    # # save_list_as_tsv(duplicate_gept_entries, "duplicate_gept_entries.tsv")
+    # gept_nv_entries = [entry for entry in gept if entry[1] == "nv"]
+    # pprint(gept_nv_entries)
 
 
     master_list = compile_master_list(word_lists)
