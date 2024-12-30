@@ -1,0 +1,30 @@
+    :root {
+      --light: #cfe0e8;
+      --medium: #87bdd8;
+      --dark: #3f7fbf;
+      --accent: #ddeedd;
+      --font-size: 14px;
+      --sep-width: 6px;
+      /* --radius: 30px; */
+      /* --radius: 20px; */
+
+      /* --elem: DarkOliveGreen;
+      --int: DarkCyan;
+      --high: DarkGoldenRod; */
+      --elem: #DE6A16;
+      --int: #009900;
+      /* --int: #589469; */
+      /* --high: #5896C2; */
+      --high: #007FFF;
+
+      --gz1: mediumpurple;
+      --gz2: cornflowerblue;
+      --gz3: darkseagreen;
+      --gz4: darkgoldenrod;
+      --gz5: orange;
+      --gz6: hotpink;
+
+      --offlist: FireBrick;
+      --misc: salmon;
+      --lowlight: darkgray;
+    }

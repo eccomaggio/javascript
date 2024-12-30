@@ -339,12 +339,12 @@
       /* font-weight: bold; */
     }
 
-    .level-i, .level-r2 {
+    .level-i {
       color: var(--int);
       /* font-weight: bold; */
     }
 
-    .level-e, .level-r1 {
+    .level-e {
       color: var(--elem);
       /* font-weight: bold; */
     }
@@ -379,8 +379,6 @@
     .level-gz4 { color: var(--gz4); font-weight: bold;}
     .level-gz5 { color: var(--gz5); font-weight: bold;}
     .level-gz6 { color: var(--gz6); font-weight: bold;}
-
-    .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 { color: lightslategrey;}
 
     td.level-o,
     td.level-h,

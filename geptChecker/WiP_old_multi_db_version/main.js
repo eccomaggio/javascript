@@ -13,3 +13,7 @@ function debounce(func, timeout = 500) {
     timer = setTimeout(() => { func.apply(this, args); }, timeout);
   };
 }
+
+// function debug(...params) {
+//   console.log(`DEBUG: ${debug.caller.name}> `, params);
+// }

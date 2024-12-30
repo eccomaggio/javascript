@@ -31,7 +31,6 @@ const HTM = {
   K_theme: document.getElementById("t1_theme"),
   B_AWL: document.getElementById("t1_awl"),
   GZ_level: document.getElementById("t1_gz6k"),
-  R_level: document.getElementById("t1_ref2k"),
   form: document.getElementById("t1_form"),
   kidsTheme: document.getElementById("t1_theme_select"),
   inputLemma: document.getElementById("t1_term_i"),

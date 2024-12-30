@@ -386,6 +386,10 @@ def save_list_as_json(list, out_filename, top="", tail=""):
         if tail:
             out_file.write(tail)
 
+def save_list_as_js(list, list_name, file_name):
+    save_list_as_json(
+        list, file_name, f"function make{list_name}db() {{\n return", "\n;}"
+    )
 
 def save_list_as_tsv(list, out_filename):
     with open(os.path.join(os.getcwd(), out_filename), "w") as out_file:
@@ -638,6 +642,7 @@ if __name__ == "__main__":
 
     master_list = compile_master_list(word_lists)
     save_list_as_tsv(master_list, "../masterWordlists/master_list.tsv")
+    save_list_as_js(master_list, "_", "../masterWordlists/db.js")
     print(f"The master list has {len(master_list)} entries.")
 
 

@@ -222,67 +222,53 @@ class UI {
     });
   }
 
-  // getNotesAsHTML(entry) {
-  //   let note = "";
-  //   let awl_note = "";
-  //   if (entry) {
-  //     [note, awl_note] = entry.notes;
-  //     note = note ? `, ${note}` : "";
-  //     awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
-  //   }
-  //   return [note, awl_note];
-  // }
-
   getNotesAsHTML(entry) {
     let note = "";
     let awl_note = "";
     if (entry) {
-      note = entry.notes;
-      note = (note) ? `, ${note}` : "";
-      awl_note = entry.awlHeadword;
+      [note, awl_note] = entry.notes;
+      note = note ? `, ${note}` : "";
       awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
     }
     return [note, awl_note];
   }
+
   highlightAwlWord(levelArr, word) {
     return (app.state.isBESTEP && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
   }
 
 
   getLevelPrefix(levelArr) {
-    // TODO refactor to use entry rather than levelArr?
     // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
-    // console.log("levelarr:",...levelArr)
+    // console.log("levelarr:",levelArr)
     // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, not a list with 3 elements
-    const db_index = app.state.current.db_state;
-    const db_headings = app.wordlist.headings[db_index];
-    const level = levelArr[db_index];
-    // console.log("**level prefix:", db_index, db_headings[level][0]);
     let levelText;
-    if (app.state.isGEPT && db_headings[level]) {
-      levelText = db_headings[level][0]
+    if (levelArr.length === 1 && ([-1, 55].includes(levelArr))) {
+      levelText = "o";
     }
-    // else if (app.state.isBESTEP && app.wordlist.headings[0][levelArr[0]]) {
-    //   levelText = app.wordlist.headings[0][levelArr[0]][0];  // use GEPT values
-    // }
-    else if (app.state.isBESTEP) {
-      if (app.wordlist.headings[0][levelArr[0]]) {
-        levelText = app.wordlist.headings[0][levelArr[0]];  // use GEPT values
-        levelText = levelText[0];
+    else if (levelArr[0] >= 100) levelText = app.wordlist.offlist_subs[levelArr[0] - 100][0];
+    else {
+      // console.log(">>", levelArr)
+      const levelGEPT = levelArr[0];
+      if (app.state.isGEPT || app.state.isBESTEP) {
+        // if (app.wordlist.level_headings[levelGEPT]) levelText = app.wordlist.level_headings[levelGEPT][0];
+        if (app.wordlist.gept_headings[levelGEPT]) levelText = app.wordlist.gept_headings[levelGEPT][0];
       }
-      else if (level <= db_headings.length) levelText = `awl${level}`;
+      else if (app.state.isKids){
+        // if (levelGEPT < app.wordlist.offlistThreshold) levelText = "k";
+        if (levelGEPT < app.wordlist.kids_headings.length) levelText = "k";
+      }
+      else if (app.state.isGZ6K) {
+        const GZ6K_level = (levelArr.length === 1) ? levelArr : levelArr[1];
+        levelText = `gz${GZ6K_level}`;
+        // if (GZ6K_level >= 1 && GZ6K_level <= 6) levelText = `gz${GZ6K_level}`;
+        // else {
+        //   const offlist_type = levelArr[0] - 100;
+        //   levelText = app.wordlist.offlist_subs[offlist_type][0];
+        // }
+      }
+      if (!levelText) levelText = "o";
     }
-    else if (app.state.isKids && level <= db_headings.length) {
-      levelText = "k";
-    }
-    else if (app.state.isGZ6K) {
-      levelText = `gz${level}`;
-    }
-    else if (app.state.isREF2K) {
-      levelText = `r${level}`;
-    }
-    if (!levelText) levelText = "o"
-    // return `level-${levelText}`;
     return levelText;
   }
 
@@ -421,12 +407,18 @@ class WordSearch {
       match: [],
       glevel: [],
       level: [],
+      // theme: [],
+      // awl: [],
       pos: []
     };
     // ** Read & normalize raw data into 'data' object
     for (let [key, value] of raw_data) {
       // ## default value of html option (but screws up db lookup)
       if (value === "-1") value = "";
+      // ## ignore form elements that aren't required for current dB
+      // if (key === "level" && app.state.isKids) continue;
+      // if (key === "theme" && !app.state.isKids) continue;
+      // if (key === "awl" && !app.state.isBESTEP) continue;
       const digit = parseInt(value)
       if (Number.isInteger(digit)) data[key].push(digit);
       else {
@@ -491,7 +483,7 @@ class WordSearch {
   runSearch(searchTerms) {
     // TODO: refactor using sub functions to make process clearer
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
-    console.log("searchterms:",searchTerms)
+    // console.log("searchterms:",searchTerms)
     let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     if (Number.isInteger(searchTerms.glevel[0]) && (app.state.isGEPT || app.state.isBESTEP)) {
@@ -509,25 +501,25 @@ class WordSearch {
     if (searchTerms?.level.length){
       if (app.state.isBESTEP) {
         /*
-        form control returns (level):
+        el[app.limit.LEVEL][2]:
+        1-in awl only; -1 in gept only; 3-in gept AND awl
+        CORRECTION: 2 = gept only
+
+        form control returns:
         200=GEPT words, 100=all AWL words, 1-10 AWL levels
         */
         if (searchTerms.level[0] === Entry.FIND_GEPT_ONLY) {
-          // matchedEntryArr = matchedEntryArr.filter(el => el.levelStatus === Entry.GEPT_ONLY);
-          matchedEntryArr = matchedEntryArr.filter(entry => entry.levelGEPT?.length);
+          matchedEntryArr = matchedEntryArr.filter(el => el.levelStatus === Entry.GEPT_ONLY);
         }
         else if (searchTerms.level[0] === Entry.FIND_AWL_ONLY) {
-          // matchedEntryArr = matchedEntryArr.filter(el => el.levelOther >= 1);
-          matchedEntryArr = matchedEntryArr.filter(entry => entry.level?.length);
+          matchedEntryArr = matchedEntryArr.filter(el => el.levelOther >= 1);
         }
         else {
-          // matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.indexOf(el.levelOther) > -1);
-          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level?.[0]) > -1);
+          matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.indexOf(el.levelOther) > -1);
         }
       }
       else if (app.state.isGZ6K) {
-        // matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.includes(el.levelOther));
-          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level?.[0]) > -1);
+        matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.includes(el.levelOther));
       }
 
     }
@@ -556,7 +548,6 @@ class WordSearch {
 
   formatResultsAsHTML(results, resultType) {
     let resultsAsTags;
-    const db_index = app.state.current.db_state;
     if (app.tools.isEmpty(results)) {
       resultsAsTags = Tag.tag("span", ["class=warning"], ["Search returned no results."]);
     }
@@ -581,10 +572,8 @@ class WordSearch {
         }
         // TODO: generalize this for all levels, maybe using separate level heading list in defaults
         // let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.level_headings[entry.levelGEPT];
-        // let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.gept_headings[entry.levelGEPT];
-        // if (entry.levelOther >= 1 && app.state.isBESTEP) level += `; AWL${entry.levelOther}`;
-        let level = app.wordlist.headings[db_index][entry.level];
-        if (app.state.isBESTEP) level = `${app.wordlist.headings[0][entry.levelGEPT]}; ${entry.levelAWL}`
+        let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.gept_headings[entry.levelGEPT];
+        if (entry.levelOther >= 1 && app.state.isBESTEP) level += `; AWL${entry.levelOther}`;
         if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
@@ -1497,10 +1486,6 @@ class State {
     return app.state.current.db_state === 3;
   }
 
-  get isREF2K() {
-    return app.state.current.db_state === 4;
-  }
-
   setHelp(e) {
     this.setDetail(e, "help_state");
   }
@@ -1542,16 +1527,15 @@ class Db {
   db;
   toShow;
   levelLimits;
-  toHide = [HTM.G_level, HTM.K_theme, HTM.B_AWL, HTM.GZ_level, HTM.R_level];
+  toHide = [HTM.G_level, HTM.K_theme, HTM.B_AWL, HTM.GZ_level];
   css;
   compounds;
   offlistDb;
   // offlistThreshold;
   // defaults = [];
-
   defaults = [
     {name: "GEPT",
-    // factory: makeGEPTdb,
+    factory: makeGEPTdb,
     toShow: [HTM.G_level],
     levelLimits: ["level-e", "level-i", "level-h", "level-o"],
     css: {
@@ -1561,7 +1545,7 @@ class Db {
       _accent: "#daebe8"
     }},
     {name: "BESTEP",
-    // factory: this.mergeGEPT_AWL,
+    factory: this.mergeGEPT_AWL,
     toShow: [HTM.G_level, HTM.B_AWL],
     levelLimits: ["level-e", "level-i", "level-h", "level-o"],
     css: {
@@ -1571,7 +1555,7 @@ class Db {
       _accent: "#d98284"
     }},
     {name: "GEPTKids",
-    // factory: makeKIDSdb,
+    factory: makeKIDSdb,
     toShow: [HTM.K_theme],
     levelLimits: ["level-k", "level-o"],
     css: {
@@ -1581,46 +1565,28 @@ class Db {
       _accent: "#fbefcc"
     }},
     {name: "GZ6K",
-    // factory: makeGZ6Kdb,
+    factory: makeGZ6Kdb,
     toShow: [HTM.GZ_level],
     levelLimits: ["level-gz1", "level-gz2", "level-gz3", "level-gz4", "level-gz5", "level-gz6", "level-o"],
     css: {
+      /*_light: "#cbbcf6",
+      _medium: "#a06ee1",
+      _dark: "#421b9b",
+      _accent: "#72b896"*/
       _light: "#C7BFD9",
       _medium: "#087E8B",
       _dark: "#0B3954",
       _accent: "#FF5A5F"
-    }},
-    {name: "REF2K",
-    // factory: makeGZ6Kdb,
-    toShow: [HTM.R_level],
-    levelLimits: ["level-800", "level-2k"],
-    css: {
-      _light: "#cbbcf6",
-      _medium: "#a06ee1",
-      _dark: "#421b9b",
-      _accent: "#72b896"
     }}
   ];
 
-  headings = [
-  [
+  gept_headings = [
     "elem (A2)",
     "int (B1)",
     "hi-int (B2)",
-  ],
-  [
-    "AWL 1",
-    "AWL 2",
-    "AWL 3",
-    "AWL 4",
-    "AWL 5",
-    "AWL 6",
-    "AWL 7",
-    "AWL 8",
-    "AWL 9",
-    "AWL 10",
-  ],
-  [
+  ];
+
+  kids_headings = [
     "Animals & insects (動物/昆蟲)",
     "Articles & determiners (冠詞/限定詞)",
     "Be & auxiliaries (be動詞/助動詞)",
@@ -1656,21 +1622,29 @@ class Db {
     "Transportation (運輸)",
     "Weather & nature (天氣/自然)",
     "Wh-words (疑問詞)",
-  ],
-  [
+  ];
+
+  awl_headings = [
+    "AWL 1",
+    "AWL 2",
+    "AWL 3",
+    "AWL 4",
+    "AWL 5",
+    "AWL 6",
+    "AWL 7",
+    "AWL 8",
+    "AWL 9",
+    "AWL 10",
+  ];
+
+  gz6k_headings = [
     "level 1",
     "level 2",
     "level 3",
     "level 4",
     "level 5",
     "level 6",
-  ],
-  [
-    "basic 800",
-    "basic 1200",
-  ],
   ];
-
 
   // ## Computed levels
   offlist_subs = [
@@ -1684,11 +1658,11 @@ class Db {
 
   // level_headings = [].concat(this.gept_headings, this.kids_headings, this.awl_headings, this.gz6k_headings, this.offlist_subs);
 
-  kids_level_offset = this.headings[0].length;
+  kids_level_offset = this.gept_headings.length;
 
-  awl_level_offset = this.kids_level_offset + this.headings[1].length;
+  awl_level_offset = this.kids_level_offset + this.kids_headings.length;
 
-  offlist_level_offset = this.awl_level_offset + this.headings[2].length;
+  offlist_level_offset = this.awl_level_offset + this.awl_headings.length + this.gz6k_headings.length;
 
 
 
@@ -1711,11 +1685,6 @@ class Db {
   };
 
   constructor() {
-    // *format: [lemma, pos, [levels: gept, awl, kids, gz6k, ref2k], [notes: gloss, note, awl-headword]]
-    // add in dummy element at index 0 to start count from 1
-    // this.db = this.createDbfromArray(["","",[], []].concat(make_db()));
-    this.db = this.createDbfromArray([[]].concat(make_db()));
-    this.compounds = this.buildCompoundsDb(this.db);
     this.change(app.state.current.db_state)
     // this.level_headings = this.level_headings.concat(this.offlist_subs);
     // nb dbKids.js currently uses GEPTlevel for its theme number & -1 for levelOther (need to change)
@@ -1732,8 +1701,8 @@ class Db {
       // console.log(key, "=>", currentDb[key])
       this[key] = currentDb[key];
     }
-    // this.db = this.createDbfromArray(this.factory());
-    // this.compounds = this.buildCompoundsDb(this.db);
+    this.db = this.createDbfromArray(this.factory());
+    this.compounds = this.buildCompoundsDb(this.db);
     // TODO: fix this so that it clears the CSS highlighting!!!
     app.ui.resetLevelInputs();
     // HTM.form.reset(); // To prevent conflicting "level" selections bleeding between dBs (see the HTML)
@@ -1760,6 +1729,23 @@ class Db {
       // return makeGEPTdb().concat(this.tweakAWLlevel(makeAWLdb()));
   }
 
+  // tweakAWLlevel(db) {
+  //   // remove this when wordlist has been adjusted
+  //   let tweakedDb = db.map(entry => {
+  //     return [
+  //       entry[0],
+  //       entry[1],
+  //       [
+  //         entry[2][0],
+  //         entry[2][1] - this.awl_level_offset + 1,
+  //         entry[2][2]
+  //       ],
+  //       entry[3]
+  //     ]
+  //   });
+  //   return tweakedDb;
+  // }
+
 
   resetOfflistDb() {
     this.offlistDb = [new Entry("unused", "", [-1, -1, -1], "", 0)];
@@ -1778,14 +1764,7 @@ class Db {
   }
 
   getEntriesByPartialLemma(lemma) {
-    // const entryList = this.db.filter(el => el.getLevel(app.state.current.db_state) && el.lemma.search(lemma) !== -1)
-    let entryList; // = this.db.filter(entry => entry.level?.length && entry.lemma.search(lemma) !== -1)
-    if (app.state.isBESTEP) {
-      entryList = this.db.filter(entry => (entry.levelGEPT?.length || entry.level?.length) && entry.lemma.search(lemma) !== -1)
-      // entryList = this.db.filter(entry => (entry[2][0]?.length) && entry.lemma.search(lemma) !== -1)
-    }
-    else entryList = this.db.filter(entry => entry.level?.length && entry.lemma.search(lemma) !== -1)
-    console.log("entries by partial lemma:", entryList)
+    const entryList = this.db.filter(el => el.lemma.search(lemma) !== -1)
     return entryList;
   }
 
@@ -1814,7 +1793,6 @@ class Db {
     */
     let compounds = {};
     for (let entry of dB) {
-      if (!entry[0]) continue;  // * ignore first dummy entry
       const word = entry.lemma.trim().toLowerCase();
       const id = entry.id;
       const splitWord = word.split(/[-'\s\.]/g);
@@ -2638,25 +2616,12 @@ class Entry {
       this._id = Entry.currID;
       Entry.incrementID();
     }
-    if (!lemma) {
-      this._lemma = "";
-      this._pos = "";
-      this._levelArr = [];
-      this._notes = [];
-    }
-    else {
-      this._lemma = lemma;
-      this._pos = pos;
-      this._levelArr = levelArr;
-      this._notes = notes;
-    }
-    // this._lemma = lemma;
-    // this._pos = pos;
-    // this._levelArr = levelArr;
-    // this._notes = notes;
+    this._lemma = lemma;
+    this._pos = pos;
+    this._levelArr = levelArr;
+    this._notes = notes;
     // if (lemma === "advocate") console.log("****", lemma, pos)
   }
-
 
   get id() { return this._id }
   get lemma() { return this._lemma }
@@ -2670,31 +2635,16 @@ class Entry {
 
   get levelArr() { return this._levelArr }
 
-  get level() { return this._levelArr[app.state.current.db_state] }
-
   get levelGEPT() { return this._levelArr[0] }
 
-  get levelAWL() { return this._levelArr[1] }
+  get levelOther() { return this._levelArr[1] }
 
-  get levelKids() { return this._levelArr[2] }
-
-  get levelGZ6K() { return this._levelArr[3] }
-
-  get levelREF2K() { return this._levelArr[4] }
-
-  getLevel(level) { return this._levelArr[level] }
-
+  get levelStatus() { return this._levelArr[2] }
 
   get notes() {
-    // let [gloss, note, awlHeadword] = this._notes;
-    const gloss = this._notes[0];
-    const note = this._notes[1]
-    let text = (note) ? `${gloss}; ${note}` : gloss;
-    return text;
-  }
-
-  get awlHeadword() {
-    return this._notes[2];
+    let note = this._notes[0];
+    if (this._notes[1]) note += `; ${this._notes[1]}`;
+    return [note, this._notes[2]];
   }
 
   static incrementID() { Entry.currID++ }

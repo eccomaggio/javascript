@@ -1,0 +1,179 @@
+# HOW TO WORK WITH THIS APP
+corrections should be made to individual files. Final file should be assembled using `toggleWordlistHTML.py`.
+The name of the stand alone file should then be changed to `wordlistTool.htm`.
+
+## Logic:
+open geptchecker
+read through each line
+ignore anything commented out (in html / css / javascript) EXCEPT:
+
+### create files (i.e. "split mode") if encounter `data-title`:
+<script data-title="blah.js"></script>
+—> <script src="blah.js"></script>
+
+<style data-title="blah.css"></style>
+—> <link href="blah.css" rel="stylesheet" />
+
+OR
+### combine files if finds above links to external files,
+("combine-into-single-file mode")
+open filename & replace link with contents into tags
+
+# ISSUES TO RESOLVE
+*in-place editing still glitchy (especially adding text at end.) NB: this seems to be caused by 'refresh' button showing, but mode being set to 'autorefresh'!!
+refresh mode not always saved? problem with 'reset'?
+hidden characters (e.g. @EOL@ displayed in backup) in in-place editing.
+
+ALTERNATIVE:
+change 'in-place' to show multiple senses ONLY as red squiggly underline; resolved in info box
+
+# LIST OF CORRECTIONS:
+4-11-2023 correct vocab mistake: (gept.js / .json) 'benefit' changed from 'nj' to 'nv' so that 'benefited' is correctly recognized
+14-11-2023 vocab mistake: (global.js) 'misunderstood' added as irregular past of 'misunderstand'
+03-01-2024 fixed cursor handling for in-place editing mode (but other fixes needed to make this mode work)
+07-01-2024 fixed switching between editing & refresh modes; cleaned up code; added more acceptable patterns for digits
+08-01-2024 fixed missing newlines when switching from in-place to 2-col
+... grey out 'auto refresh' option when in in-place mode
+
+
+20-03-2024 added corrections to wordlist creation: streamlined process a little & Americanized/corrected AWL source file .tsv's
+
+many changes (untracked here, but on GIT)
+
+Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundation.com/vocab/academic/awllists/#):
+1) headword
+2) sublist number
+3) optional word family words
+
+[
+    "abstract",                lemma
+    "jnv",                     list of parts of speech (here: adj, noun, verb)
+    [
+        1,                     GEPT level (int+)
+        43,                    AWL level (6+)
+        3                      status++ (here: in both lists)
+    ],
+    OLD: "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
+		NEW: [chinese, notes, awl headword]
+
+], ...
+
+    + according to position in level_headings (-1 = not on AWL list)
+    ++ given by Pos enum:
+      AWL_ONLY = 1
+      GEPT_ONLY = 2
+      AWL_AND_GEPT = 3
+			new: OFFLIST = -1
+			new: KIDS = 4
+
+MAP OF PROJECT:
+
+TAB 1 WORKFLOW:
+HTM.inputLemma: addEventListener(debounce)
+-> wordSearch()
+	wordGetFormData()
+	wordCheckFormData()
+	wordBuildiSearchTerms()
+	wordRunSearch()
+		stripOutRegex()
+		checkDerivations()
+		lazyCheckAgainstCompounds()
+		checkNegativePrefix()
+		checkAllowedVariants()
+	wordFormatResultsAsHTML()
+	wordDisplayResults()
+
+
+
+
+TAB 2 WORKFLOW:
+
+HTM.workingDiv: addEventListener OR
+forceUpdateInputDiv()
+--> normalizePastedText(e)
+textMarkup()
+	textGetLatest()
+	lookups()
+		normalizeRawText()
+		chunkText()
+		lookupCompoundWords()
+		lookupAllWords()
+	buildHTML()
+		getAllLevelStats()
+		buildHTMLtext()
+		buildHTMLrepeatList()
+		buildLevelStats()
+
+
+CAPTURING / INSERTING CURSOR
+automatically moved with every keyup with cursor.updatePos()
+updateInputDiv() = forceUpdateInputDiv
+	processText() = textMarkup
+		getRevisedText()
+			insertCursorPlaceholder() inserts as CURSOR.simpleText
+			chunkText() + tokenize() then insert as ["", "mc"]
+		buildHTMLtext()
+	displayProcessedText()
+		displayWorkingText()
+			setCursorPos()
+
+EOLs
+textMarkup() called by forceUpdateInputDiv() & normalizePastedText()
+	textGetLatest
+		cursor.insertCursorPlaceholder
+			cursor.newlinesToPlaintext => returns nodelist (with <br> turned into ___EOL___)
+	textdivideIntoTokens
+		normalizeRawText = (\n \r\n > EOL.text i.e. "___EOL___")
+		tokenize
+			split = (splits on ___, leaving just EOL.simpleText, i.e. "EOL")
+			tokenize1 = (catches "EOL" > Token.type = "pe")
+
+	textBuildHTML = Token.type["pe"] > EOL.HTMLtext, i.e. "<hr>"
+
+
+
+Search module: Return types & workflow:
+
+(text) lookupWord - [type, [entry]]
+(word) wordRunSearch - [Entry]
+
+both call:
+checkAgainstLookups - [entry] —>
+
+1) checkForEnglishSpelling - [wordStr, [Entry], typeStr]
+	checkVariantSpellings - [Entry]
+		replaceLetters - [entry]
+			**checkDerivations
+	checkVariantSuffixes - [Entry]
+2) checkNegativePrefix - [entry]
+3) **checkDerivations - [entry]
+	checkNames - [entry]
+		markOfflist - [entry]
+	checkArticle - [entry]
+	checkIrregularNegatives -  [entry]
+		**winnowPos - [entry]
+	checkIrregularVerbs -   [entry]
+		**winnowPos - [entry]
+	checkIrregularPlurals - [entry]
+	checkForeignPlurals - [entry]
+		**winnowPos - [entry]
+	checkAllSuffixes - [entry]
+		checkForSuffix - [entry]
+			**winnowPos - [entry]
+				findBaseForm - [entry]
+4) checkAllowedVariants - [entry]
+	checkVariantWords - [entry]
+	checkAbbreviations - [entry]
+	checkGenderedNouns - [entry]
+
+
+	*****
+Todo:
+1) make all AWL levels count from zero (and same with kids?) - OK
+2) ?put level headings in with defaults? i.e. load once at start - CONSIDERING
+3) rename entry.levelAWL / AWLraw to levelLocal
+4) make general purpose lookups for:
+	getLevelDigit
+	getLevelHeading
+	getLevelShort
+5) think of a way to generically use color for 'color' OR 'background-color' (for info panes with gz6k) - DONE (slightly cludgily)
