@@ -250,41 +250,101 @@ class UI {
 
 
   getLevelPrefix(levelArr) {
-    // TODO refactor to use entry rather than levelArr?
-    // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
-    // console.log("levelarr:",...levelArr)
-    // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, not a list with 3 elements
-    const db_index = app.state.current.db_state;
-    const db_headings = app.wordlist.headings[db_index];
-    const level = levelArr[db_index];
-    // console.log("**level prefix:", db_index, db_headings[level][0]);
+    // console.log("getLevelPrefix:", levelArr)
     let levelText;
-    if (app.state.isGEPT && db_headings[level]) {
-      levelText = db_headings[level][0]
+    if (levelArr.length == 3) {
+       levelText = app.wordlist.offlist_subs[levelArr[0] - 100][0];
     }
-    // else if (app.state.isBESTEP && app.wordlist.headings[0][levelArr[0]]) {
-    //   levelText = app.wordlist.headings[0][levelArr[0]][0];  // use GEPT values
-    // }
-    else if (app.state.isBESTEP) {
-      if (app.wordlist.headings[0][levelArr[0]]) {
-        levelText = app.wordlist.headings[0][levelArr[0]];  // use GEPT values
-        levelText = levelText[0];
+    else {
+      // TODO refactor to use entry rather than levelArr?
+      // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
+      // console.log("levelarr:",...levelArr)
+      // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, app.text.renderLevelInfo sends word.levelArr
+      const db_index = app.state.current.db_state;
+      const db_headings = app.wordlist.headings[db_index];
+      const level = levelArr[db_index];
+      const gept_headings = app.wordlist.headings[0];
+      const levelGEPT = levelArr[0];
+      // console.log("**level prefix:", db_index, db_headings[level][0]);
+      // let levelText;
+      if (app.state.isGEPT && db_headings[level]) {
+        levelText = db_headings[level][0]
       }
-      else if (level <= db_headings.length) levelText = `awl${level}`;
+      else if (app.state.isBESTEP) {
+        if (gept_headings[levelGept]) {
+          levelText = gept_headings[levelGEPT][0];  // use GEPT values
+        }
+        else if (level <= db_headings.length) levelText = `awl${level}`;
+      }
+      else if (level?.length) {
+        if (app.state.isKids && level <= db_headings.length) {
+          levelText = "k";
+        }
+        else if (app.state.isGZ6K && level <= db_headings.length) {
+          levelText = `gz${level}`;
+        }
+        else if (app.state.isREF2K && level <= db_headings.length) {
+          console.log("***ref2k", level, levelArr)
+          levelText = `r${level}`;
+        }
+      }
+      // else if (app.state.isKids && level.length && level <= db_headings.length) {
+      //   levelText = "k";
+      // }
+      // else if (app.state.isGZ6K && level.length && level <= db_headings.length) {
+      //   levelText = `gz${level}`;
+      // }
+      // else if (app.state.isREF2K && level?.length && level <= db_headings.length) {
+      //   console.log("***ref2k", level, levelArr)
+      //   levelText = `r${level}`;
+      // }
+      if (!levelText) levelText = "o"
+
     }
-    else if (app.state.isKids && level <= db_headings.length) {
-      levelText = "k";
-    }
-    else if (app.state.isGZ6K) {
-      levelText = `gz${level}`;
-    }
-    else if (app.state.isREF2K) {
-      levelText = `r${level}`;
-    }
-    if (!levelText) levelText = "o"
-    // return `level-${levelText}`;
     return levelText;
   }
+
+  // getLevelPrefix(entry) {
+  //   // TODO refactor to use entry rather than levelArr?
+  //   // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
+  //   // console.log("levelarr:",...levelArr)
+  //   // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, not a list with 3 elements
+  //   const db_index = app.state.current.db_state;
+  //   const db_headings = app.wordlist.headings[db_index];
+  //   // const level = levelArr[db_index];
+  //   const level = entry.level;
+  //   // console.log("**level prefix:", db_index, db_headings[level][0]);
+  //   let levelText;
+  //   if (app.state.isGEPT && db_headings[level]) {
+  //     levelText = db_headings[level][0]
+  //   }
+  //   // else if (app.state.isBESTEP && app.wordlist.headings[0][levelArr[0]]) {
+  //   //   levelText = app.wordlist.headings[0][levelArr[0]][0];  // use GEPT values
+  //   // }
+  //   else if (app.state.isBESTEP) {
+  //     // if (app.wordlist.headings[0][levelArr[0]]) {
+  //     if (app.wordlist.headings[0][entry.levelGEPT]) {
+  //       // levelText = app.wordlist.headings[0][levelArr[0]];  // use GEPT values
+  //       levelText = app.wordlist.headings[0][entry.levelGEPT];  // use GEPT values
+  //       levelText = levelText[0];
+  //     }
+  //     else if (level <= db_headings.length) levelText = `awl${level}`;
+  //   }
+  //   else if (app.state.isKids && level <= db_headings.length) {
+  //     levelText = "k";
+  //   }
+  //   else if (app.state.isGZ6K) {
+  //     levelText = `gz${level}`;
+  //   }
+  //   else if (app.state.isREF2K) {
+  //     levelText = `r${level}`;
+  //   }
+  //   if (!levelText) levelText = "o"
+  //   // return `level-${levelText}`;
+  //   return levelText;
+  // }
+
+
 
   signalRefreshNeeded(mode) {
     if (mode === "on") {
@@ -589,6 +649,7 @@ class WordSearch {
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
         let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
+        // console.log(">>>>", entry, class2)
         output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
         previousInitial = currentInitial;
         i++;
@@ -646,7 +707,6 @@ class Repeats {
           let displayClass = "class=anchors";
           if (rep === 1) {
             displayText = app.ui.highlightAwlWord(entry.levelArr, lemma);
-            // displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelGEPT)}`;
             displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelArr)}`;
           }
           anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [displayText]));
@@ -788,15 +848,9 @@ class WordStatistics {
   getAllLevelStats(tokenArr) {
     // TODO: generalize the horrible cludge for gz6k list
     let lemmasByLevel = {}  // {level : [lemma, lemma, ...]}
-    // for (let [lemma, [freq, id, geptLevel, rawAwl]] of Object.entries(this.allLemmas)){
     for (let [lemma, [freq, id, geptLevel, awlLevel]] of Object.entries(this.allLemmas)){
       lemmasByLevel[geptLevel] = this.addOrUpdate(lemmasByLevel, geptLevel, lemma);
-      // if (app.state.isBESTEP && rawAwl >= 0) {
-      //   const awlLevel = rawAwl + app.wordlist.awl_level_offset - 1;
-      //   lemmasByLevel[awlLevel] = this.addOrUpdate(lemmasByLevel, awlLevel, lemma);
-      // }
       if (app.state.isBESTEP && awlLevel >= 0) {
-        // const awlLevel = awlLevel + app.wordlist.awl_level_offset - 1;
         lemmasByLevel[awlLevel] = this.addOrUpdate(lemmasByLevel, awlLevel, lemma);
       }
     }
@@ -804,9 +858,10 @@ class WordStatistics {
     for (const [level, lemmaArr] of Object.entries(lemmasByLevel)) {
       const lemmaTotalAtThisLevel = lemmaArr.length;
       const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
-      // let levelText = app.wordlist.level_headings[level];
-      // let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.level_headings[level];
-      let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.gept_headings[level];
+      // let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.gept_headings[level];
+      // let levelText = (app.state.isBESTEP) ? app.wordlist.headings[0][??] : app.wordlist.gept_headings[level];
+      // TODO: make bestep show gept level?
+      let levelText = app.wordlist.headings[app.state.current.db_state][level];
       if (!levelText) levelText = "offlist"
       statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
     }
@@ -814,7 +869,9 @@ class WordStatistics {
   }
 
   addOrUpdate(list, index, value) {
-    return list[index] = (list[index]) ? list[index].concat([value]) : [value];
+    // return list[index] = (list[index]) ? list[index].concat([value]) : [value];
+    list[index] = (list[index]) ? list[index].concat([value]) : [value];
+    return list[index];
   }
 
   buildHTMLlevelStats(tokenArr) {
@@ -1337,7 +1394,7 @@ class InformationPanes {
       // const [levelArr, levelClass] = app.ui.getLevelDetails(entry);
       const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
       const levelTagArr = this.buildHTMLlevel(entry, id, tokenType);
-      console.log("???", entry.levelGEPT)
+      // console.log("???", entry.levelGEPT)
       // const levelTag = (entry.levelGEPT <= app.wordlist.offlistThreshold)
       const levelTag = (entry.levelGEPT <= 99)
         ? Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr])
@@ -1376,16 +1433,9 @@ class InformationPanes {
       levelStr = entry.pos; // a string, e.g. "jn"
     }
     else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
-    else {
-      // levelStr = app.wordlist.level_headings[entry.levelGEPT];
-      levelStr = app.wordlist.gept_headings[entry.levelGEPT];
-      if (entry.levelOther >= 1) {
-        // levelStr += `; ${app.wordlist.level_headings[entry.levelAWLraw]}`;
-        levelStr += `; ${app.wordlist.awl_headings[entry.levelOther]}`;
-      }
-    }
-    let level = [];
-    if (levelStr) level = [Tag.tag("em", [], level), Tag.tag("br")];
+    else if (app.state.isBESTEP && entry.levelGEPT) levelStr = app.wordlist.headings[0][entry.levelGEPT];
+    else levelStr = app.wordlist.headings[app.state.current.db_state][entry.level];
+    let level = (levelStr) ? [Tag.tag("em", [], levelStr), Tag.tag("br")] : [];
     return level;
   }
 
@@ -1684,11 +1734,11 @@ class Db {
 
   // level_headings = [].concat(this.gept_headings, this.kids_headings, this.awl_headings, this.gz6k_headings, this.offlist_subs);
 
-  kids_level_offset = this.headings[0].length;
+  // kids_level_offset = this.headings[0].length;
 
-  awl_level_offset = this.kids_level_offset + this.headings[1].length;
+  // awl_level_offset = this.kids_level_offset + this.headings[1].length;
 
-  offlist_level_offset = this.awl_level_offset + this.headings[2].length;
+  // offlist_level_offset = this.awl_level_offset + this.headings[2].length;
 
 
 
