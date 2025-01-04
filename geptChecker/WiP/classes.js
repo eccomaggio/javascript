@@ -304,47 +304,6 @@ class UI {
     return levelText;
   }
 
-  // getLevelPrefix(entry) {
-  //   // TODO refactor to use entry rather than levelArr?
-  //   // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
-  //   // console.log("levelarr:",...levelArr)
-  //   // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, not a list with 3 elements
-  //   const db_index = app.state.current.db_state;
-  //   const db_headings = app.wordlist.headings[db_index];
-  //   // const level = levelArr[db_index];
-  //   const level = entry.level;
-  //   // console.log("**level prefix:", db_index, db_headings[level][0]);
-  //   let levelText;
-  //   if (app.state.isGEPT && db_headings[level]) {
-  //     levelText = db_headings[level][0]
-  //   }
-  //   // else if (app.state.isBESTEP && app.wordlist.headings[0][levelArr[0]]) {
-  //   //   levelText = app.wordlist.headings[0][levelArr[0]][0];  // use GEPT values
-  //   // }
-  //   else if (app.state.isBESTEP) {
-  //     // if (app.wordlist.headings[0][levelArr[0]]) {
-  //     if (app.wordlist.headings[0][entry.levelGEPT]) {
-  //       // levelText = app.wordlist.headings[0][levelArr[0]];  // use GEPT values
-  //       levelText = app.wordlist.headings[0][entry.levelGEPT];  // use GEPT values
-  //       levelText = levelText[0];
-  //     }
-  //     else if (level <= db_headings.length) levelText = `awl${level}`;
-  //   }
-  //   else if (app.state.isKids && level <= db_headings.length) {
-  //     levelText = "k";
-  //   }
-  //   else if (app.state.isGZ6K) {
-  //     levelText = `gz${level}`;
-  //   }
-  //   else if (app.state.isREF2K) {
-  //     levelText = `r${level}`;
-  //   }
-  //   if (!levelText) levelText = "o"
-  //   // return `level-${levelText}`;
-  //   return levelText;
-  // }
-
-
 
   signalRefreshNeeded(mode) {
     if (mode === "on") {
@@ -646,6 +605,7 @@ class WordSearch {
         let level = app.wordlist.headings[db_index][entry.level];
         if (app.state.isBESTEP) level = `${app.wordlist.headings[0][entry.levelGEPT]}; ${entry.levelAWL}`
         if (!level) continue;
+        console.log(">> format results as html:", entry.lemma, ...entry.levelArr)
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
         let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
@@ -1029,6 +989,7 @@ class Text {
 
   renderLevelInfo(word) {
     const levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
+    console.log(">> render level info:", app.state.current.db_state,word.lemma, word.levelArr[app.state.current.db_state], levelClass,...word.levelArr)
     const limitClass = app.limit.renderAsCSS(levelClass);
     let multiLevelStatusClass = "";
     if (word.matchCount > 1) multiLevelStatusClass = (word.isMixedLevels) ? "multi-diff" : "multi-same";
@@ -1227,15 +1188,24 @@ addfixes(tokenArr){
           j++;
         }
         wordBlob = wordBlob.toLowerCase();
-        for (const [compound, id] of Object.entries(app.wordlist.compounds)) {
-          if (wordBlob.startsWith(compound)) {
+        for (const [compound, [id, levelArr]] of Object.entries(app.wordlist.compounds)) {
+          if (wordBlob.startsWith(compound) && this.isInWordlist(levelArr)) {
             token.appendMatches(app.wordlist.getEntryById(id));
             break;
           }
         }
       }
     }
+    // console.log("matched compounds:", tokenArr)
     return tokenArr;
+  }
+
+  isInWordlist(levelArr) {
+    let level;
+    if (app.state.isBESTEP) level = (levelArr[0][0] || levelArr[1][0]);
+    else level = levelArr[app.state.current.db_state][0];
+    console.log("isInWordlist:", level, levelArr[0], levelArr[app.state.current.db_state])
+    return level;
   }
 
   normalizeRawText(text) {
@@ -1317,10 +1287,17 @@ addfixes(tokenArr){
   lookupWord(word) {
     word = word.toLowerCase();
     let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, app.wordlist.getEntriesByExactLemma(word));
+    // if (matchedEntryArr.length) matchedEntryArr = matchedEntryArr.filter(entry => {
+    //   const res = this.isInWordlist(entry.levelArr);
+    //   console.log(`@@@1 lookupWord <${entry.lemma}>: gept=${entry.levelGEPT[0]}, ${app.wordlist.name}=${entry.level[0]}, res=${res}=${!!res} (${entry.levelArr})`);
+    //   return !!res;
+    // });
+    if (matchedEntryArr.length) matchedEntryArr = matchedEntryArr.filter(entry => this.isInWordlist(entry.levelArr));
     if (!matchedEntryArr.length) {
       matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
     }
     const results = [tokenType, matchedEntryArr];
+    console.log("@@@ >> lookupWord:", word, ...results)
     return results;
   }
 
@@ -1714,6 +1691,7 @@ class Db {
     "level 4",
     "level 5",
     "level 6",
+    "supplement",
   ],
   [
     "basic 800",
@@ -1851,7 +1829,7 @@ class Db {
     return entry;
   }
 
-  buildCompoundsDb(dB) {
+  buildCompoundsDb(db) {
     /* ##
     A) goes through currentDb and checks for compounds (words containing spaces / hyphens)
     These are a problem as spaces are used to divide words;
@@ -1863,16 +1841,17 @@ class Db {
     (as compounds and single words)
     */
     let compounds = {};
-    for (let entry of dB) {
-      if (!entry[0]) continue;  // * ignore first dummy entry
-      const word = entry.lemma.trim().toLowerCase();
+    for (let entry of db) {
+      if (!entry.lemma) continue;  // * ignore first dummy entry
+      // const word = entry.lemma.trim().toLowerCase();
+      const word = entry.lemma;
       const id = entry.id;
       const splitWord = word.split(/[-'\s\.]/g);
       if (splitWord.length > 1) {
         const newCompound = splitWord.join("");
-        compounds[newCompound] = id;
+        compounds[newCompound] = [id, entry.levelArr];
         // ** to catch A.M. and P.M.
-        if (/[ap]\.m\./.test(word)) compounds[word] = id;
+        // if (/[ap]\.m\./.test(word)) compounds[word] = [id, ];
       }
     }
     return compounds;
@@ -2433,7 +2412,8 @@ class GenericSearch {
     if (LOOKUP.notLetterVariant.includes(word)) return matchedEntryArr;
     for (const [letters, replacement] of LOOKUP.variantLetters) {
       matchedEntryArr = this.subLettersAndCheckForMatches(word, letters, replacement);
-      if (!app.tools.isEmpty(matchedEntryArr)) {
+      // if (!app.tools.isEmpty(matchedEntryArr)) {
+      if (matchedEntryArr.length) {
         break;
       }
     }

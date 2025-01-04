@@ -112,7 +112,7 @@ advance	nv	2
 advanced	j	3
 advantage	n	3
 adventure	n	3
-adverb 	n	7
+adverb	n	7
 adverse	j	5
 advertise	v	3
 advertisement	n	3
@@ -213,7 +213,7 @@ ambition	n	3
 ambitious	j	4
 ambulance	n	3
 amend	v	5
-america 	n	7
+america	n	7
 amid	p	6
 amidst	p	6
 among	p	2
@@ -305,10 +305,10 @@ archaeology	n	6
 architect	n	5
 architecture	n	5
 archive	n	6
-arctic 	n	7
+arctic	n	7
 area	n	1
 arena	n	5
-argentina 	n	7
+argentina	n	7
 argue	v	2
 argument	n	2
 arise	v	4
@@ -376,7 +376,7 @@ at	p	1
 athlete	n	3
 athletic	j	4
 athletics	n	5
-atlantic 	n	7
+atlantic	n	7
 atmosphere	n	4
 atom	n	4
 atomic	j	4
@@ -402,11 +402,11 @@ audience	n	3
 audio	j	4
 audit	n	6
 auditorium	n	6
-aug 	n	7
-august 	n	7
+aug	n	7
+august	n	7
 aunt	n	1
-australia 	n	7
-australia 	n	7
+australia	n	7
+australia	n	7
 authentic	j	4
 author	nv	2
 authority	n	4
@@ -417,7 +417,7 @@ autograph	nv	4
 automatic	j	3
 automobile	n	3
 autonomy	n	5
-autumn 	n	7
+autumn	n	7
 auxiliary	n	7
 available	j	2
 avenue	n	3
@@ -569,9 +569,9 @@ big	j	1
 bike	n	1
 bilateral	j	6
 bill	nv	2
+billion	mn	7
 billion	n	2
-billion 	mn	7
-billionth 	bjn	7
+billionth	bjn	7
 bin	n	4
 bind	v	3
 biography	n	4
@@ -716,8 +716,8 @@ brutal	j	4
 bubble	nv	3
 bucket	n	3
 bud	nv	3
-buddhism 	n	7
-buddhist 	jn	7
+buddhism	n	7
+buddhist	jn	7
 budget	nv	3
 buffalo	n	3
 buffet	n	3
@@ -939,7 +939,7 @@ chimney	n	3
 chimpanzee	n	6
 chin	n	3
 china	n	2
-china 	n	7
+china	n	7
 chip	nv	3
 chirp	nv	6
 chocolate	n	1
@@ -1191,7 +1191,7 @@ congratulation	n	2
 congress	n	4
 congressman	n	6
 congresswoman	n	6
-conjunction 	n	7
+conjunction	n	7
 connect	v	3
 connection	n	2
 conquer	v	4
@@ -1467,11 +1467,11 @@ debate	nv	2
 debris	n	5
 debt	n	2
 debut	n	5
-dec 	n	7
+dec	n	7
 decade	n	3
 decay	nv	5
 deceive	v	5
-december 	n	7
+december	n	7
 decent	j	5
 decide	v	1
 decision	n	2
@@ -1833,7 +1833,7 @@ ease	nv	2
 east	bjn	1
 eastern	j	2
 eastern orthodox	j	7
-eastern orthodoxy 	n	7
+eastern orthodoxy	n	7
 easy	j	1
 eat	v	1
 eccentric	jn	6
@@ -1863,11 +1863,11 @@ efficient	j	3
 effort	n	2
 egg	n	1
 ego	n	5
-eight 	jmnr	7
+eight	jmnr	7
 eighteen	jmnr	7
 eighteenth	bjn	7
 eighth	bjn	7
-eightieth 	bjn	7
+eightieth	bjn	7
 eighty	jmnr	7
 either	bcjr	1
 elaborate	jv	5
@@ -2146,8 +2146,8 @@ fairy	jn	3
 faith	n	3
 faithful	j	4
 fake	jnv	3
+fall	n	7
 fall	nv	1
-fall 	n	7
 false	j	2
 falter	v	6
 fame	n	4
@@ -2188,8 +2188,8 @@ feasible	j	6
 feast	nv	4
 feather	n	3
 feature	nv	2
-feb 	n	7
-february 	n	7
+feb	n	7
+february	n	7
 federal	j	5
 fee	n	2
 feeble	j	6
@@ -2215,11 +2215,11 @@ fiber	n	5
 fiction	n	4
 field	n	2
 fierce	j	4
-fifteen 	jmnr	7
-fifteenth 	bjn	7
-fifth 	bjn	7
+fifteen	jmnr	7
+fifteenth	bjn	7
+fifth	bjn	7
 fiftieth	bjn	7
-fifty 	jmnr	7
+fifty	jmnr	7
 fight	nv	1
 fighter	n	3
 figure	nv	2
@@ -2246,7 +2246,7 @@ firewoman	n	2
 firework	n	3
 firm	bjnv	2
 first	bjn	1
-first 	bjn	7
+first	bjn	7
 fiscal	j	5
 fish	nv	1
 fisherman	n	2
@@ -2333,7 +2333,7 @@ fortieth	bjn	7
 fortify	v	6
 fortunate	j	4
 fortune	n	3
-forty 	jmnr	7
+forty	jmnr	7
 forum	n	5
 forward	b	2
 forward	jnv	2
@@ -2375,9 +2375,9 @@ frequency	n	4
 frequent	jv	3
 fresh	j	1
 freshman	n	4
-fri 	n	7
+fri	n	7
 friction	n	6
-friday 	n	7
+friday	n	7
 fridge	n	2
 friend	n	1
 friendly	j	1
@@ -2462,7 +2462,7 @@ geographical	j	6
 geography	n	3
 geometry	n	6
 germ	n	4
-germany 	n	7
+germany	n	7
 gesture	nv	3
 get	v	1
 ghost	n	1
@@ -2796,8 +2796,8 @@ humor	n	3
 humorous	j	3
 hunch	nv	6
 hundred	jn	1
-hundred 	mn	7
-hundredth 	bjn	7
+hundred	mn	7
+hundredth	bjn	7
 hunger	n	3
 hungry	j	1
 hunt	nv	2
@@ -2890,8 +2890,8 @@ indeed	b	2
 independence	n	2
 independent	j	2
 index	nv	5
-india 	n	7
-indian 	n	7
+india	n	7
+indian	n	7
 indicate	v	2
 indication	n	4
 indifference	n	6
@@ -2900,7 +2900,7 @@ indigenous	j	5
 indignant	j	6
 indispensable	j	5
 individual	jn	2
-indonesia 	n	7
+indonesia	n	7
 indoor	j	3
 indoors	b	3
 induce	v	6
@@ -3055,7 +3055,7 @@ isolate	v	4
 isolation	n	4
 issue	nv	4
 it	r	1
-italy 	n	7
+italy	n	7
 itch	nv	6
 item	n	1
 its	r	1
@@ -3069,7 +3069,7 @@ jam	nv	2
 jan	n	7
 janitor	n	6
 january	n	7
-japan 	n	7
+japan	n	7
 jar	n	3
 jasmine	n	6
 jaw	n	3
@@ -3106,12 +3106,12 @@ judicial	j	5
 jug	nv	5
 juice	n	1
 juicy	j	3
-jul 	n	7
-july 	n	7
+jul	n	7
+july	n	7
 jump	nv	1
-jun 	n	7
+jun	n	7
 junction	n	6
-june 	n	7
+june	n	7
 jungle	n	3
 junior	jn	3
 junk	nv	3
@@ -3157,7 +3157,7 @@ know	v	1
 knowledge	n	1
 knowledgeable	j	6
 koala	n	3
-korea 	n	7
+korea	n	7
 lab	n	4
 label	nv	3
 labor	nv	4
@@ -3460,8 +3460,8 @@ mattress	n	5
 mature	j	2
 maturity	n	4
 maximum	jn	4
+may	n	7
 may	x	1
-may 	n	7
 maybe	b	1
 mayor	n	3
 ma’am	n	6
@@ -3547,10 +3547,10 @@ milestone	n	5
 military	jn	2
 milk	n	1
 mill	nv	4
+million	mn	7
 million	n	1
-million 	mn	7
 millionaire	n	4
-millionth 	bjn	7
+millionth	bjn	7
 mimic	nv	6
 mind	nv	1
 mine	nv	1
@@ -3610,7 +3610,7 @@ moisture	n	3
 molecule	n	5
 moment	n	1
 momentum	n	6
-mon 	n	7
+mon	n	7
 monarch	n	6
 monday	n	7
 monetary	j	6
@@ -3764,9 +3764,9 @@ nightmare	n	4
 nine	jmnr	7
 nineteen	jmnr	7
 nineteenth	bjn	7
-ninetieth 	bjn	7
+ninetieth	bjn	7
 ninety	jmnr	7
-ninth 	bjn	7
+ninth	bjn	7
 no	bjn	1
 noble	jn	4
 nobody	nr	1
@@ -3799,13 +3799,13 @@ noticeable	j	5
 notify	v	5
 notion	n	5
 notorious	j	6
-noun 	n	7
+noun	n	7
 nourish	v	6
 nourishment	n	6
-nov 	n	7
+nov	n	7
 novel	jn	2
 novelist	n	3
-november 	n	7
+november	n	7
 novice	n	6
 now	bn	1
 nowadays	b	4
@@ -3880,7 +3880,7 @@ olive	jn	5
 omit	v	3
 on	bp	1
 once	bcn	1
-one 	jmnr	7
+one	jmnr	7
 ongoing	j	3
 onion	n	3
 online	j	1
@@ -3996,7 +3996,7 @@ oyster	n	6
 ozone	n	6
 p.m.	b	1
 pace	nv	4
-pacific 	n	7
+pacific	n	7
 pack	nv	1
 package	n	1
 packet	n	6
@@ -4151,7 +4151,7 @@ pharmacist	n	6
 pharmacy	n	6
 phase	nv	5
 phenomenon	n	4
-philippines 	n	7
+philippines	n	7
 philosopher	n	4
 philosophical	j	4
 philosophy	n	4
@@ -4336,7 +4336,7 @@ premise	n	5
 premium	n	5
 preparation	n	3
 prepare	v	1
-preposition 	n	7
+preposition	n	7
 prescribe	v	5
 prescription	n	5
 presence	n	3
@@ -4422,7 +4422,7 @@ promote	v	3
 promotion	n	4
 prompt	jnv	4
 prone	j	5
-pronoun 	n	7
+pronoun	n	7
 pronounce	v	3
 pronunciation	n	4
 proof	n	3
@@ -4707,7 +4707,7 @@ representative	jn	3
 reproduce	v	6
 reptile	jn	6
 republic	n	3
-republic of china 	n	7
+republic of china	n	7
 republican	jn	5
 reputation	n	4
 request	nv	3
@@ -4879,7 +4879,7 @@ sake	n	3
 salad	n	1
 salary	n	3
 sale	n	1
-salesman 	n	2
+salesman	n	2
 salesperson	n	2
 saleswoman	n	2
 salmon	jn	5
@@ -4894,12 +4894,12 @@ sand	nv	2
 sandal	n	5
 sandwich	nv	2
 sanitation	n	6
-sat 	n	7
+sat	n	7
 satellite	n	4
 satisfaction	n	4
 satisfactory	j	3
 satisfy	v	2
-saturday 	n	7
+saturday	n	7
 sauce	n	3
 saucer	n	3
 saudi arabia	n	7
@@ -5023,12 +5023,12 @@ setting	n	5
 settle	v	2
 settlement	n	2
 settler	n	4
-seven 	jmnr	7
-seventeen 	jmnr	7
-seventeenth 	bjn	7
-seventh 	bjn	7
+seven	jmnr	7
+seventeen	jmnr	7
+seventeenth	bjn	7
+seventh	bjn	7
 seventieth	bjn	7
-seventy 	jmnr	7
+seventy	jmnr	7
 several	jr	1
 severe	j	4
 sew	v	4
@@ -5143,12 +5143,12 @@ sister	n	1
 sit	v	1
 site	nv	4
 situation	n	3
-six 	jmnr	7
-sixteen 	jmnr	7
-sixteenth 	bjn	7
-sixth 	bjn	7
+six	jmnr	7
+sixteen	jmnr	7
+sixteenth	bjn	7
+sixth	bjn	7
 sixtieth	bjn	7
-sixty 	jmnr	7
+sixty	jmnr	7
 size	nv	1
 skate	nv	3
 skeleton	n	5
@@ -5530,9 +5530,9 @@ summary	n	3
 summer	n	7
 summit	n	3
 summon	v	6
+sun	n	7
 sun	nv	1
-sun 	n	7
-sunday 	n	7
+sunday	n	7
 sunny	j	1
 super	bj	2
 superb	j	5
@@ -5636,8 +5636,8 @@ tan	jnv	6
 tangerine	n	3
 tangle	nv	5
 tank	n	3
-taoism 	n	7
-taoist 	jn	7
+taoism	n	7
+taoist	jn	7
 tap	nv	3
 tape	n	1
 target	nv	2
@@ -5677,7 +5677,7 @@ tempo	n	6
 temporary	j	3
 tempt	v	5
 temptation	n	5
-ten 	jmnr	7
+ten	jmnr	7
 tenant	nv	6
 tend	v	3
 tendency	n	4
@@ -5687,7 +5687,7 @@ tense	jv	4
 tension	n	4
 tent	n	3
 tentative	j	6
-tenth 	bjn	7
+tenth	bjn	7
 term	nv	2
 terminal	jn	5
 terrace	nv	6
@@ -5738,14 +5738,14 @@ thin	j	1
 thing	n	1
 think	v	1
 third	bjn	1
-third 	bjn	7
+third	bjn	7
 thirst	n	3
 thirsty	j	2
 thirteen	jmnr	7
 thirteenth	bjn	7
-thirtieth 	bjn	7
+thirtieth	bjn	7
 thirty	jmnr	7
-thirty-four 	jmnr	7
+thirty-four	jmnr	7
 thirty-one	jmnr	7
 thirty-three	jmnr	7
 thirty-two	jmnr	7
@@ -5761,7 +5761,7 @@ thousandth	bjn	7
 thread	nv	3
 threat	n	3
 threaten	v	3
-three 	jmnr	7
+three	jmnr	7
 threshold	n	5
 thrill	nv	5
 thriller	n	5
@@ -5772,10 +5772,10 @@ through	bp	1
 throughout	bp	2
 throw	nv	1
 thrust	nv	5
-thu 	n	7
+thu	n	7
 thumb	nv	3
 thunder	nv	2
-thursday 	n	7
+thursday	n	7
 thus	b	2
 tick	nv	5
 ticket	n	1
@@ -5947,18 +5947,18 @@ turn	nv	1
 turtle	n	2
 tutor	nv	3
 tv	n	1
-twelfth 	bjn	7
+twelfth	bjn	7
 twelve	jmnr	7
-twentieth 	bjn	7
+twentieth	bjn	7
 twenty	jmnr	7
 twenty three	jmnr	7
 twenty-fifth	bjn	7
 twenty-first	bjn	7
-twenty-five 	jmnr	7
-twenty-four 	jmnr	7
-twenty-fourth 	bjn	7
+twenty-five	jmnr	7
+twenty-four	jmnr	7
+twenty-fourth	bjn	7
 twenty-one	jmnr	7
-twenty-second 	bjn	7
+twenty-second	bjn	7
 twenty-third	bjn	7
 twenty-two	jmnr	7
 twice	b	1
@@ -5967,7 +5967,7 @@ twilight	n	6
 twin	n	3
 twinkle	nv	6
 twist	nv	3
-two 	jmnr	7
+two	jmnr	7
 type	nv	1
 typhoon	n	2
 typical	j	2
@@ -5986,7 +5986,7 @@ underground	n	2
 underline	nv	5
 underlying	v	3
 undermine	v	5
-underneath 	bjnp	6
+underneath	bjnp	6
 underpass	n	6
 understand	v	1
 undertake	v	5

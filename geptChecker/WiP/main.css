@@ -334,19 +334,16 @@
       font-weight: bold;
     }
 
-    .level-h {
+    .level-h, .level-r2{
       color: var(--high);
-      /* font-weight: bold; */
     }
 
-    .level-i, .level-r2 {
+    .level-i, .level-r1 {
       color: var(--int);
-      /* font-weight: bold; */
     }
 
-    .level-e, .level-r1 {
+    .level-e {
       color: var(--elem);
-      /* font-weight: bold; */
     }
 
     .level-k {
@@ -354,7 +351,6 @@
     }
 
     .level-e, .level-i, .level-h, .level-k {
-      /* font-weight: bold; */
       font-weight: normal;
     }
 
@@ -363,15 +359,15 @@
     .level-n,
     .level-d,
     .level-s {
-      /* color: var(--misc); */
       color: var(--lowlight);
     }
 
     /* awl list in general (in levelStats) */
     .level-a {
-      /* color: darkgray; */
       color: var(--lowlight);
     }
+
+    .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 { color: lightslategrey;}
 
     .level-gz1 { color: var(--gz1);}
     .level-gz2 { color: var(--gz2); font-weight: bold;}
@@ -379,8 +375,7 @@
     .level-gz4 { color: var(--gz4); font-weight: bold;}
     .level-gz5 { color: var(--gz5); font-weight: bold;}
     .level-gz6 { color: var(--gz6); font-weight: bold;}
-
-    .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 { color: lightslategrey;}
+    .level-gz7 { color: var(--gz7); font-weight: bold;}
 
     td.level-o,
     td.level-h,
@@ -390,12 +385,9 @@
 
     .unprocessed {
       color: black;
-      /* font-weight: bold; */
     }
 
     .word-detail {
-      /* color: white; */
-      /* background-color: var(--light); */
       background-color: var(--medium);
       font-weight: normal;
       border-radius: 5px;
@@ -415,8 +407,6 @@
     }
 
     .dot {
-      /* height: var(--radius);
-      width: var(--radius); */
       height: 1.5em;
       width: 1.5em;
       background-color: white;
@@ -425,7 +415,6 @@
       line-height: 1.5;
       vertical-align: middle;
       text-align: center;
-      /* font-size: larger; */
       font-size: normal;
       font-style: normal;
       font-family: sans-serif;
