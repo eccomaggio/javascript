@@ -254,6 +254,7 @@ class UI {
     let levelText;
     if (levelArr.length == 3) {
        levelText = app.wordlist.offlist_subs[levelArr[0] - 100][0];
+       // TODO: change the numbering of offlist_subs to be triggered by minus numbers
     }
     else {
       // TODO refactor to use entry rather than levelArr?
@@ -265,14 +266,15 @@ class UI {
       const level = levelArr[db_index];
       const gept_headings = app.wordlist.headings[0];
       const levelGEPT = levelArr[0];
-      // console.log("**level prefix:", db_index, db_headings[level][0]);
-      // let levelText;
-      if (app.state.isGEPT && db_headings[level]) {
-        levelText = db_headings[level][0]
+      // "level - 1" because the headings are in a 0-indexed array
+      // if (app.state.isGEPT && db_headings[level - 1]) {
+      if (app.state.isGEPT && this.getLevelHeading(level)) {
+        // levelText = db_headings[level - 1][0]
+        levelText = this.getLevelHeading(level)[0];
       }
       else if (app.state.isBESTEP) {
-        if (gept_headings[levelGept]) {
-          levelText = gept_headings[levelGEPT][0];  // use GEPT values
+        if (gept_headings[levelArr[0]]) {
+          levelText = gept_headings[levelGEPT - 1][0];  // use GEPT values
         }
         else if (level <= db_headings.length) levelText = `awl${level}`;
       }
@@ -288,22 +290,18 @@ class UI {
           levelText = `r${level}`;
         }
       }
-      // else if (app.state.isKids && level.length && level <= db_headings.length) {
-      //   levelText = "k";
-      // }
-      // else if (app.state.isGZ6K && level.length && level <= db_headings.length) {
-      //   levelText = `gz${level}`;
-      // }
-      // else if (app.state.isREF2K && level?.length && level <= db_headings.length) {
-      //   console.log("***ref2k", level, levelArr)
-      //   levelText = `r${level}`;
-      // }
       if (!levelText) levelText = "o"
 
     }
+    // console.log("getLevelPrefix:", levelArr[app.state.current.db_state], levelText)
     return levelText;
   }
 
+
+  getLevelHeading(level, db_index=-1) {
+    if (db_index < 0) db_index = app.state.current.db_state;
+    return app.wordlist.headings[db_index][level - 1];
+  }
 
   signalRefreshNeeded(mode) {
     if (mode === "on") {
@@ -1410,32 +1408,61 @@ class InformationPanes {
       levelStr = entry.pos; // a string, e.g. "jn"
     }
     else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
-    else if (app.state.isBESTEP && entry.levelGEPT) levelStr = app.wordlist.headings[0][entry.levelGEPT];
-    else levelStr = app.wordlist.headings[app.state.current.db_state][entry.level];
+    // else if (app.state.isBESTEP && entry.levelGEPT) levelStr = app.wordlist.headings[0][entry.levelGEPT];
+    // else levelStr = app.wordlist.headings[app.state.current.db_state][entry.level];
+    else if (app.state.isBESTEP && entry.levelGEPT) levelStr = app.ui.getLevelHeading(entry.levelGEPT, 0);
+    else levelStr = app.ui.getLevelHeading(entry.level);
     let level = (levelStr) ? [Tag.tag("em", [], levelStr), Tag.tag("br")] : [];
     return level;
   }
 
+  // buildHTMLlevelDot(entry) {
+  //   let html = "";
+  //   let dotText;
+  //   let geptLevel;
+  //   if (!app.state.isKids) {
+  //     if (app.state.isGZ6K) {
+  //       // dotText = entry.levelOther;
+  //       dotText = entry.level;
+  //     }
+  //     else {
+  //       geptLevel = entry.levelGEPT;
+  //       if (geptLevel >=0 && geptLevel <= 2) dotText = ["E", "I", "H"][geptLevel - 1];
+  //     }
+  //     html = (dotText) ? Tag.tag("span", ["class=dot"], [dotText]) : "";
+  //   }
+  //   // if (app.state.isBESTEP && entry.levelOther >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
+  //   if (app.state.isBESTEP && entry.levelAWL >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
+  //   return html;
+  // }
+
+
   buildHTMLlevelDot(entry) {
     let html = "";
     let dotText;
-    let geptLevel;
-    if (!app.state.isKids) {
-      if (app.state.isGZ6K) {
-        dotText = entry.levelOther;
-      }
-      else {
-        geptLevel = entry.levelGEPT;
-        if (geptLevel >=0 && geptLevel <= 2) dotText = ["E", "I", "H"][geptLevel];
-      }
-      html = (dotText) ? Tag.tag("span", ["class=dot"], [dotText]) : "";
+    // let geptLevel;
+    if (app.state.isKids) {
+      dotText = "";
     }
-    if (app.state.isBESTEP && entry.levelOther >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
+    else if (app.state.isGZ6K) {
+      dotText = entry.level[0];
+    }
+    else if (app.state.isREF2K) {
+      // dotText = ["", "800", "1200"][entry.level];
+      dotText = entry.level[0];
+    }
+    else if (entry.levelGEPT >=0 && entry.levelGEPT <= 2) {
+        dotText = ["E", "I", "H"][entry.levelGEPT - 1];
+    }
+    html = (dotText) ? Tag.tag("span", ["class=dot"], [dotText]) : "";
+    if (app.state.isBESTEP && entry.levelAWL >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
     return html;
   }
 
+
   buildHTMLlevelAWL(entry) {
-    return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelOther}`])];
+    // return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelOther}`])];
+    return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.level}`])];
   }
 
   buildHTMLlevelKids(entry) {

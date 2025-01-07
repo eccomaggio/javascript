@@ -535,11 +535,6 @@ def compile_master_list(word_lists):
     1) create unique entries according to the lemma & pos
     2) compile the differing levels and notes from each list by lemma-pos
 
-    The gept list has many entries like 'bear, nv' which split the lemma into
-    'bear, n' and 'bear, v' because their senses are different;
-    the non-gept lists don't specify the sense, so they treat 'nv' lemmas as one;
-    to save space (c.150 entries), the non-gept nv-entries are split and added to the
-    relevant gept entry.
     """
     master_list_as_dict = {}
     for i, (name, list) in enumerate(word_lists):
@@ -578,6 +573,13 @@ def make_unique_headword(entry):
 
 
 def split_combined_entries(array):
+    """
+    The gept list has many entries like 'bear, nv' which split the lemma into
+    'bear, n' and 'bear, v' because their senses are different;
+    the non-gept lists don't specify the sense, so they treat 'nv' lemmas as one;
+    to save space (c.300 entries), the non-gept nv-entries are split and added to the
+    relevant gept entry.
+    """
     LEMMA, POS, LEVELS = (0, 1, 2)
     counted_lemmas = {}  # { lemma: [ frequency, [list of ids with this lemma] ], ...}
     for i, (lemma, *_) in enumerate(array):
