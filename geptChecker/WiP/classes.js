@@ -211,27 +211,16 @@ class UI {
   resetLevelInputs() {
     const allInputs = HTM.form.querySelectorAll("input[name='level']");
     allInputs.forEach(el => {
-      el.checked = (el.value === -1) ? true : false;
-      el.parentElement.classList.remove("selected_txt");
-      // el.parentElement.removeAttribute("class");
+      el.checked = (parseInt(el.value) === -1);
+      el.parentElement.classList.toggle("selected_text", el.checked); // * utilizes the toggle 'force' option
     });
 
     const allOptions = HTM.form.querySelectorAll("select[name='level'] > option");
     allOptions.forEach(el => {
-      el.selected = (el.value === -1) ? true : false;
+      el.selected = (parseInt(el.value) === -1);
     });
   }
 
-  // getNotesAsHTML(entry) {
-  //   let note = "";
-  //   let awl_note = "";
-  //   if (entry) {
-  //     [note, awl_note] = entry.notes;
-  //     note = note ? `, ${note}` : "";
-  //     awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
-  //   }
-  //   return [note, awl_note];
-  // }
 
   getNotesAsHTML(entry) {
     let note = "";
@@ -244,8 +233,12 @@ class UI {
     }
     return [note, awl_note];
   }
-  highlightAwlWord(levelArr, word) {
-    return (app.state.isBESTEP && levelArr[1] >= 0) ? Tag.tag("span", ["class=awl-word"], [word]) : word;
+
+  highlightAwlWord(levelArr, lemma) {
+    // const result = (app.state.isBESTEP && levelArr[app.state.current.db_state]?.[0] >= 0) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
+    // console.warn("highlight awl:", levelArr, lemma)
+    const result = (app.state.isBESTEP && levelArr?.[app.state.current.db_state]?.[0]) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
+    return result;
   }
 
 
@@ -261,46 +254,50 @@ class UI {
       // console.log((typeof levelArr == "object") ? ...levelArr : levelArr)
       // console.log("levelarr:",...levelArr)
       // BEWARE: app.stats.buildHTMLlevelStats sends only levelID as int, app.text.renderLevelInfo sends word.levelArr
-      const db_index = app.state.current.db_state;
-      const db_headings = app.wordlist.headings[db_index];
-      const level = levelArr[db_index];
-      const gept_headings = app.wordlist.headings[0];
-      const levelGEPT = levelArr[0];
-      // "level - 1" because the headings are in a 0-indexed array
-      // if (app.state.isGEPT && db_headings[level - 1]) {
-      if (app.state.isGEPT && this.getLevelHeading(level)) {
-        // levelText = db_headings[level - 1][0]
-        levelText = this.getLevelHeading(level)[0];
-      }
-      else if (app.state.isBESTEP) {
-        if (gept_headings[levelArr[0]]) {
-          levelText = gept_headings[levelGEPT - 1][0];  // use GEPT values
+      // const db_index = app.state.current.db_state;
+      // const db_headingsCount = app.wordlist.headings[db_index].length;
+      // const levelInt = levelArr[db_index]?.[0];
+      const db_headingsCount = app.ui.getLevelHeadingArr().length;
+      const levelInt = levelArr[app.state.current.db_state]?.[0];
+      if (levelInt || levelArr[0]?.length) {
+        if (app.state.isGEPT && this.getLevelHeading(levelInt)) {
+          levelText = this.getLevelHeading(levelInt)[0];
         }
-        else if (level <= db_headings.length) levelText = `awl${level}`;
-      }
-      else if (level?.length) {
-        if (app.state.isKids && level <= db_headings.length) {
+        else if (app.state.isBESTEP) {
+          // logic: use GEPT if available; else use AWL
+          const geptHeading = this.getLevelHeading(levelArr[0], 0);
+          levelText = (geptHeading) ? geptHeading[0] : `awl${levelInt}`;
+        }
+        else if (app.state.isKids && levelInt <= db_headingsCount) {
           levelText = "k";
         }
-        else if (app.state.isGZ6K && level <= db_headings.length) {
-          levelText = `gz${level}`;
+        else if (app.state.isGZ6K && levelInt <= db_headingsCount) {
+          levelText = `gz${levelInt}`;
         }
-        else if (app.state.isREF2K && level <= db_headings.length) {
-          console.log("***ref2k", level, levelArr)
-          levelText = `r${level}`;
+        else if (app.state.isREF2K && levelInt <= db_headingsCount) {
+          levelText = `r${levelInt}`;
         }
       }
       if (!levelText) levelText = "o"
-
+      console.log("getLevelPrefix:", levelInt, db_headingsCount,levelInt <= db_headingsCount, levelArr[app.state.current.db_state], levelText)
     }
-    // console.log("getLevelPrefix:", levelArr[app.state.current.db_state], levelText)
+    // console.log("getLevelPrefix:", levelInt, levelArr[app.state.current.db_state], levelText)
     return levelText;
   }
 
 
   getLevelHeading(level, db_index=-1) {
+    // * the -1 is because headings are indexed from zero & levels from 1
+    // if (db_index < 0) db_index = app.state.current.db_state;
+    // return app.wordlist.headings[db_index][level - 1];
+    return this.getLevelHeadingArr(db_index)[level - 1];
+  }
+
+  getLevelHeadingArr(db_index=-1) {
+    // * the -1 is because headings are indexed from zero & levels from 1
     if (db_index < 0) db_index = app.state.current.db_state;
-    return app.wordlist.headings[db_index][level - 1];
+    return app.wordlist.headings[db_index];
+
   }
 
   signalRefreshNeeded(mode) {
@@ -509,7 +506,10 @@ class WordSearch {
     // TODO: refactor using sub functions to make process clearer
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
     console.log("searchterms:",searchTerms)
-    let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
+    let tokenType;
+    let matchedEntryArr = app.wordlist.getEntriesByPartialLemma(searchTerms.lemma);
+    [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, matchedEntryArr);
+    // let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, app.wordlist.getEntriesByPartialLemma(searchTerms.lemma));
     matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     if (Number.isInteger(searchTerms.glevel[0]) && (app.state.isGEPT || app.state.isBESTEP)) {
       let tmp_matches = [];
@@ -525,26 +525,21 @@ class WordSearch {
     }
     if (searchTerms?.level.length){
       if (app.state.isBESTEP) {
-        /*
-        form control returns (level):
-        200=GEPT words, 100=all AWL words, 1-10 AWL levels
-        */
         if (searchTerms.level[0] === Entry.FIND_GEPT_ONLY) {
-          // matchedEntryArr = matchedEntryArr.filter(el => el.levelStatus === Entry.GEPT_ONLY);
-          matchedEntryArr = matchedEntryArr.filter(entry => entry.levelGEPT?.length);
+          matchedEntryArr = matchedEntryArr.filter(entry => entry.isInGeptList);
         }
         else if (searchTerms.level[0] === Entry.FIND_AWL_ONLY) {
-          // matchedEntryArr = matchedEntryArr.filter(el => el.levelOther >= 1);
-          matchedEntryArr = matchedEntryArr.filter(entry => entry.level?.length);
+          matchedEntryArr = matchedEntryArr.filter(entry => entry.isInCurrentList);
         }
         else {
-          // matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.indexOf(el.levelOther) > -1);
-          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level?.[0]) > -1);
+          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level) > -1);
         }
       }
       else if (app.state.isGZ6K) {
-        // matchedEntryArr = matchedEntryArr.filter(el => searchTerms.level.includes(el.levelOther));
-          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level?.[0]) > -1);
+          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level) > -1);
+      }
+      else if (app.state.isREF2K && searchTerms.level.length) {
+          matchedEntryArr = matchedEntryArr.filter(entry => searchTerms.level.indexOf(entry.level) > -1);
       }
 
     }
@@ -574,6 +569,8 @@ class WordSearch {
   formatResultsAsHTML(results, resultType) {
     let resultsAsTags;
     const db_index = app.state.current.db_state;
+    // const levelHeadings = app.wordlist.headings[db_index];
+    const levelHeadings = app.ui.getLevelHeadingArr();
     if (app.tools.isEmpty(results)) {
       resultsAsTags = Tag.tag("span", ["class=warning"], ["Search returned no results."]);
     }
@@ -597,15 +594,17 @@ class WordSearch {
           console.log("PoS information missing from entry in wordlist:", entry.lemma);
         }
         // TODO: generalize this for all levels, maybe using separate level heading list in defaults
-        // let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.level_headings[entry.levelGEPT];
-        // let level = (app.state.isGZ6K) ? entry.levelOther : app.wordlist.gept_headings[entry.levelGEPT];
-        // if (entry.levelOther >= 1 && app.state.isBESTEP) level += `; AWL${entry.levelOther}`;
-        let level = app.wordlist.headings[db_index][entry.level];
-        if (app.state.isBESTEP) level = `${app.wordlist.headings[0][entry.levelGEPT]}; ${entry.levelAWL}`
-        if (!level) continue;
-        console.log(">> format results as html:", entry.lemma, ...entry.levelArr)
+        // let level = app.wordlist.headings[db_index][entry.level];
+        let level = levelHeadings[entry.level - 1];
+        if (app.state.isBESTEP) {
+          // const tmpGEPT = app.wordlist.headings[0][entry.levelGEPT - 1];
+          const tmpGEPT = app.ui.getLevelHeading(entry.levelGEPT, 0);
+          level = [tmpGEPT,level].filter(entry => entry).join("/");
+        }
+        // if (!level) continue;
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
-        const col2 = [lemmaPrefix, lemma, Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
+        // console.log(`>> format results as html: ${entry.lemma}, ${entry.level}, ${entry.levelArr}, heading=${levelHeadings[entry.level]}, note=${note}`)
+        const col2 = [lemmaPrefix, lemma, ": ", Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
         let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
         // console.log(">>>>", entry, class2)
         output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
@@ -788,10 +787,8 @@ class WordStatistics {
         if (token?.type.startsWith("w")) {
           let frequency = 0;
           if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
-          // const majorLevel = (app.state.isGZ6K) ? firstEntry.levelAWL + app.wordlist.awl_level_offset - 1 : firstEntry.levelGEPT;
-          const majorLevel = (app.state.isGZ6K) ? firstEntry.levelOther: firstEntry.levelGEPT;
-          // allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.levelGEPT, firstEntry.levelAWL];
-          allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, majorLevel, firstEntry.levelOther];
+          const majorLevel = (app.state.isGZ6K) ? firstEntry.level: firstEntry.levelGEPT;
+          allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, majorLevel, firstEntry.level];
           allLemmasByTokenID[i] = lemma;
         }
       }
@@ -819,7 +816,8 @@ class WordStatistics {
       // let levelText = (app.state.isGZ6K) ? app.wordlist.gz6k_headings[level - 1] : app.wordlist.gept_headings[level];
       // let levelText = (app.state.isBESTEP) ? app.wordlist.headings[0][??] : app.wordlist.gept_headings[level];
       // TODO: make bestep show gept level?
-      let levelText = app.wordlist.headings[app.state.current.db_state][level];
+      // let levelText = app.wordlist.headings[app.state.current.db_state][level];
+      let levelText = app.ui.getLevelHeading(level);
       if (!levelText) levelText = "offlist"
       statsForThisLevel.push([level, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
     }
@@ -1416,26 +1414,6 @@ class InformationPanes {
     return level;
   }
 
-  // buildHTMLlevelDot(entry) {
-  //   let html = "";
-  //   let dotText;
-  //   let geptLevel;
-  //   if (!app.state.isKids) {
-  //     if (app.state.isGZ6K) {
-  //       // dotText = entry.levelOther;
-  //       dotText = entry.level;
-  //     }
-  //     else {
-  //       geptLevel = entry.levelGEPT;
-  //       if (geptLevel >=0 && geptLevel <= 2) dotText = ["E", "I", "H"][geptLevel - 1];
-  //     }
-  //     html = (dotText) ? Tag.tag("span", ["class=dot"], [dotText]) : "";
-  //   }
-  //   // if (app.state.isBESTEP && entry.levelOther >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
-  //   if (app.state.isBESTEP && entry.levelAWL >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
-  //   return html;
-  // }
-
 
   buildHTMLlevelDot(entry) {
     let html = "";
@@ -1445,11 +1423,13 @@ class InformationPanes {
       dotText = "";
     }
     else if (app.state.isGZ6K) {
-      dotText = entry.level[0];
+      // dotText = entry.level[0];
+      dotText = entry.level;
     }
     else if (app.state.isREF2K) {
       // dotText = ["", "800", "1200"][entry.level];
-      dotText = entry.level[0];
+      // dotText = entry.level[0];
+      dotText = entry.level;
     }
     else if (entry.levelGEPT >=0 && entry.levelGEPT <= 2) {
         dotText = ["E", "I", "H"][entry.levelGEPT - 1];
@@ -1461,7 +1441,6 @@ class InformationPanes {
 
 
   buildHTMLlevelAWL(entry) {
-    // return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.levelOther}`])];
     return [" ", Tag.tag("span", ["class=awl-level"], [`AWL ${entry.level}`])];
   }
 
@@ -1773,7 +1752,6 @@ class Db {
     this.compounds = this.buildCompoundsDb(this.db);
     this.change(app.state.current.db_state)
     // this.level_headings = this.level_headings.concat(this.offlist_subs);
-    // nb dbKids.js currently uses GEPTlevel for its theme number & -1 for levelOther (need to change)
     // this.offlistThreshold = this.awl_level_offset + this.awl_headings.length;
   }
 
@@ -1807,13 +1785,13 @@ class Db {
     return db.map(entry => new Entry(...entry));
   }
 
-  mergeGEPT_AWL() {
-      let tmpDb1 = makeAWLdb();
-      // tmpDb1 = this.tweakAWLlevel(tmpDb1);
-      // console.log(">>>",tmpDb1)
-      return makeGEPTdb().concat(tmpDb1);
-      // return makeGEPTdb().concat(this.tweakAWLlevel(makeAWLdb()));
-  }
+  // mergeGEPT_AWL() {
+  //     let tmpDb1 = makeAWLdb();
+  //     // tmpDb1 = this.tweakAWLlevel(tmpDb1);
+  //     // console.log(">>>",tmpDb1)
+  //     return makeGEPTdb().concat(tmpDb1);
+  //     // return makeGEPTdb().concat(this.tweakAWLlevel(makeAWLdb()));
+  // }
 
 
   resetOfflistDb() {
@@ -1832,17 +1810,27 @@ class Db {
     return entryList;
   }
 
-  getEntriesByPartialLemma(lemma) {
-    // const entryList = this.db.filter(el => el.getLevel(app.state.current.db_state) && el.lemma.search(lemma) !== -1)
-    let entryList; // = this.db.filter(entry => entry.level?.length && entry.lemma.search(lemma) !== -1)
+  // getEntriesByPartialLemma(lemma) {
+  //   let entryList;
+  //   if (app.state.isBESTEP) {
+  //     entryList = this.db.filter(entry => (entry.isInGeptList || entry.isInCurrentList) && entry.lemma.search(lemma) !== -1)
+  //   }
+  //   else entryList = this.db.filter(entry => entry.isInCurrentList && entry.lemma.search(lemma) !== -1)
+  //   console.log("entries by partial lemma:", entryList)
+  //   return entryList;
+  // }
+
+  getEntriesByPartialLemma(searchLemma) {
+    let entryList = this.db.filter(entry => entry.isInCurrentList && entry.lemma.search(searchLemma) >= 0);
     if (app.state.isBESTEP) {
-      entryList = this.db.filter(entry => (entry.levelGEPT?.length || entry.level?.length) && entry.lemma.search(lemma) !== -1)
-      // entryList = this.db.filter(entry => (entry[2][0]?.length) && entry.lemma.search(lemma) !== -1)
+      const geptMatches = this.db.filter(entry => (entry.isInGeptList && !entry.isInCurrentList) && entry.lemma.search(searchLemma) >= 0);
+      // console.warn("it's a BESTep partial lemma search", {entryList}, {geptMatches})
+      entryList = entryList.concat(geptMatches)
     }
-    else entryList = this.db.filter(entry => entry.level?.length && entry.lemma.search(lemma) !== -1)
-    console.log("entries by partial lemma:", entryList)
+    // console.log("entries by partial lemma:", entryList)
     return entryList;
   }
+
 
   getEntryById(id) {
     // ** a negative id signifies an offlist word
@@ -2682,10 +2670,10 @@ class GenericSearch {
 
 class Entry {
   static currID = 0;
-  static AWL_ONLY = 1;
-  // static GEPT_ONLY = -1;
-  static GEPT_ONLY = 2;
-  static AWL_AND_GEPT = 3;
+  // static AWL_ONLY = 1;
+  // // static GEPT_ONLY = -1;
+  // static GEPT_ONLY = 2;
+  // static AWL_AND_GEPT = 3;
   static FIND_AWL_ONLY = 100;
   static FIND_GEPT_ONLY = 200;
 
@@ -2725,21 +2713,39 @@ class Entry {
     return (pos_str) ? pos_str.split("").map(el => app.wordlist.pos_expansions[el]).join(", ") : "";
   }
 
+  // get levelArr() { return this._levelArr }
+  // get levelGEPTRaw() { return this._levelArr[0] }
+  // get levelRaw() { return this._levelArr[app.state.current.db_state] }
+
+  // get isInCurrentList() { return this.levelRaw?.length}
+  // get isInGeptList() { return this.levelGEPTRaw?.length}
+
+  // get level() { return this._levelArr[app.state.current.db_state] }
+  // get level() { return this.levelRaw?.[0] }
+  // get levelGEPT() { return this._levelArr[0]?.[0] }
+  // get levelGEPT() { return this.levelGEPTRaw?.[0] }
+  // get levelAWL() { return this._levelArr[1]?.[0] }
+  // get levelKids() { return this._levelArr[2]?.[0] }
+  // get levelGZ6K() { return this._levelArr[3]?.[0] }
+  // get levelREF2K() { return this._levelArr[4]?.[0] }
+
+  // get isInCurrentList() { return this._levelArr[app.state.current.db_state]?.length }
+  // get isInGeptList() { return this._levelArr[0]?.length }
+  // getLevel(level) { return this._levelArr[level]?.[0] }
+
   get levelArr() { return this._levelArr }
+  getLevelRaw(level) {return this._levelArr[level]}
+  getLevelInt(level) { return this.getLevelRaw(level)?.[0] }
 
-  get level() { return this._levelArr[app.state.current.db_state] }
+  get isInCurrentList() { return this.getLevelRaw(app.state.current.db_state)?.length }
+  get isInGeptList() { return this.getLevelRaw(0)?.length }
 
-  get levelGEPT() { return this._levelArr[0] }
-
-  get levelAWL() { return this._levelArr[1] }
-
-  get levelKids() { return this._levelArr[2] }
-
-  get levelGZ6K() { return this._levelArr[3] }
-
-  get levelREF2K() { return this._levelArr[4] }
-
-  getLevel(level) { return this._levelArr[level] }
+  get level() { return this.getLevelInt(app.state.current.db_state)}
+  get levelGEPT() { return this.getLevelInt(0)}
+  get levelAWL() { return this.getLevelInt(1)}
+  get levelKids() { return this.getLevelInt(2)}
+  get levelGZ6K() { return this.getLevelInt(3)}
+  get levelREF2K() { return this.getLevelInt(4)}
 
 
   get notes() {

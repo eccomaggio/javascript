@@ -476,7 +476,7 @@ def process_from_raw():
 
     awl = [[entry[0], entry[1], entry[2][1], entry[3][2]] for entry in awl]
     gept = [[entry[0], entry[1], entry[2][0] + 1, entry[3]] for entry in gept] # *GEPT numbers levels from 0
-    kids = [[entry[0], entry[1], entry[2][0], entry[3]] for entry in kids]
+    kids = [[entry[0], entry[1], entry[2][0] - 2, entry[3]] for entry in kids]
 
     gept = sorted(gept)
     kids = sorted(kids)

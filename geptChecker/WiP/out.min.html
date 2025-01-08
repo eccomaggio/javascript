@@ -124,23 +124,6 @@
                 </label>
               </div>
             </fieldset>
-            <fieldset id="t1_level" style="display: block;">
-              <legend id="t1_level_legend">Level:</legend>
-              <div id="t1_level_inputs" class="line-el line">
-                <label for="t1_level_a" class="selected_txt default">any
-                  <input type="radio" name="glevel" id="t1_level_a" value="" checked="">
-                </label>
-                <label for="t1_level_e">elem.
-                  <input type="checkbox" name="glevel" id="t1_level_e" value="0">
-                </label>
-                <label for="t1_level_i">int.
-                  <input type="checkbox" name="glevel" id="t1_level_i" value="1">
-                </label>
-                <label for="t1_level_h">hi-int.
-                  <input type="checkbox" name="glevel" id="t1_level_h" value="2">
-                </label>
-              </div>
-            </fieldset>
             <fieldset id="t1_theme" style="display: none;">
               <legend id="t1_theme_legend">Theme:</legend>
               <div id="t1_theme_values">
@@ -182,6 +165,23 @@
                   <option value="36">Weather &amp; nature (天氣/自然)</option>
                   <option value="37">Wh-words (疑問詞)</option>
                 </select>
+              </div>
+            </fieldset>
+            <fieldset id="t1_level" style="display: block;">
+              <legend id="t1_level_legend">Level:</legend>
+              <div id="t1_level_inputs" class="line-el line">
+                <label for="t1_level_a" class="selected_txt default">any
+                  <input type="radio" name="glevel" id="t1_level_a" value="" checked>
+                </label>
+                <label for="t1_level_e">elem.
+                  <input type="checkbox" name="glevel" id="t1_level_e" value="0">
+                </label>
+                <label for="t1_level_i">int.
+                  <input type="checkbox" name="glevel" id="t1_level_i" value="1">
+                </label>
+                <label for="t1_level_h">hi-int.
+                  <input type="checkbox" name="glevel" id="t1_level_h" value="2">
+                </label>
               </div>
             </fieldset>
             <!-- <fieldset id="t1_awl" style="display: none;"> -->
@@ -253,6 +253,9 @@
                 <label for="t1_gz6k_6">6
                   <input type="checkbox" name="level" id="t1_gz6k_6" value="6">
                 </label>
+                <label for="t1_gz6k_7">supp.
+                  <input type="checkbox" name="level" id="t1_gz6k_7" value="7">
+                </label>
               </div>
             </fieldset>
             <fieldset id="t1_ref2k">
@@ -261,11 +264,11 @@
                 <label for="t1_ref2k_0" class="selected_txt default">all
                   <input type="radio" name="level" id="t1_ref2k_0" value="-1" checked>
                 </label>
-                <label for="t1_ref2k_1">1
-                  <input type="checkbox" name="level" id="t1_ref2k_1" value="1">
+                <label for="t1_ref2k_1">basic 800
+                  <input type="radio" name="level" id="t1_ref2k_1" value="1">
                 </label>
-                <label for="t1_ref2k_2">2
-                  <input type="checkbox" name="level" id="t1_ref2k_2" value="2">
+                <label for="t1_ref2k_2">basic 1200
+                  <input type="radio" name="level" id="t1_ref2k_2" value="2">
                 </label>
               </div>
             </fieldset>
@@ -302,6 +305,7 @@
                   <span class="level-gz4">4</span>,
                   <span class="level-gz5">5</span>,
                   <span class="level-gz6">6</span>,
+                  <span class="level-gz7">supp.</span>
                 </li>
                 <li id="help-kids"><span class="level-k">on-list</span></li>
                 <li id="help-offlist"><span class="level-o" id="l-o">off-list</span></li>

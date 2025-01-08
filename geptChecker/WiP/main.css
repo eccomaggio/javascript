@@ -572,8 +572,9 @@
       text-shadow: 0 2px 2px white, 0 -2px 1px var(--medium);
     }
 
-    .selected_txt,
-    #t1_theme_select[data-chosen="-1"] {
+    /* fieldset > div > label:has(input[checked]), */
+    #t1_theme_select[data-chosen="-1"],
+    .selected_txt {
       font-weight: bold;
       color: black;
       text-shadow: 0 2px 2px var(--medium), 0 -2px 1px white;
