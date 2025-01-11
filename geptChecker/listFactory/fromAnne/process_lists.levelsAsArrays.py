@@ -541,8 +541,7 @@ def compile_master_list(word_lists):
         for entry in list:
             lemma, pos = entry[:2]
             notes = ["","",""] # [chinese gloss, english note, awl headword] to be added later
-            # levels = [[] for _ in range(len(word_lists))]
-            levels = [0 for _ in range(len(word_lists))]
+            levels = [[] for _ in range(len(word_lists))]
             to_add_to_master = [[lemma, pos, levels, notes]]
             for revised_entry in to_add_to_master:
                 master_list_as_dict[make_unique_headword(revised_entry)] = revised_entry
@@ -550,14 +549,11 @@ def compile_master_list(word_lists):
     return sorted(master_list_as_dict.values())
 
 def add_levels_and_notes_to_master(word_lists, master_list_as_dict):
-    LEVEL = 2
-    NOTES = 3
     for i, (name, list) in enumerate(word_lists):
         for entry in list:
             if master_list_as_dict.get(headword := make_unique_headword(entry)):
-                # master_list_as_dict[headword][2][i] = [entry[2]]
-                master_list_as_dict[headword][LEVEL][i] = int(entry[2])
-                master_list_as_dict[headword][NOTES] = compile_master_notes(name, master_list_as_dict[headword][3], entry)
+                master_list_as_dict[headword][2][i] = [entry[2]]
+                master_list_as_dict[headword][3] = compile_master_notes(name, master_list_as_dict[headword][3], entry)
     return master_list_as_dict
 
 
@@ -615,8 +611,8 @@ def split_combined_entries(array):
 ###########################################################################
 
 if __name__ == "__main__":
-    # word_lists = process_from_raw()
-    word_lists = load_lists_from_master_tsvs()
+    word_lists = process_from_raw()
+    # word_lists = load_lists_from_master_tsvs()
     print_sample(word_lists)
 
     # gept = word_lists[0][1]
