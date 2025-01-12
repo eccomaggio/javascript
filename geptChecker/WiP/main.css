@@ -346,11 +346,12 @@
       color: var(--elem);
     }
 
-    .level-k {
+    /* .level-k {
       color: var(--int);
-    }
+    } */
 
-    .level-e, .level-i, .level-h, .level-k {
+    /* .level-e, .level-i, .level-h, .level-k { */
+    .level-e, .level-i, .level-h {
       font-weight: normal;
     }
 
@@ -367,7 +368,20 @@
       color: var(--lowlight);
     }
 
-    .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 { color: lightslategrey;}
+    .level-k,
+    .level-k1, .level-k2, .level-k3, .level-k4, .level-k5, .level-k6, .level-k7, .level-k8, .level-k9, .level-k10,
+    .level-k11, .level-k12, .level-k13, .level-k14, .level-k15, .level-k16, .level-k17, .level-k18, .level-k19, .level-k20,
+    .level-k21, .level-k22, .level-k23, .level-k24, .level-k25, .level-k26, .level-k27, .level-k28, .level-k29, .level-k30,
+    .level-k31, .level-k32, .level-k33, .level-k34, .level-k35 {
+      color: var(--int);
+      font-weight: normal;
+     }
+
+    /* .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 { color: lightslategrey;} */
+    .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 {
+      /* text-decoration-line: underline;
+      text-decoration-style: dotted; */
+    }
 
     .level-gz1 { color: var(--gz1);}
     .level-gz2 { color: var(--gz2); font-weight: bold;}

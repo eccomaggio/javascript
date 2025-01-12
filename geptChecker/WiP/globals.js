@@ -458,6 +458,7 @@ const LOOKUP = {
 
   repeatableWords: [
     "a",
+    "an",
     "and",
     "but",
     "or",

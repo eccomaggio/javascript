@@ -110,6 +110,28 @@ class EventListeners {
     HTM.workingDiv.addEventListener("mouseout", function(e) { app.info.hoverEffects(e) }, false);
   }
 
+  // setHighlightLevels(addListener=true) {
+  //   const levelStatsItems = document.querySelectorAll("#level-details-list > p");
+  //   console.log("level stats items:",levelStatsItems)
+  //   if (addListener) {
+  //     levelStatsItems.forEach(el =>
+  //       el.addEventListener("mouseover", function(e) { app.stats.toggleLevelHighlight(e)}
+  //     ));
+  //   }
+  //   else {
+  //     levelStatsItems.forEach(el =>
+  //       el.removeEventListener("mouseover", function(e) { app.stats.toggleLevelHighlight(e)}
+  //     ));
+  //   }
+  // }
+
+  setHighlightLevels(levelStatsItems) {
+    // console.log("level stats items:",levelStatsItems)
+    levelStatsItems.forEach(el => {
+      el.addEventListener("click", function(e) { app.stats.toggleLevelHighlight(e)}, false)
+    });
+  }
+
   addDetailToggle(levelDetailsTag) {
     // ** Added here as don't exist when page loaded; automatically garbage-collected when el destroyed
     if (levelDetailsTag) levelDetailsTag.addEventListener("toggle", function (e) { app.state.setLevel(e) }, false);
@@ -255,7 +277,8 @@ class UI {
           levelText = (geptHeading) ? geptHeading[0] : `awl${levelInt}`;
         }
         else if (app.state.isKids && levelInt <= db_headingsCount) {
-          levelText = "k";
+          // levelText = "k";
+          levelText = `k${levelInt}`;
         }
         else if (app.state.isGZ6K && levelInt <= db_headingsCount) {
           levelText = `gz${levelInt}`;
@@ -293,7 +316,7 @@ class UI {
       this.refreshRequired = false;
       this.refreshPermitted = false;
       // * This delay is required to stop accidental refresh requests during refresh process!
-      debounce(()=>this.refreshPermitted = true, 1000);
+      // debounce(()=>this.refreshPermitted = true, 1000);
       HTM.workingDiv.style.backgroundColor = "white";
       app.tabs.htm.textTabTag.classList.remove("to-refresh");
       app.backup.htm.backupSave2.style.display = "none";
@@ -559,7 +582,8 @@ class WordSearch {
           output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
         }
         const awlWord = app.ui.highlightAwlWord(entry.levelArr, entry.lemma);
-        const lemma = Tag.tag("strong", [], [awlWord]);
+        let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
+        const lemma = Tag.tag("strong", [`class=${class2} all-repeats`], [awlWord]);
         let pos;
         if (entry.posExpansion) pos = `[${entry.posExpansion}]`;
         else {
@@ -567,20 +591,29 @@ class WordSearch {
           console.log("PoS information missing from entry in wordlist:", entry.lemma);
         }
         // TODO: generalize this for all levels, maybe using separate level heading list in defaults
-        // let level = app.wordlist.headings[db_index][entry.level];
-        // let level = levelHeadings[entry.level - 1];
-        let level = app.ui.getLevelHeading(entry.level);
+        // let level = app.ui.getLevelHeading(entry.level);
+        // if (app.state.isBESTEP) {
+        //   const geptLevel = app.ui.getLevelHeading(entry.gept, 0);
+        //   console.log("level=", level, geptLevel, lemma)
+        //   if (level && geptLevel) level = geptLevel + "*" + level;
+        //   else if (geptLevel) level = geptLevel;
+        //   // level = [geptLevel,level].filter(entry => entry).join("/");
+        // }
+        let level;
         if (app.state.isBESTEP) {
-          const tmpGEPT = app.ui.getLevelHeading(entry.gept, 0);
-          level = [tmpGEPT,level].filter(entry => entry).join("/");
+          level = app.ui.getLevelHeading(entry.awl);
+          const geptLevel = app.ui.getLevelHeading(entry.gept, 0);
+          if (level && geptLevel) level = geptLevel + "/" + level;
+          else if (geptLevel) level = geptLevel;
         }
-        // if (!level) continue;
+        else level = app.ui.getLevelHeading(entry.level);
         let [note, awl_note] = app.ui.getNotesAsHTML(entry);
         // console.log(`>> format results as html: ${entry.lemma}, ${entry.level}, ${entry.levelArr}, heading=${levelHeadings[entry.level]}, note=${note}`)
         const col2 = [lemmaPrefix, lemma, ": ", Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [level]), note, awl_note];
-        let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
+        // let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
         // console.log(">>>>", entry, class2)
-        output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
+        // output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", class2));
+        output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", "dark"));
         previousInitial = currentInitial;
         i++;
       }
@@ -786,7 +819,7 @@ class WordStatistics {
         statsForThisLevel.push([level, levelPrefix, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
       }
     }
-    // console.log("stats for this level:",statsForThisLevel)
+    console.log("stats for this level:",statsForThisLevel)
     return statsForThisLevel;
   }
 
@@ -816,12 +849,12 @@ class WordStatistics {
     for (let [lemma, [freq, id, geptLevel, currLevel]] of Object.entries(this.allLemmas)){
       geptLevel = parseInt(geptLevel);
       currLevel = parseInt(currLevel);
-      if (geptLevel && app.state.isBESTEP) {
+      if (geptLevel < 100 && app.state.isBESTEP) {
         lemmasByLevel["gept"][geptLevel] = this.addOrUpdate(lemmasByLevel["gept"], geptLevel, lemma);
       }
       lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
     }
-    // console.log("lemmas by level", lemmasByLevel)
+    console.log("lemmas by level", lemmasByLevel)
     return lemmasByLevel;
   }
 
@@ -855,11 +888,21 @@ class WordStatistics {
         "Level statistics:",
         Tag.tag("em", [], [this.totalLemmaCount, " headwords"]),
       ]),
-      Tag.tag("div", ["class=level-stats-cols"], [...tmpStats])
+      Tag.tag("div", ["id=level-details-list","class=level-stats-cols"], [...tmpStats])
     ])
     ]);
     return levelStatsHTML.stringify();
   }
+
+  toggleLevelHighlight(e) {
+    const targetLevel = e.target.classList[0];
+    console.log("level stats level:", targetLevel)
+    if (targetLevel){
+      app.info.toggleHighlight(HTM.workingDiv.getElementsByClassName(targetLevel));
+      app.info.toggleHighlight([e.target]);
+    }
+  }
+
 }
 
 class Text {
@@ -886,6 +929,7 @@ class Text {
     app.repeats.displayList(repeatsHTML, levelStatsHTML);
     this.textDisplayWorking(resultsHTML);
     app.listeners.addDetailToggle(document.getElementById("level-details"));
+    app.listeners.setHighlightLevels(document.querySelectorAll("#level-details-list > p"));
   }
 
   getWordCountAsHTML(wordCount) {
@@ -970,14 +1014,16 @@ class Text {
     let [repStatusClass, dataReps, idLinkingReps] = ["", "", ""];
     if (word.totalReps > 0) {
       repStatusClass = "duplicate";
-      dataReps = `data-reps=${word.totalReps}`;
+      dataReps = `data-reps=${word.totalReps + 1}`;
       idLinkingReps = `id=${relatedWordsClass}_${word.thisRep + 1}`;
     }
     return [relatedWordsClass, repStatusClass, dataReps, idLinkingReps];
   }
 
   renderLevelInfo(word) {
-    const levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
+    let levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
+    // if (app.state.isBESTEP && word.levelArr.hasAwl) levelClass = `level-awl${word.levelArr.awl} ${levelClass}`;
+    if (app.state.isBESTEP && word.levelArr.hasAwl) levelClass += ` level-awl${word.levelArr.awl}`;
     // console.log(">> render level info:", app.state.current.db_state,word.lemma, word.levelArr[app.state.current.db_state], levelClass,...word.levelArr)
     const limitClass = app.limit.renderAsCSS(levelClass);
     let multiLevelStatusClass = "";
@@ -1593,7 +1639,7 @@ class Db {
     }},
     {name: "REF2K",
     toShow: [HTM.R_level],
-    levelLimits: ["level-800", "level-2k"],
+    levelLimits: ["level-r1", "level-r2", "level-o"],
     css: {
       _light: "#cbbcf6",
       _medium: "#a06ee1",
@@ -1835,6 +1881,7 @@ class Db {
     document.getElementById("help-gept").setAttribute("style", (app.state.isGEPT || app.state.isBESTEP) ? "display:list-item;" : "display:none;");
     document.getElementById("help-awl").setAttribute("style", (app.state.isBESTEP) ? "display:list-item;" : "display:none;");
     document.getElementById("help-gz6k").setAttribute("style", (app.state.isGZ6K) ? "display:list-item;" : "display:none;");
+    document.getElementById("help-ref2k").setAttribute("style", (app.state.isREF2K) ? "display:list-item;" : "display:none;");
   }
 }
 
