@@ -682,10 +682,12 @@ class Repeats {
           totalOfRepeatedLemmas,
           ` significant repeated word${app.tools.pluralNoun(totalOfRepeatedLemmas)}`,
         ]),
-        Tag.tag("p", [], [
-          Tag.tag("em", [], ["Click on word / number to jump to that occurrence."])
-        ]),
-        Tag.tag("div", ["id=repeats"], [...listOfRepeats]),
+        // Tag.tag("p", ["class=summary-instructions"], [
+        //   Tag.tag("em", [], ["Click on word / number to jump to that occurrence."])
+        // ]),
+        // Tag.tag("p", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
+        Tag.tag("aside", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
+        Tag.tag("div", ["id=repeats"], [...listOfRepeats])
       ]);
     }
     else {
@@ -847,9 +849,9 @@ class WordStatistics {
     // console.log("allLemmas:",this.allLemmas)
     let lemmasByLevel = {gept: {}, curr: {}}  // {level : [lemma, lemma, ...]}
     for (let [lemma, [freq, id, geptLevel, currLevel]] of Object.entries(this.allLemmas)){
-      geptLevel = parseInt(geptLevel);
       currLevel = parseInt(currLevel);
-      if (geptLevel < 100 && app.state.isBESTEP) {
+      geptLevel = parseInt(geptLevel);
+      if (geptLevel > 0 && geptLevel < 100 && app.state.isBESTEP) {
         lemmasByLevel["gept"][geptLevel] = this.addOrUpdate(lemmasByLevel["gept"], geptLevel, lemma);
       }
       lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
@@ -888,6 +890,7 @@ class WordStatistics {
         "Level statistics:",
         Tag.tag("em", [], [this.totalLemmaCount, " headwords"]),
       ]),
+      Tag.tag("aside", ["class=summary-instructions"], [ "Click on level to show all words at that level." ]),
       Tag.tag("div", ["id=level-details-list","class=level-stats-cols"], [...tmpStats])
     ])
     ]);
