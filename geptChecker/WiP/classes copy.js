@@ -239,8 +239,7 @@ class UI {
   }
 
   highlightAwlWord(levelArr, lemma) {
-    // console.log("highlight awl:", lemma, ...levelArr.levelArr, levelArr.hasAwl)
-    const result = (app.state.isBESTEP && levelArr.hasAwl) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
+    const result = (app.state.isBESTEP && levelArr.awl) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
     return result;
   }
 
@@ -249,20 +248,32 @@ class UI {
     let levelText;
     const offlistID = levels.offlistTypeID;
     if (offlistID) {
-      // console.log(">>>",...levels.levelArr)
       levelText = app.db.offlist_subs[offlistID - 100][0];
+      // TODO: change the numbering of offlist_subs to be triggered by minus numbers
     }
     else {
       let levelInt = (levels.level === -1) ? 0 : levels.level;
       if (levelInt) {
         levelText = app.db.prefix;
-        if (app.state.isBESTEP && levels.hasGept) {
-          levelInt = levels.gept;
-          // levelText = "g";
-          levelText = app.db.geptPrefix;
+        if (app.state.isBESTEP) {
+          if (levels.gept) {
+            levelInt = levels.gept;
+            levelText = "g";
+          }
         }
         levelText += levelInt;
       }
+
+      // if (levelInt || levels.hasGept) {
+      //   if (levelInt <= this.getLevelHeadingArr().length) {
+      //     levelText = app.db.prefix;
+      //   }
+      //   if (app.state.isBESTEP && levels.gept && levels.gept) {
+      //     // logic: use GEPT if available; else use AWL
+      //     levelText = app.db.defaults[0].prefix;
+      //   }
+      // }
+      // if (levelText) levelText += levelInt;
       else levelText = "o";
     }
     // console.log("levelPrefix:", levelText, levels.levelArr)
@@ -282,17 +293,17 @@ class UI {
   }
 
 
-  getLevelHeadingArr(dBindex=-1) {
+  getLevelHeadingArr(db_index=-1) {
     let result;
-    if (dBindex < 0) result = app.db.headings;
-    else result = app.db.defaults[dBindex].headings;
+    if (db_index < 0) result = app.db.headings;
+    else result = app.db.defaults[db_index].headings;
     return result;
   }
 
 
-  getLevelHeading(level, dBindex=-1) {
+  getLevelHeading(level, db_index=-1) {
     // * the -1 below is because headings are indexed from zero & levels from 1
-    return this.getLevelHeadingArr(dBindex)[level - 1];
+    return this.getLevelHeadingArr(db_index)[level - 1];
   }
 
 
@@ -798,7 +809,7 @@ class WordStatistics {
         statsForThisLevel.push([level, levelPrefix, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
       }
     }
-    // console.log("stats for this level:",statsForThisLevel)
+    console.log("stats for this level:",statsForThisLevel)
     return statsForThisLevel;
   }
 
@@ -834,7 +845,7 @@ class WordStatistics {
       }
       lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
     }
-    // console.log("lemmas by level", lemmasByLevel)
+    console.log("lemmas by level", lemmasByLevel)
     return lemmasByLevel;
   }
 
@@ -959,8 +970,6 @@ class Text {
   }
 
   buildHTMLword(token, wordIndex) {
-    // console.log(">>>", token.lemma, token.matches)
-    // token.matches.forEach( m => console.log("\t", m.bestep));
     // ** expects populated list of matches (therefore requires textLookupSimples)
     let word = {
       lemma: token.lemma,
@@ -1004,10 +1013,12 @@ class Text {
   }
 
   renderLevelInfo(word) {
-    // console.log("render >>>", word.lemma,word.id > 0, word, word.levelArr, app.ui.getLevelPrefix(word.levelArr))
+    const prefix = app.ui.getLevelPrefix(word.levelArr);
+    // console.log("render >>>", word.lemma, word.levelArr, prefix)
     let levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
-    // if (app.state.isBESTEP && word.levelArr.hasGept && word.levelArr.hasAwl) levelClass += ` level-a${word.levelArr.awl}`;
-    // if (word.levelArr.hasBestep && word.id > 0) levelClass += ` level-a${word.levelArr.awl}`;
+    // if (app.state.isBESTEP && word.levelArr.hasAwl) levelClass = `level-awl${word.levelArr.awl} ${levelClass}`;
+    if (app.state.isBESTEP && word.levelArr.hasAwl) levelClass += ` level-awl${word.levelArr.awl}`;
+    // console.log(">> render level info:", app.state.current.db_state,word.lemma, word.levelArr[app.state.current.db_state], levelClass,...word.levelArr)
     const limitClass = app.limit.renderAsCSS(levelClass);
     let multiLevelStatusClass = "";
     if (word.matchCount > 1) multiLevelStatusClass = (word.isMixedLevels) ? "multi-diff" : "multi-same";
@@ -1417,6 +1428,9 @@ class InformationPanes {
       levelStr = entry.pos; // a string, e.g. "jn"
     }
     else if (["d", "y", "c", "wo"].includes(tokenType)) levelStr = "";
+    // else if (app.state.isBESTEP && entry.gept) levelStr = app.ui.getLevelHeading(entry.gept, 0);
+    // else levelStr = app.ui.getLevelHeading(entry.level);
+    // else levelStr = app.word.getLevelInfoText(entry);
     else levelStr = app.ui.getLevelInfoText(entry);
     let level = (levelStr) ? [Tag.tag("em", [], levelStr), Tag.tag("br")] : [];
     return level;
@@ -1758,7 +1772,6 @@ class Db {
     this.list = this.createDbfromArray([[]].concat(make_db()));
     this.compounds = this.buildCompoundsDb(this.list);
     this.change(app.state.current.db_state);
-    this.geptPrefix = this.defaults[0].prefix;
   }
 
   change(e) {
@@ -1773,6 +1786,7 @@ class Db {
       this[key] = currentDb[key];
     }
     // this.compounds = this.buildCompoundsDb(this.db);
+    // TODO: fix this so that it clears the CSS highlighting!!!
     app.ui.resetLevelInputs();
     for (const key in this.css) {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
@@ -2310,7 +2324,6 @@ class GenericSearch {
 
 
   checkForEnglishSpelling(word) {
-    console.log("checking spelling...")
     // returns => [lemma, [ids...], type]
     let matchedEntryArr = this.checkVariantSpellings(word);
     if (!matchedEntryArr.length) matchedEntryArr = this.checkVariantSuffixes(word);
@@ -2666,12 +2679,11 @@ class Entry {
 
   get offlistTypeID() { return this._levels.offlistTypeID };
 
-  get hasGept() { return this._levels.hasGept };
-  get hasAwl() { return this._levels.hasAwl };
-  get hasKids() { return this._levels.hasKids };
-  get hasGz6k() { return this._levels.hasGz6k };
-  get hasRef2k() { return this._levels.hasRef2k };
-  get hasBestep() { return this._levels.hasBestep };
+  get hasGept() { return !!this.gept };
+  get hasAwl() { return !!this.awl };
+  get hasKids() { return !!this.kids };
+  get hasGz6k() { return !!this.gz6k };
+  get hasRef2k() { return !!this.ref2k };
   get isInCurrentList() {
     return !!this.level;
   }
@@ -2724,16 +2736,14 @@ class Token {
     }
     // * Sort matches by their GEPT level (low to high)
     if (this.matches.length > 1){
-      // this.matches.forEach(m => console.log(">>", this.lemma, m.bestep))
-      if (app.state.isBESTEP) this.matches.sort((a,b) => a.bestep[2] - b.bestep[2]);
-      else this.matches.sort((a,b) => a.gept - b.gept);
+      this.matches = this.matches.sort((a,b) => a.gept - b.gept);
     }
   }
 
   get isMixedLevels() {
     if (this.matches.length < 2) return false;
-    const levelOfEachMatch = this.matches.map(match => match.level);
-    return new Set(levelOfEachMatch).size === levelOfEachMatch.length;
+    const geptLevelOfMatches = this.matches.map(match => match.gept);
+    return new Set(geptLevelOfMatches).size === geptLevelOfMatches.length;
   }
 
   overwriteMatches(entryList) {
@@ -2832,39 +2842,28 @@ class Levels {
   get gz6k() { return this.levels[3] };
   get ref2k() { return this.levels[4] };
   get level() {
-    let result = this.bestep?.[0] ?? this.levels[app.state.current.db_state];
+    let result = this.levels[app.state.current.db_state];
+    if (!result && app.state.isBESTEP) result = this.gept;
+    // if (app.state.isBESTEP && this.levels.gept) result = this.gept;
     return result;
+    // return this.levels[app.state.db_state];
   }
 
-  get bestep() {
-    // * Logic: for BESTep, prefer GEPT level over AWL if available
-    let result;
-    if (app.state.isBESTEP && !this.offlistTypeID) {
-      // * the final field is to ensure gept sorts before awl
-      if (this.gept) result = [this.gept, app.db.geptPrefix, this.gept];
-      else result = [this.awl, app.db.prefix, 100 + this.awl];
-    }
-    return result;
-  }
+  // get bestep() {
+  //   return [this.gept, this.awl];
+  // }
 
   get offlistTypeID() {
     let id = 0;
-    // * offlist types are assigned a blanket [offlistID, -1, -1, -1, -1] levelArr
     if (this.gept > 100 && this.awl === -1) id = this.gept;
     return id;
   }
-  get hasGept() { return (this.gept > 0 && this.gept < 100) };
-  get hasAwl() { return this.awl > 0 };
-  get hasKids() { return this.kids > 0 };
-  get hasGz6k() { return this.gz6k > 0 };
-  get hasRef2k() { return this.ref2k > 0 };
-  // get hasBestep() { return !!(this.gept || this.awl)}
-  get hasBestep() { return !!(this.bestep?.[0])}
+  get hasGept() { return !!this.gept };
+  get hasAwl() { return !!this.awl };
+  get hasKids() { return !!this.kids };
+  get hasGz6k() { return !!this.gz6k };
+  get hasRef2k() { return !!this.ref2k };
   get isInCurrentList() {
     return !!this.level;
-    // let result;
-    // if (app.state.isBESTEP) result = !!this.hasBestep;
-    // else result = !!this.level;
-    // return result;
   }
 }

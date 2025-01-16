@@ -334,15 +334,15 @@
       font-weight: bold;
     }
 
-    .level-h, .level-r2{
+    .level-g3, .level-r2{
       color: var(--high);
     }
 
-    .level-i, .level-r1 {
+    .level-g2, .level-r1 {
       color: var(--int);
     }
 
-    .level-e {
+    .level-g1 {
       color: var(--elem);
     }
 
@@ -350,8 +350,8 @@
       color: var(--int);
     } */
 
-    /* .level-e, .level-i, .level-h, .level-k { */
-    .level-e, .level-i, .level-h {
+    /* .level-g1, .level-g2, .level-g3, .level-k { */
+    .level-g1, .level-g2, .level-g3 {
       font-weight: normal;
     }
 
@@ -377,19 +377,19 @@
       font-weight: normal;
      }
 
-    .level-awl1, .level-awl2, .level-awl3, .level-awl4, .level-awl5, .level-awl6, .level-awl7, .level-awl8, .level-awl9, .level-awl10 {}
+    .level-a1, .level-a2, .level-a3, .level-a4, .level-a5, .level-a6, .level-a7, .level-a8, .level-a9, .level-a10 {}
 
-    .level-gz1 { color: var(--gz1);}
-    .level-gz2 { color: var(--gz2); font-weight: bold;}
-    .level-gz3 { color: var(--gz3); font-weight: bold;}
-    .level-gz4 { color: var(--gz4); font-weight: bold;}
-    .level-gz5 { color: var(--gz5); font-weight: bold;}
-    .level-gz6 { color: var(--gz6); font-weight: bold;}
-    .level-gz7 { color: var(--gz7); font-weight: bold;}
+    .level-z1 { color: var(--z1);}
+    .level-z2 { color: var(--z2); font-weight: bold;}
+    .level-z3 { color: var(--z3); font-weight: bold;}
+    .level-z4 { color: var(--z4); font-weight: bold;}
+    .level-z5 { color: var(--z5); font-weight: bold;}
+    .level-z6 { color: var(--z6); font-weight: bold;}
+    .level-z7 { color: var(--z7); font-weight: bold;}
 
     td.level-o,
-    td.level-h,
-    td.level-i {
+    td.level-g3,
+    td.level-g2 {
       font-weight: normal;
     }
 
@@ -454,15 +454,15 @@
       background-color: var(--offlist);
     }
 
-    #t2_final_info > div.level-h {
+    #t2_final_info > div.level-g3 {
       background-color: var(--high);
     }
 
-    #t2_final_info > div.level-i {
+    #t2_final_info > div.level-g2 {
       background-color: var(--int);
     }
 
-    #t2_final_info > div.level-e,
+    #t2_final_info > div.level-g1,
     #t2_final_info > div.level-k {
       background-color: var(--elem);
     }
@@ -472,28 +472,28 @@
       background-color: var(--lowlight);
     }
 
-    #t2_final_info > div.level-gz1 {
-      background-color: var(--gz1);
+    #t2_final_info > div.level-z1 {
+      background-color: var(--z1);
     }
 
-    #t2_final_info > div.level-gz2 {
-      background-color: var(--gz2);
+    #t2_final_info > div.level-z2 {
+      background-color: var(--z2);
     }
 
-    #t2_final_info > div.level-gz3 {
-      background-color: var(--gz3);
+    #t2_final_info > div.level-z3 {
+      background-color: var(--z3);
     }
 
-    #t2_final_info > div.level-gz4 {
-      background-color: var(--gz4);
+    #t2_final_info > div.level-z4 {
+      background-color: var(--z4);
     }
 
-    #t2_final_info > div.level-gz5 {
-      background-color: var(--gz5);
+    #t2_final_info > div.level-z5 {
+      background-color: var(--z5);
     }
 
-    #t2_final_info > div.level-gz6 {
-      background-color: var(--gz6);
+    #t2_final_info > div.level-z6 {
+      background-color: var(--z6);
     }
 
 
