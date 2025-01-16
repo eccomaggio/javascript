@@ -1,6 +1,6 @@
 # HOW TO WORK WITH THIS APP
 corrections should be made to individual files. Final file should be assembled using `toggleWordlistHTML.py`.
-The name of the stand alone file should then be changed to `wordlistTool.htm`.
+The name of the stand alone file (out.htm) should then be changed to `wordlistTool.htm`.
 
 ## Logic:
 open geptchecker
@@ -49,12 +49,9 @@ Key to .json vocabulary lists: (AWL based on the table at https://www.eapfoundat
     "abstract",                lemma
     "jnv",                     list of parts of speech (here: adj, noun, verb)
     [
-        1,                     GEPT level (int+)
-        43,                    AWL level (6+)
-        3                      status++ (here: in both lists)
+			[gept], [awl], [kids], [gz6k], [ref2k]
     ],
-    OLD: "抽象的，摘要|abstract"      chinese gloss (if any) + separator + awl headword (if any)
-		NEW: [chinese, notes, awl headword]
+		[chinese, notes, awl headword]
 
 ], ...
 
@@ -169,11 +166,12 @@ checkAgainstLookups - [entry] —>
 
 	*****
 Todo:
-1) make all AWL levels count from zero (and same with kids?) - OK
-2) ?put level headings in with defaults? i.e. load once at start - CONSIDERING
-3) rename entry.levelAWL / AWLraw to levelLocal
-4) make general purpose lookups for:
+1) OK - make all heading levels count from zero (and same with kids?) - OK
+2) OK - ?put level headings in with defaults? i.e. load once at start - CONSIDERING
+3) KIND OF - rename entry.levelAWL / AWLraw to levelLocal
+4) OK - make general purpose lookups for:
 	getLevelDigit
 	getLevelHeading
 	getLevelShort
-5) think of a way to generically use color for 'color' OR 'background-color' (for info panes with gz6k) - DONE (slightly cludgily)
+5) OK - think of a way to generically use color for 'color' OR 'background-color' (for info panes with gz6k) - DONE (slightly cludgily)
+6) add in extra lists & update to allow (relatively) easy 'plug-in'

@@ -293,32 +293,38 @@
             <details class="instructions" id="help-details">
               <summary class='in-list-header'>HELP</summary>
               <ul id="help-all">
-                <li id="help-gept">GEPT:
-                  <span class="level-e">elem (A2)</span>,
-                  <span class="level-i">int (B1)</span>,
-                  <span class="level-h">hi-int (B2)</span>
+                <!-- <li id="help-gept">GEPT: -->
+                <li id="help-gept">
+                  <span class="level-g1">elem (A2)</span>,
+                  <span class="level-g2">int (B1)</span>,
+                  <span class="level-g3">hi-int (B2)</span>
+                  <span class="level-o">offlist</span>
                 </li>
-                <li id="help-gz6k">高中6K字 levels:
-                  <span class="level-gz1">1</span>,
-                  <span class="level-gz2">2</span>,
-                  <span class="level-gz3">3</span>,
-                  <span class="level-gz4">4</span>,
-                  <span class="level-gz5">5</span>,
-                  <span class="level-gz6">6</span>,
-                  <span class="level-gz7">supp.</span>
+                <!-- <li id="help-gz6k">高中6K字 levels: -->
+                <li id="help-gz6k">
+                  <span class="level-z1">1</span>,
+                  <span class="level-z2">2</span>,
+                  <span class="level-z3">3</span>,
+                  <span class="level-z4">4</span>,
+                  <span class="level-z5">5</span>,
+                  <span class="level-z6">6</span>,
+                  <span class="level-z7">supp.</span>
+                  <span class="level-o">offlist</span>
                 </li>
-                <li id="help-ref2k">國中r2K字 levels:
+                <!-- <li id="help-ref2k">國中r2K字 levels: -->
+                <li id="help-ref2k">
                   <span class="level-r1">800</span>,
                   <span class="level-r2">1200</span>
+                  <span class="level-o">offlist</span>
                 </li>
-                <li id="help-kids"><span class="level-k">on-list</span></li>
-                <li id="help-offlist"><span class="level-o" id="l-o">off-list</span></li>
+                <li id="help-kids"><span class="level-k">on-list</span> <span class="level-o">offlist</span></li>
+                <!-- <li id="help-offlist"><span class="level-o" id="l-o">off-list</span></li> -->
                 <li id="help-reps">superscript<sup>n</sup> = number of repetitions</li>
                 <li id="help-variants"><span class="variant">wavy underline</span> = form to avoid</li>
                 <!-- <li id="help-multi"><span class="multi-diff">double underline</span> = multiple levels</li> -->
                 <li id="help-multi"><span class="multi-diff">subscript queries</span> = multiple levels</li>
                 <li id="help-awl"><span class="awl-word">dotted underline</span> = AWL word</li>
-                <li id="help-refresh">To <b>refresh markup</b>, click the 'Text &#8635;' tab</li>
+                <li id="help-refresh" onclick="app.ui.signalRefreshNeeded('on'); app.text.refresh();">To <b>refresh markup</b>, click here or the <b>Text &#8635;</b> tab</li>
                 <li id="help-refresh">To <span class="wrong">strike through <b>unwanted</b> levels</span>, click a level above;<br>click again to remove</li>
               </ul>
             </details>

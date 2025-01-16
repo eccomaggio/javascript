@@ -254,18 +254,16 @@ class UI {
     }
     else {
       let levelInt = (levels.level === -1) ? 0 : levels.level;
-      if (levelInt) {
+      if (levelInt && levelInt < 100) {
         levelText = app.db.prefix;
         if (app.state.isBESTEP && levels.hasGept) {
           levelInt = levels.gept;
-          // levelText = "g";
           levelText = app.db.geptPrefix;
         }
         levelText += levelInt;
       }
       else levelText = "o";
     }
-    // console.log("levelPrefix:", levelText, levels.levelArr)
     return levelText;
   }
 
@@ -824,17 +822,20 @@ class WordStatistics {
   }
 
   compileLemmasByLevel() {
-    // console.log("allLemmas:",this.allLemmas)
+    console.log("allLemmas:",this.allLemmas)
     let lemmasByLevel = {gept: {}, curr: {}}  // {level : [lemma, lemma, ...]}
     for (let [lemma, [freq, id, geptLevel, currLevel]] of Object.entries(this.allLemmas)){
       currLevel = parseInt(currLevel);
       geptLevel = parseInt(geptLevel);
-      if (geptLevel > 0 && geptLevel < 100 && app.state.isBESTEP) {
-        lemmasByLevel["gept"][geptLevel] = this.addOrUpdate(lemmasByLevel["gept"], geptLevel, lemma);
+      if (app.state.isBESTEP) {
+        if (geptLevel > 0 && geptLevel < 100) {
+          lemmasByLevel["gept"][geptLevel] = this.addOrUpdate(lemmasByLevel["gept"], geptLevel, lemma);
+        }
+        else lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
       }
-      lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
+      else lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
     }
-    // console.log("lemmas by level", lemmasByLevel)
+    console.log("lemmas by level", lemmasByLevel)
     return lemmasByLevel;
   }
 
@@ -1301,15 +1302,33 @@ addfixes(tokenArr){
     return newEntry;
   }
 
+  // lookupWord(word) {
+  //   word = word.toLowerCase();
+  //   console.log("lookup:", word)
+  //   let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, app.db.getEntriesByExactLemma(word));
+  //   if (!matchedEntryArr.length) {
+  //     matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
+  //   }
+  //   const results = [tokenType, matchedEntryArr];
+  //   return results;
+  // }
+
+
   lookupWord(word) {
     word = word.toLowerCase();
-    let [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, app.db.getEntriesByExactLemma(word));
+    // console.log("lookup:", word)
+    let tokenType = "w";
+    let matchedEntryArr = app.db.getEntriesByExactLemma(word);
     if (!matchedEntryArr.length) {
-      matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
+      [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, matchedEntryArr);
+      if (!matchedEntryArr.length) {
+        matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
+      }
     }
     const results = [tokenType, matchedEntryArr];
     return results;
   }
+
 
   findBaseForm(word, subs) {
     // ** Uses lookup tables to apply spelling rules to return underlying base HTM.form candidates
@@ -1596,7 +1615,7 @@ class Db {
     prefix: "g",
     id: 0,
     toShow: [HTM.G_level],
-    levelLimits: ["level-e", "level-i", "level-h", "level-o"],
+    levelLimits: ["level-g1", "level-g2", "level-g3", "level-o"],
     css: {
       _light: "#cfe0e8",
       _medium: "#87bdd8",
@@ -1613,7 +1632,7 @@ class Db {
     prefix: "a",  // for "awl"
     id: 1,
     toShow: [HTM.G_level, HTM.B_AWL],
-    levelLimits: ["level-e", "level-i", "level-h", "level-o"],
+    levelLimits: ["level-g1", "level-g2", "level-g3", "level-o"],
     css: {
       _light: "#e1e5bb",
       _medium: "#d6c373",
@@ -1686,7 +1705,7 @@ class Db {
     prefix: "z",
     id: 3,
     toShow: [HTM.GZ_level],
-    levelLimits: ["level-gz1", "level-gz2", "level-gz3", "level-gz4", "level-gz5", "level-gz6", "level-gz7", "level-o"],
+    levelLimits: ["level-z1", "level-z2", "level-z3", "level-z4", "level-z5", "level-z6", "level-z7", "level-o"],
     css: {
       _light: "#C7BFD9",
       _medium: "#087E8B",
@@ -2297,7 +2316,7 @@ class GenericSearch {
       ];
       for (let [checkFunc, type] of checks) {
         matchedEntryArr = checkFunc.bind(this)(word);
-        if (matchedEntryArr) {
+        if (matchedEntryArr.length) {
           tokenType = type;
           break;
         }
@@ -2310,8 +2329,8 @@ class GenericSearch {
 
 
   checkForEnglishSpelling(word) {
-    console.log("checking spelling...")
-    // returns => [lemma, [ids...], type]
+    // console.log("checking spelling...")
+    // * returns => [lemma, [ids...], type]
     let matchedEntryArr = this.checkVariantSpellings(word);
     if (!matchedEntryArr.length) matchedEntryArr = this.checkVariantSuffixes(word);
     return matchedEntryArr;
@@ -2319,10 +2338,12 @@ class GenericSearch {
 
 
   checkNegativePrefix(word) {
+    // console.log("...checking for negative prefix")
     let matchedEntryArr = [];
     const prefix = this.hasNegativePrefix(word);
     if (prefix) {
-      const base = prefix;
+      const base = word.slice(prefix.length);
+      // console.log("base, prefix", base, prefix)
       matchedEntryArr = app.db.getEntriesByExactLemma(base);
       if (!matchedEntryArr.length) matchedEntryArr = this.checkDerivations(base, matchedEntryArr);
     }
@@ -2335,7 +2356,7 @@ class GenericSearch {
     if (word.length > 4) {
       const possiblePrefix = word.slice(0, 2);
       if (LOOKUP.prefixes.includes(possiblePrefix)) {
-        prefix = word.slice(2);
+        prefix = possiblePrefix;
       }
     }
     return prefix;
@@ -2350,6 +2371,7 @@ class GenericSearch {
       const len = variant.length;
       const root = word.slice(0, -len);
       const suffix = word.slice(-len);
+      // console.log("variant suffixes:", word, root, suffix)
       if (variant === suffix) {
         matchedLemmas.push(root + replacement);
       }
@@ -2375,6 +2397,7 @@ class GenericSearch {
     let matchedEntryArr = [];
     if (LOOKUP.notLetterVariant.includes(word)) return matchedEntryArr;
     for (const [letters, replacement] of LOOKUP.variantLetters) {
+      // console.log(">>", word, letters, replacement)
       matchedEntryArr = this.subLettersAndCheckForMatches(word, letters, replacement);
       // if (!app.tools.isEmpty(matchedEntryArr)) {
       if (matchedEntryArr.length) {
@@ -2407,7 +2430,8 @@ class GenericSearch {
 
 
   checkAllowedVariants(word, offlistID = 0) {
-    const shouldUpdateOfflistDb = (offlistID !== 0);
+    // console.log("...checking allowed variants")
+    // const shouldUpdateOfflistDb = (offlistID !== 0);
     let matchedIDarr = [];
     for (let check of [
       this.checkVariantWords,
@@ -2471,6 +2495,7 @@ class GenericSearch {
 
 
   checkDerivations(word, preMatchedIDarr = []) {
+    // console.log("...checking derivations")
     // returns => array of matched ids
     // NB. always returns a match, even if it is just "offlist"
     /* Tests
