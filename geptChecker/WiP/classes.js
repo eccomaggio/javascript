@@ -230,7 +230,7 @@ class UI {
     let note = "";
     let awl_note = "";
     if (entry) {
-      note = entry.notes;
+      note = entry.notesAsText;
       note = (note) ? `, ${note}` : "";
       awl_note = entry.awlHeadword;
       awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
@@ -238,7 +238,7 @@ class UI {
     return [note, awl_note];
   }
 
-  highlightAwlWord(levelArr, lemma) {
+  highlightAwlAsHTML(levelArr, lemma) {
     // console.log("highlight awl:", lemma, ...levelArr.levelArr, levelArr.hasAwl)
     const result = (app.state.isBESTEP && levelArr.hasAwl) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
     return result;
@@ -379,6 +379,25 @@ class Tools {
   newlinesToEOLs(text) {
     return text.replace("\n", EOL.text);
   }
+
+  expandDb(db) {
+    let result = [];
+    for (let entry of db) {
+      result.push([entry[0], entry[1], this.expandArray(entry[2]), entry[3]])
+    }
+    return result;
+  }
+
+  expandArray(arr, filler = 0) {
+    let expanded = arr
+      .join("_")
+      .replace("__", "_0_")
+      .split("_")
+      .map(el => parseInt(el));
+    return expanded.map(el => (isNaN(el)) ? 0 : el);
+    // expanded = expanded.map(el => (isNaN(el)) ? 0 : el);
+    // return expanded;
+  }
 }
 
 class WordSearch {
@@ -397,7 +416,7 @@ class WordSearch {
     app.ui.isExactMatch = (data.match[0] === "exact");
     let errorMsg = this.validateFormData(data);
     if (errorMsg) {
-      HTMLstringToDisplay = this.markStringAsError(errorMsg);
+      HTMLstringToDisplay = this.markStringAsErrorHTML(errorMsg).stringify();
     } else {
       const searchTerms = this.buildSearchTerms(data);
       [resultsArr, resultType] = this.runSearch(searchTerms);
@@ -406,8 +425,8 @@ class WordSearch {
     this.displayResults(HTMLstringToDisplay, resultsArr.length);
   }
 
-  markStringAsError(str) {
-    return Tag.tag("span", ["class=error"], [str]).stringify();
+  markStringAsErrorHTML(str, type="error") {
+    return Tag.tag("span", ["class=" + type], [str]);
   }
 
   updateKidstheme(e) {
@@ -552,7 +571,7 @@ class WordSearch {
   formatResultsAsHTML(results, resultType) {
     let resultsAsTags;
     if (app.tools.isEmpty(results)) {
-      resultsAsTags = Tag.tag("span", ["class=warning"], ["Search returned no results."]);
+      resultsAsTags = this.markStringAsErrorHTML("Search returned no results.","warning");
     }
     else {
       const lemmaPrefix = (resultType.length > 1) ? "≈ " : "";
@@ -565,7 +584,7 @@ class WordSearch {
         if (currentInitial !== previousInitial) {
           output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
         }
-        const awlWord = app.ui.highlightAwlWord(entry.levelArr, entry.lemma);
+        const awlWord = app.ui.highlightAwlAsHTML(entry.levelArr, entry.lemma);
         let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
         const lemma = Tag.tag("strong", [`class=${class2} all-repeats`], [awlWord]);
         let pos;
@@ -644,7 +663,7 @@ class Repeats {
           let displayText = rep;
           let displayClass = "class=anchors";
           if (rep === 1) {
-            displayText = app.ui.highlightAwlWord(entry.levelArr, lemma);
+            displayText = app.ui.highlightAwlAsHTML(entry.levelArr, lemma);
             displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelArr)}`;
           }
           anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [displayText]));
@@ -822,7 +841,7 @@ class WordStatistics {
   }
 
   compileLemmasByLevel() {
-    console.log("allLemmas:",this.allLemmas)
+    // console.log("allLemmas:",this.allLemmas)
     let lemmasByLevel = {gept: {}, curr: {}}  // {level : [lemma, lemma, ...]}
     for (let [lemma, [freq, id, geptLevel, currLevel]] of Object.entries(this.allLemmas)){
       currLevel = parseInt(currLevel);
@@ -835,7 +854,7 @@ class WordStatistics {
       }
       else lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
     }
-    console.log("lemmas by level", lemmasByLevel)
+    // console.log("lemmas by level", lemmasByLevel)
     return lemmasByLevel;
   }
 
@@ -968,7 +987,7 @@ class Text {
       id: token.matches[0].id,
       type: token.type,
       levelArr: token.matches[0].levelArr,
-      level: token.matches[0].gept,
+      // level: token.matches[0].gept,
       matches: token.matches,
       matchCount: token.matches.length,
       totalReps: token.info.totalReps,
@@ -976,7 +995,7 @@ class Text {
       isMixedLevels: token.isMixedLevels,
     }
     if (!word.matchCount) console.warn(`Unprocessed item (${word.lemma})!!`)
-    const renderedWord = app.ui.highlightAwlWord(word.levelArr, word.lemma);
+    const renderedWord = app.ui.highlightAwlAsHTML(word.levelArr, word.lemma);
     const variantClass = (word.type.includes("v")) ? " variant" : "";
     const [levelClass,
       limitClass,
@@ -1774,7 +1793,8 @@ class Db {
   constructor() {
     // *format: [lemma, pos, [levels: gept, awl, kids, gz6k, ref2k], [notes: gloss, note, awl-headword]]
     // add in dummy element at index 0 to start count from 1
-    this.list = this.createDbfromArray([[]].concat(make_db()));
+    // this.list = this.createDbfromArray([[]].concat(make_db()));
+    this.list = this.createDbfromArray([[]].concat(app.tools.expandDb(make_db())));
     this.compounds = this.buildCompoundsDb(this.list);
     this.change(app.state.current.db_state);
     this.geptPrefix = this.defaults[0].prefix;
@@ -2702,11 +2722,20 @@ class Entry {
   }
 
 
-  get notes() {
-    const gloss = this._notes[0];
-    const note = this._notes[1]
-    let text = (note) ? `${gloss}; ${note}` : gloss;
+  get notesAsText() {
+    // const gloss = this._notes[0];
+    // const note = this._notes[1]
+    // let text = (note) ? `${gloss}; ${note}` : gloss;
+    let text = (this.note) ? `${this.gloss}; ${this.note}` : this.gloss;
     return text;
+  }
+
+  get gloss() {
+    return this._notes[0];
+  }
+
+  get note() {
+    return this._notes[1];
   }
 
   get awlHeadword() {

@@ -611,6 +611,11 @@ def split_combined_entries(array):
                     array[to_split][LEMMA] = ""
     return [entry for entry in array if entry[LEMMA]]
 
+def compress_master_list(array):
+    compressed = [[entry[0], entry[1], entry[2], entry[3]] for entry in array]
+    compressed_str = str(compressed).replace("0,", ",").replace(", ", ",")
+    return compressed_str
+
 
 ###########################################################################
 
@@ -632,6 +637,11 @@ if __name__ == "__main__":
     master_list = compile_master_list(word_lists)
     master_list = split_combined_entries(master_list)
     # combine_split_entries(master_list_as_dict)
+
+    compressed_master_str = compress_master_list(master_list)
+    with open ("db_tiny.js", "w") as f:
+        # f.write(compressed_master_str)
+        f.write(f"function make_db() {{\n return {compressed_master_str}\n;}}")
 
     save_list_as_tsv(master_list, "../masterWordlists/master_list.tsv")
     save_list_as_js(master_list, "_", "../masterWordlists/db.js")

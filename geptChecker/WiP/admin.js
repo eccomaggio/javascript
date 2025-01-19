@@ -1,7 +1,7 @@
     "use strict";
     console.clear();
-    const versionNumber = "8.0.1";
-    const versionDetails = "*New GEPT wordlist; includes GZ6K & ref2k lists; edits 'in place'; *advises on preferred spellings; *recognizes negative prefixes and superfluous hyphens; *custom level strike-through; *preserves original spacing/punctuation";
+    const versionNumber = "8.1.0";
+    const versionDetails = "* Includes GZ6K & ref2k lists; stores db as sparse array to reduce file size; edits 'in place'; *advises on preferred spellings; *recognizes negative prefixes and superfluous hyphens; *custom level strike-through; *preserves original spacing/punctuation";
     const versionInfo = document.getElementById("version-no");
     versionInfo.innerHTML = `Version ${versionNumber}`;
     versionInfo.title += `\n${versionDetails}.`;
