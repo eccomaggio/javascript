@@ -27,6 +27,27 @@ hidden characters (e.g. @EOL@ displayed in backup) in in-place editing.
 ALTERNATIVE:
 change 'in-place' to show multiple senses ONLY as red squiggly underline; resolved in info box
 
+
+# Derivation Tests:
+negatives = aren't won't cannot
+irregular pasts = hidden written stole lain
+irregular plurals = indices, cacti, criteria, phenomena, radii, formulae, bases, children, crises
+Ving = "bobbing begging swimming buzzing picnicking hoping dying going flying"
+Vpp = robbed gagged passed busied played visited
+Superlatives = "longest hottest prettiest closest soonest"
+Comparatives = "longer hotter prettier closer sooner"
+Final-s =  families tries potatoes scarves crises boxes dogs
+regular ADVs =  happily clumsily annually finely sensibly sadly automatically
+
+# Simple list tests:
+gz6k: her hero's helmet is in the 42 helicopters, highlighting that he's heterosexual in the united kingdom.
+gept: I'm able to absorb 42 absurd band-aids.
+awl: analytic, commissioner, deregister, erroneous, federal, globalization, inevitable, mutual maturation
+
+
+
+
+
 # LIST OF CORRECTIONS:
 4-11-2023 correct vocab mistake: (gept.js / .json) 'benefit' changed from 'nj' to 'nv' so that 'benefited' is correctly recognized
 14-11-2023 vocab mistake: (global.js) 'misunderstood' added as irregular past of 'misunderstand'
