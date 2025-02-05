@@ -4,162 +4,17 @@ class App {
   wordlist;
   hasBeenReset = true;
 
-  locale = {
-    en: {
-      legends: {
-        term: "Search",
-        match: "Match",
-        level: "Level",
-        theme: "Theme",
-        pos: "PoS",
-        results: "Results",
-      },
-    }
-  }
-
-  shared = {
-    splitHere: "___",
-
-    abbreviations: {
-      mon: "monday",
-      tue: "tuesday",
-      tues: "tuesday",
-      wed: "wednesday",
-      weds: "wednesday",
-      thu: "thursday",
-      thur: "thursday",
-      thurs: "thursday",
-      fri: "friday",
-      sat: "saturday",
-      sun: "saturday",
-      jan: "january",
-      feb: "february",
-      mar: "march",
-      apr: "april",
-      jun: "june",
-      jul: "july",
-      aug: "august",
-      sep: "september",
-      sept: "september",
-      oct: "october",
-      nov: "november",
-      dec: "december",
-      vol: "volume",
-      kg: "kilogram",
-      km: "kilometer",
-      gm: "gram",
-      cm: "centimeter",
-      mm: "millimeter",
-      lb: "pound",
-      oz: "ounce",
-      l: "liter",
-      m: "meter:mile",
-      p: "page:penny",
-      g: "gram",
-      _: [5,4,3,2,1],
-    },
-
-    repeatableWords: [
-      "a",
-      "an",
-      "and",
-      "but",
-      "or",
-      "so",
-      "the",
-      "this",
-      "that",
-      "these",
-      "those",
-      "here",
-      "there",
-      "not",
-      "no",
-      "yes",
-      "be",
-      "are",
-      "have",
-      "had",
-      "do",
-      "he",
-      "him",
-      "his",
-      "I",
-      "i",
-      "is",
-      "are",
-      "was",
-      "were",
-      "me",
-      "mine",
-      "my",
-      "you",
-      "your",
-      "yours",
-      "she",
-      "her",
-      "hers",
-      "it",
-      "its",
-      "we",
-      "us",
-      "our",
-      "ours",
-      "they",
-      "their",
-      "theirs",
-      "one",
-      "this",
-      "that",
-      "these",
-      "those",
-      "who",
-      "which",
-      "where",
-      "when",
-      "how",
-      "why",
-      "what",
-      "that",
-      "more",
-      "in",
-      "on",
-      "at",
-      "of",
-      "by",
-      "with",
-      "to",
-      "from",
-      "for",
-      "m",
-      "re",
-      "ve",
-      "ll",
-      "d",
-      "t",
-      "s",
-      "wh",
-      "yn",
-      "sr",
-      "some",
-      "other",
-      "about",
-      "&"
-    ],
-  };
-
   EOL = {
     HTMLtext: "<hr>",
     tagName: "hr",
     simpleText: "EOL",
-    text: this.shared.splitHere + "EOL" + this.shared.splitHere,
-  };
+    text: LOOKUP.splitHere + "EOL" + LOOKUP.splitHere,
+  }
 
   constructor() {
     if (App.#instance) {
       throw new Error("Only one app is allowed to run at a time.");
     }
-
     App.#instance = this;
     this.htm = new Htm();
     this.tools = new Tools();
@@ -167,18 +22,18 @@ class App {
     this.backup = new Backup();
     this.listeners = new EventListeners();
     this.ui = new UI();
-    this.search = new GenericSearch(this.shared);
+    this.search = new GenericSearch();
     this.info = new InformationPanes();
-    this.word = new WordSearch(this.locale.en);
+    this.word = new WordSearch();
     this.text = new Text();
-    this.parser = new Parser(this.shared);
+    this.parser = new Parser();
     this.stats = new WordStatistics();
-    this.repeats = new Repeats(this.shared);
+    this.repeats = new Repeats();
   }
 
   init() {
     this.state = new State();
-    this.cursor = new Cursor(this.shared);
+    this.cursor = new Cursor();
     this.limit = new ShowLevelLimit();
     this.db = new Db(this.state.current.db_state);
     this.tabs.setTab(this.state.current.tab_state);
@@ -589,10 +444,6 @@ class WordSearch {
     ends: [".*", "$"]
   };
 
-  constructor(locale) {
-    this.legends = locale.legends;
-  }
-
   search(e) {
     let resultsArr = [];
     let resultType = "";
@@ -812,8 +663,7 @@ class WordSearch {
   }
 
   displayResults(resultsAsHtmlString, resultCount = 0) {
-    // let text = LOOKUP.legends.results;
-    let text = this.legends.results;
+    let text = LOOKUP.legends.results;
     if (resultCount) text += ` (${resultCount})`;
     app.htm.resultsLegend.innerHTML = text;
     app.htm.resultsText.innerHTML = resultsAsHtmlString;
@@ -834,10 +684,6 @@ class WordSearch {
 
 class Repeats {
   repsByLemma = {};
-
-  constructor(sharedLookups) {
-    this.shared = sharedLookups;
-  }
 
   buildHTMLrepeatList() {
     const repeatedLemmas = Object.keys(this.repsByLemma).sort();
@@ -924,8 +770,7 @@ class Repeats {
     const allLemmasByTokenID = app.stats.allLemmasByTokenID;
     let repsByLemma = {};
     for (const lemma of Object.keys(allFrequenciesByLemma)) {
-      // if (allFrequenciesByLemma[lemma][0] && !LOOKUP.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
-      if (allFrequenciesByLemma[lemma][0] && !this.shared.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
+      if (allFrequenciesByLemma[lemma][0] && !LOOKUP.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
     }
     this.repsByLemma = repsByLemma;
     const listOfRepeatedLemmas = Object.keys(repsByLemma);
@@ -1238,12 +1083,7 @@ class Parser {
     y: "symbol",
   };
 
-  constructor(sharedLookups) {
-    this.shared = sharedLookups;
-    this.shared.abbreviatedLemmas = Object.keys(this.shared.abbreviations);
-    this.splitAtUnderscoreOrBoundary = new RegExp(`${this.shared.splitHere}|\\b`);
-  }
-
+  splitAtUnderscoreOrBoundary = new RegExp(`${LOOKUP.splitHere}|\\b`);
 
   markup(revisedText) {
     app.ui.signalRefreshNeeded("off");
@@ -1302,7 +1142,7 @@ class Parser {
       else if (/\d/.test(el)) token = "d";             // digit
       else if (/[#$£]/.test(el)) token = "$";          // pre-digit punctuation (i.e. money etc.)
       else if (/[%¢]/.test(el)) token = "%";           // post-digit punctuation (i.e. money etc.)
-      // else if (/[+\-=@*<>&]/.test(el)) token = "y";    // symbols
+      else if (/[+\-=@*<>&]/.test(el)) token = "y";    // symbols
       else if (el === ".") token = "@";                // punctuation digit (i.e. occurs in digits)
       else if (el === ",") token = "@";
       else if (/["':;,./?!()[\]]/.test(el)) token = "p";                // punctuation
@@ -1378,9 +1218,7 @@ class Parser {
     for (let token of taggedTokenArr) {
       let toAdd = [];
       if (token.type === "d") {
-        // for (let el of Object.keys(LOOKUP.abbreviations)) {
-        // for (let el of Object.keys(this.shared.abbreviations)) {
-        for (let el of this.shared.abbreviatedLemmas) {
+        for (let el of Object.keys(LOOKUP.abbreviations)) {
           const ending = token.lemma.slice(-el.length)
           if (ending === el) {
             const num = token.lemma.slice(0, -el.length)
@@ -2427,10 +2265,8 @@ class Cursor {
   oldOffsetb = 0;
   increment = 0;
 
-  constructor(sharedLookups) {
-    this.shared = sharedLookups;
-    // this.text = LOOKUP.splitHere + this.simpleText + LOOKUP.splitHere;
-    this.text = this.shared.splitHere + this.simpleText + this.shared.splitHere;
+  constructor() {
+    this.text = LOOKUP.splitHere + this.simpleText + LOOKUP.splitHere;
   }
 
   displayInputCursor() {
@@ -2516,697 +2352,14 @@ class Cursor {
 
 class GenericSearch {
 
-  // shared = {};
-
-  lookup = {
-    s_subs: {
-      ies: ["y"],
-      oes: ["o"],
-      ves: ["fe", "f"],
-      es: ["e", "*"],
-      s: ["*"],
-      _: [3, 2, 1]
-    },
-
-    ly_subs: {
-      ily: ["y"],
-      lly: ["l", "ll", "le"],
-      ely: ["e"],
-      ically: ["ic"],
-      bly: ["ble"],
-      ly: ["*"],
-      _: [6, 3, 2]
-    },
-
-    // ## THE FOLLOWING ALL TRY TO INTERPRET WORD INFLECTIONS TO MATCH TO dB
-
-    prefixes: [
-      "un", "in", "im", "il", "ir",
-    ],
-
-    foreign_plurals: {
-      ae: ["a"],
-      a: ["um", "on"],
-      ia: ["ion"],
-      i: ["us", "o"],
-      es: ["is"],
-      ices: ["ex", "ix"],
-      // ives: ["ife"],
-      // ooves: ["oof"],
-      // arves: ["arf"],
-      lves: ["lf"],
-      men: ["man"],
-      // _: [1,2,3,4,5],
-      _: [1,2,3,4],
-    },
-
-    contractions: [
-      "m",
-      "re",
-      "ve",
-      "ll",
-      "d",
-      "t",
-      "s",
-      "&",
-    ],
-
-    irregPlural: {
-      feet: "foot",
-      geese: "goose",
-      men: "man",
-      mice: "mouse",
-      teeth: "tooth",
-      women: "woman",
-      children: "child",
-      oxen: "ox",
-      others: "other",  // ** irregular because it's an adj/pronoun
-      // an: "a"
-    },
-
-    irregNegVerb: {
-      aren: "be",
-      couldn: "could",
-      daren: "dare",
-      didn: "do",
-      doesn: "do",
-      don: "do",
-      hadn: "have",
-      hasn: "have",
-      haven: "have",
-      isn: "be",
-      mayn: "may",
-      mightn: "might",
-      mustn: "must",
-      needn: "need",
-      oughtn: "ought",
-      shan: "shall",
-      shouldn: "should",
-      wasn: "be",
-      weren: "be",
-      won: "will",
-      wouldn: "would",
-      cannot: "can",
-    },
-
-    irregVerb: {
-      am: "be",
-      is: "be",
-      are: "be",   // these are listed as sep words in the wordlist
-      were: "be",
-      was: "be",
-      been: "be",
-      has: "have",
-      does: "do",
-      arisen: "arise",
-      arose: "arise",
-      ate: "eat",
-      awoken: "awake",
-      babysat: "babysit",
-      beaten: "beat",
-      became: "become",
-      began: "begin",
-      begun: "begin",
-      bent: "bend",
-      // bet: "bet",
-      bit: "bite",
-      bitten: "bite",
-      bled: "bleed",
-      blew: "blow",
-      blown: "blow",
-      bore: "bear",
-      born: "bear", // this only works if bear(v) precedes noun in dB!
-      bought: "buy",
-      bound: "bind",
-      bred: "breed",
-      broke: "break",
-      broken: "break",
-      brought: "bring",
-      built: "build",
-      burnt: "burn",
-      came: "come",
-      caught: "catch",
-      chose: "choose",
-      chosen: "choose",
-      clung: "cling",
-      creep: "crept",
-      dealt: "deal",
-      did: "do",
-      done: "do",
-      dove: "dive",
-      drank: "drink",
-      drawn: "draw",
-      dreamt: "dream",
-      drew: "draw",
-      driven: "drive",
-      drove: "drive",
-      drunk: "drink",
-      dug: "dig",
-      dwelt: "dwell",
-      eaten: "eat",
-      fallen: "fall",
-      fed: "feed",
-      fell: "fall",
-      felt: "feel",
-      fled: "flee",
-      flew: "fly",
-      flung: "fling",
-      flown: "fly",
-      forbade: "forbid",
-      forbidden: "forbid",
-      forgave: "forgive",
-      forgiven: "forgive",
-      forgot: "forget",
-      forgotten: "forget",
-      foresaw: "foresee",
-      foreseen: "foresee",
-      fought: "fight",
-      found: "find",
-      froze: "freeze",
-      frozen: "freeze",
-      gave: "give",
-      given: "give",
-      gone: "go",
-      got: "get",
-      gotten: "get",
-      grew: "grow",
-      ground: "grind",
-      grown: "grow",
-      had: "have",
-      hanged: "hang",
-      heard: "hear",
-      held: "hold",
-      hid: "hide",
-      hidden: "hide",
-      hung: "hang",
-      kept: "keep",
-      knew: "know",
-      known: "know",
-      laid: "lay",
-      lain: "lie",
-      learnt: "learn",
-      led: "lead",
-      left: "leave",
-      lent: "lend",
-      lit: "light",
-      lost: "lose",
-      made: "make",
-      meant: "mean",
-      met: "meet",
-      misunderstood: "misunderstand",
-      mown: "mow",
-      outdid: "outdo",
-      outdone: "outdo",
-      overcame: "overcome",
-      paid: "pay",
-      pled: "plead",
-      proven: "prove",
-      ran: "run",
-      rang: "ring",
-      ridden: "ride",
-      risen: "rise",
-      rode: "ride",
-      rose: "rise",
-      rung: "ring",
-      said: "say",
-      sang: "sing",
-      sank: "sink",
-      sat: "sit",
-      saw: "see",
-      sought: "seek",
-      seen: "see",
-      sent: "send",
-      shaken: "shake",
-      shone: "shine",
-      shook: "shake",
-      shot: "shoot",
-      showed: "show",
-      shown: "show",
-      slept: "sleep",
-      slid: "slide",
-      smelt: "smell",
-      sold: "sell",
-      sped: "speed",
-      spent: "spend",
-      // spilt: "spill",
-      spoke: "speak",
-      spoken: "speak",
-      spun: "spin",
-      sprang: "spring",
-      sprung: "spring",
-      stank: "stink",
-      stunk: "stink",
-      stole: "steal",
-      stolen: "steal",
-      stood: "stand",
-      strove: "strive",
-      striven: "strive",
-      struck: "strike",
-      stuck: "stick",
-      stung: "sting",
-      sung: "sing",
-      sunk: "sink",
-      swam: "swim",
-      swept: "sweep",
-      swore: "swear",
-      sworn: "swear",
-      swum: "swim",
-      swung: "swing",
-      taken: "take",
-      taught: "teach",
-      thought: "think",
-      threw: "throw",
-      thrown: "throw",
-      told: "tell",
-      took: "take",
-      tore: "tear",
-      torn: "tear",
-      underwent: "undergo",
-      undergone: "undergo",
-      understood: "understand",
-      underlay: "underlie",
-      underlain: "underlie",
-      undertook: "undertake",
-      undertaken: "undertake",
-      wept: "weep",
-      went: "go",
-      withdrawn: "withdraw",
-      withdrew: "withdraw",
-      woke: "wake",
-      woken: "wake",
-      won: "win",
-      wore: "wear",
-      worn: "wear",
-      written: "write",
-      wrote: "write",
-      wrung: "wring",
-    },
-
-
-    // List of irregular lexical items (NOT regular derivations)
-    // e.g. hardly is not derived from adj: hard
-    falseDerivations: ["inner", "outer", "lately", "hardly", "am",],
-
-    // setOfCommonNames: new Set([
-    personalNames: [
-      "aaron",
-      "abigail",
-      "adam",
-      "alan",
-      "albert",
-      "alexander",
-      "alexis",
-      "alice",
-      "amanda",
-      "amber",
-      "amy",
-      "andrea",
-      "andrew",
-      "angela",
-      "ann",
-      "anne",
-      "anna",
-      "anthony",
-      "arthur",
-      "ashley",
-      "austin",
-      "barbara",
-      "benjamin",
-      "becky",
-      "betty",
-      "beverly",
-      "billy",
-      "bobby",
-      "brandon",
-      "brenda",
-      "brian",
-      "brittany",
-      "bruce",
-      "bryan",
-      "carl",
-      "carol",
-      "carolyn",
-      "catherine",
-      "charles",
-      "charlotte",
-      "cheryl",
-      // "christian",
-      "christina",
-      "christine",
-      "christopher",
-      "cindy",
-      "cynthia",
-      "daniel",
-      "danielle",
-      "david",
-      "deborah",
-      "debra",
-      "denise",
-      "dennis",
-      "diana",
-      "diane",
-      "donald",
-      "donna",
-      "doris",
-      "dorothy",
-      "douglas",
-      "dylan",
-      "edward",
-      "elijah",
-      "elizabeth",
-      "emily",
-      "emma",
-      "eric",
-      "ethan",
-      "eugene",
-      "evelyn",
-      "frances",
-      "frank",
-      "gabriel",
-      "gary",
-      "george",
-      "gerald",
-      "gloria",
-      // "grace",
-      "gregory",
-      "hannah",
-      "harold",
-      "heather",
-      "helen",
-      "henry",
-      "hogan",
-      "ingrid",
-      "iria",
-      "isabella",
-      "jack",
-      "jacob",
-      "jacqueline",
-      "james",
-      "janet",
-      "janice",
-      "jason",
-      "jean",
-      "jeffrey",
-      "jen",
-      "jennifer",
-      "jeremy",
-      "jerry",
-      "jesse",
-      "jessica",
-      "joan",
-      "joe",
-      "john",
-      "jonathan",
-      "jordan",
-      "jose",
-      "joseph",
-      "joshua",
-      //"joy",
-      "joyce",
-      "juan",
-      "judith",
-      "judy",
-      "julia",
-      "julie",
-      "justin",
-      "karen",
-      "katherine",
-      "kathleen",
-      "kathryn",
-      "kayla",
-      "keith",
-      "kelly",
-      "kenneth",
-      "kevin",
-      "kimberly",
-      "kyle",
-      "larry",
-      "laura",
-      "lauren",
-      "lawrence",
-      "linda",
-      "lisa",
-      "logan",
-      "lori",
-      "louis",
-      "lynn",
-      "madison",
-      "margaret",
-      "maria",
-      "marie",
-      "marilyn",
-      "mark",
-      "martha",
-      "mary",
-      "mason",
-      "matthew",
-      "megan",
-      "melissa",
-      "michael",
-      "michelle",
-      "miranda",
-      "nancy",
-      "natalie",
-      "nathan",
-      "nicholas",
-      "nicole",
-      "noah",
-      "olivia",
-      "ouyang",
-      "pamela",
-      "patricia",
-      "patrick",
-      "paul",
-      "peter",
-      "philip",
-      "rachel",
-      "ralph",
-      "randy",
-      "raymond",
-      "rebecca",
-      "richard",
-      "robert",
-      "roger",
-      "ronald",
-      "roy",
-      "russell",
-      "ruth",
-      "ryan",
-      "sally",
-      "samantha",
-      "samuel",
-      "sandra",
-      "sara",
-      "sarah",
-      "scott",
-      "sean",
-      "sharon",
-      "shirley",
-      "simon",
-      "sophia",
-      "stan",
-      "stephanie",
-      "stephen",
-      "steven",
-      "susan",
-      "teresa",
-      "terry",
-      "theresa",
-      "thomas",
-      "timothy",
-      "tim",
-      "tyler",
-      "victoria",
-      "vincent",
-      "virginia",
-      "vivian",
-      "walter",
-      "wayne",
-      "william",
-      "willie",
-      "zachary",
-      // ])
-    ],
-
-    variantWords: {
-      // n.b. these are stripped of trailing -e to allow match with -ing / -ed
-
-      // businessman: "businessperson",
-      // businesswoman: "businessperson",
-      // draught: "draft", // on list
-      // labell: "label",
-      // travell: "travel",
-      // vet: "veterinarian",
-      ad: ["advertisement"],
-      advisor: ["adviser"],
-      aeroplan: ["airplane"],
-      ageing: ["aging"],
-      aluminum: ["aluminium"], // i.e. the 'british' is standard in GEPT
-      analytic: ["analytical"],
-      appal: ["appall"],
-      archeology: ["archaeology"],
-      artefact: ["artifact"],
-      aunti: ["aunt"],
-      aunty: ["aunt"],
-      axe: ["ax"],
-      bacterium: ["bacteria"],
-      barbq: ["barbecue"],
-      bbq: ["barbecue"],
-      bik: ["bicycle"],
-      blond: ["blonde"],
-      bookshop: ["bookstore"],
-      botanic: ["botanical"],
-      cab: ["taxi"],
-      carer: ["caretaker"],
-      carryout: ["takeaway"],
-      catalogu: ["catalog"],
-      catsup: ["ketchup"],
-      centigrad: ["celsius"],
-      chairman: ["chair"],
-      chairwoman: ["chair"],
-      chequ: ["check"],
-      chequebook: ["checkbook"],
-      chili: ["chilli"],
-      coz: ["because"],
-      cuz: ["because"],
-      cosy: ["cozy"],
-      councillor: ["councilor"],
-      counsellor: ["counselor"],
-      crosswalk: ["crossing"],
-      datum: ["data"],
-      dependant: ["dependent"],
-      despatch: ["dispatch"],
-      disc: ["disk"],
-      distil: ["distill"],
-      donut: ["doughnut"],
-      dorm: ["dormitory"],
-      enquir: ["inquire","inquiry"],
-      enrol: ["enroll"],
-      fulfill: ["fulfil"],
-      gaol: ["jail"],
-      gramm: ["gram"],
-      grey: ["gray"],
-      groom: ["bridegroom"],
-      guerilla: ["guerrilla"],
-      gull: ["seagull"],
-      homogenous: ["homogeneous"],
-      icebox: ["refrigerator"],
-      instalment: ["installment"],
-      jewelry: ["jewellery"],
-      judgement: ["judgment"],
-      kitty: ["kitten"],
-      lab: ["laboratory"],
-      ladybird: ["ladybug"],
-      limo: ["limousine"],
-      litchi: ["lychee"],
-      mailman: ["mail carrier"],
-      mamma: ["mother"],
-      manoeuvr: ["maneuver"], // include because contains oe>e AND re>er
-      mom: ["mother"],
-      momma: ["mother"],
-      mommy: ["mother"],
-      mould: ["mold"],
-      mum: ["mother"],
-      mummy: ["mother"],
-      nope: ["no"],
-      orientat: ["orient"],
-      pingpong: ["table tennis"],
-      plough: ["plow"],
-      postman: ["mail carrier"],
-      programme: ["program"],
-      providing: ["provided"],
-      pyjama: ["pajamas"],
-      quartette: ["quartet"],
-      railway: ["railroad"],
-      rhino: ["rhinoceros"],
-      rotatory: ["rotary"],
-      sceptical: ["skeptical"],
-      skilful: ["skillful"],
-      sledge: ["sled"],
-      soya: ["soy"],
-      soyabean: ["soybean"],
-      spaceship: ["spacecraft"],
-      specialit: ["specialty"],
-      streetcar: ["trolley"],
-      sulphur: ["sulfur"],
-      symbolical: ["symbolic"],
-      takeout: ["takeaway"],
-      taxicab: ["taxi"],
-      tb: ["tuberculosis"],
-      teeshirt: ["t-shirt"],
-      tram: ["trolley"],
-      tramcar: ["trolley"],
-      tshirt: ["t-shirt"],
-      tummy: ["stomach"],
-      tyr: ["tire"],
-      vet: ["veteran","veterinarian"],
-      vs: ["versus"],
-      whisky: ["whiskey"],
-      xmas: ["christmas"],
-      yoghurt: ["yogurt"],
-      _: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-      // _: [10, 9, 8, 7, 6, 5, 4, 3, 2],
-    },
-
-
-    variantSuffixes: [
-      ["enc", "ense"],    // licence
-      // ["e", ""],
-      ["r", "er"],        // centre
-      ["is", "ize"],      // organise
-      ["is", "ice"],      // practise
-      ["lys", "lyze"],    // analyse
-      ["ogu", "og"],      // dialogue
-      ["eabl", "able"],   // likeable
-      ["ward", "ward"],   //  downwards
-    ],
-
-    variantLetters: [
-      ["ou", "o"],
-      ["ll", "l"],
-      ["ae", "e"],
-      ["oe", "e"],
-      ["ss", "s"],
-    ],
-
-    notLetterVariant: [
-      "fourth",
-    ],
-
-    gendered_nouns: {
-      businessm: 'businessperson',
-      businesswom: 'businessperson',
-      chairm: 'chairperson',
-      chairwom: 'chairperson',
-      firem: 'firefighter',
-      mailm: 'mail carrier',
-      postm: 'mail carrier',
-      salesm: 'salesperson',
-      saleswom: 'salesperson',
-      spokesm: 'spokesperson',
-      spokeswom: 'spokesperson',
-      sportsm: 'sportsperson',
-      sportswom: 'sportsperson',
-      stewardess: 'steward',
-      _: [5, 6, 7, 8, 9, 10, 11],
-    },
-
-  };
-
-  constructor(sharedLookups) {
-    this.shared = sharedLookups;
-    this.shared.abbreviatedLemmas = Object.keys(this.shared.abbreviations);
-    // console.warn("generic search:",this.shared)
-  }
-
   suffixChecks = [
     // ["es", this.findRootAsArray, LOOKUP.s_subs, ["n", "v"]],
-    ["s", this.findRootAsArray, this.lookup.s_subs, ["n", "v"]],
+    ["s", this.findRootAsArray, LOOKUP.s_subs, ["n", "v"]],
     ["ing", this.findRootErEstEdIng, "ing", ["v"]],
     ["ed", this.findRootErEstEdIng, "ed", ["v"]],
     ["est", this.findRootErEstEdIng, "est", ["j"]],
     ["er", this.findRootErEstEdIng, "er", ["j"]],
-    ["ly", this.findRootAsArray, this.lookup.ly_subs, ["j", "v"]], // added verbs to allow for 'satisfy-ing-ly' etc.
+    ["ly", this.findRootAsArray, LOOKUP.ly_subs, ["j", "v"]], // added verbs to allow for 'satisfy-ing-ly' etc.
   ];
 
 
@@ -3228,13 +2381,11 @@ class GenericSearch {
       for (let [checkFunc, type] of checks) {
         matchedEntryArr = checkFunc.bind(this)(word);
         if (matchedEntryArr.length) {
-          // console.log(">>", word, checkFunc.name, matchedEntryArr)
           tokenType = type;
           break;
         }
       }
     }
-    // console.log("check for offlist:", word, matchedEntryArr)
     if (!matchedEntryArr.length) tokenType = "wo";  // offlist
     // console.log('**check against lookups:', word, tokenType, matchedEntryArr)
     return [tokenType, matchedEntryArr];
@@ -3268,7 +2419,7 @@ class GenericSearch {
     let prefix = "";
     if (word.length > 4) {
       const possiblePrefix = word.slice(0, 2);
-      if (this.lookup.prefixes.includes(possiblePrefix)) {
+      if (LOOKUP.prefixes.includes(possiblePrefix)) {
         prefix = possiblePrefix;
       }
     }
@@ -3280,7 +2431,7 @@ class GenericSearch {
     let matchedLemmas = [];
     let matchedEntryArr = [];
     word = this.removeObviousSuffixes(word);
-    for (const [variant, replacement] of this.lookup.variantSuffixes) {
+    for (const [variant, replacement] of LOOKUP.variantSuffixes) {
       const len = variant.length;
       const root = word.slice(0, -len);
       const suffix = word.slice(-len);
@@ -3308,8 +2459,8 @@ class GenericSearch {
 
   checkVariantSpellings(word) {
     let matchedEntryArr = [];
-    if (this.lookup.notLetterVariant.includes(word)) return matchedEntryArr;
-    for (const [letters, replacement] of this.lookup.variantLetters) {
+    if (LOOKUP.notLetterVariant.includes(word)) return matchedEntryArr;
+    for (const [letters, replacement] of LOOKUP.variantLetters) {
       // console.log(">>", word, letters, replacement)
       matchedEntryArr = this.subLettersAndCheckForMatches(word, letters, replacement);
       if (matchedEntryArr.length) {
@@ -3351,8 +2502,7 @@ class GenericSearch {
       this.checkGenderedNouns,
     ]) {
       let result = check(word);
-      if (result.length && result[0]) {
-        console.log(">>", word, check.name, result)
+      if (result.length) {
         matchedIDarr.push(...result);
         // console.log(">> search:", ...result,app.db.getEntriesByExactLemma(...result) )
         // matchedIDarr.push(app.db.getEntriesByExactLemma(...result));
@@ -3368,8 +2518,7 @@ class GenericSearch {
 
 
   checkVariantWords(word) {
-    // const arrayOfPossibleLemmas = app.search.findRootAsArray(word, this.lookup.variantWords);
-    let arrayOfPossibleLemmas = app.search.findRootAsArray(word, app.search.lookup.variantWords);
+    const arrayOfPossibleLemmas = app.search.findRootAsArray(word, LOOKUP.variantWords);
     return arrayOfPossibleLemmas.map(lemma => app.db.getEntriesByExactLemma(lemma)?.[0]);
   }
 
@@ -3377,12 +2526,8 @@ class GenericSearch {
   checkAbbreviations(word) {
     word = word.replace(".", "");
     let matchedEntryArr = [];
-    // if (LOOKUP.abbreviations.hasOwnProperty(word)) {
-      // const match = LOOKUP.abbreviations[word];
-    // if (this.shared.abbreviations.hasOwnProperty(word)) {
-    // if (this.shared.abbreviatedLemmas.includes(word)) {
-    if (app.search.shared.abbreviatedLemmas.includes(word)) {
-      const match = this.shared.abbreviations[word];
+    if (LOOKUP.abbreviations.hasOwnProperty(word)) {
+      const match = LOOKUP.abbreviations[word];
       for (const lemma of match.split(":")) {
         matchedEntryArr.push(...app.db.getEntriesByExactLemma(lemma));
       }
@@ -3393,12 +2538,11 @@ class GenericSearch {
   checkGenderedNouns(word) {
     let lemma = "";
     let matchedEntryArr = []
-    // for (let key of Object.keys(this.lookup.gendered_nouns)) {
-    for (let key of Object.keys(app.search.lookup.gendered_nouns)) {
+    for (let key of Object.keys(LOOKUP.gendered_nouns)) {
       const truncated = word.slice(0, key.length)
       const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
       if (searchTerm === truncated) {
-        lemma = this.lookup.gendered_nouns[key];
+        lemma = LOOKUP.gendered_nouns[key];
         matchedEntryArr = app.db.getEntriesByExactLemma(lemma)
         break;
       }
@@ -3422,7 +2566,7 @@ class GenericSearch {
     Final-s =  families tries potatoes scarves crises boxes dogs
     regular ADVs =  happily clumsily annually finely sensibly sadly automatically
     */
-    if (!this.lookup.falseDerivations.includes(word)) {
+    if (!LOOKUP.falseDerivations.includes(word)) {
       let localMatches = [];
       for (const guess of [
         this.checkNames,
@@ -3451,7 +2595,7 @@ class GenericSearch {
 
   checkNames(word) {
     let matchedEntryArr = [];
-    if (this.lookup.personalNames.includes(word)) {
+    if (LOOKUP.personalNames.includes(word)) {
       matchedEntryArr.push(app.parser.markOfflist(word, "name"));
     }
     return matchedEntryArr;
@@ -3468,7 +2612,7 @@ class GenericSearch {
 
   checkIrregularNegatives(word) {
     let matchedEntryArr = [];
-    const lookup = this.lookup.irregNegVerb[word];
+    const lookup = LOOKUP.irregNegVerb[word];
     /* assume (e.g. do / have) that if there are two matches, one will be the full verb & one the aux.; return only the aux. If only one match, assume it is an anomalous verb like dare / need, not a full aux., so return the single match. */
     if (lookup) {
       const entries = app.db.getEntriesByExactLemma(lookup);
@@ -3483,7 +2627,7 @@ class GenericSearch {
 
   checkIrregularVerbs(word) {
     let matchedEntryArr = [];
-    const lookup = this.lookup.irregVerb[word];
+    const lookup = LOOKUP.irregVerb[word];
     if (lookup) {
       matchedEntryArr.push(...this.winnowEntriesByPos(app.db.getEntriesByExactLemma(lookup), ["x", "v"]));
     }
@@ -3492,7 +2636,7 @@ class GenericSearch {
 
   checkIrregularPlurals(word) {
     let matchedEntryArr = [];
-    const lookup = this.lookup.irregPlural[word];
+    const lookup = LOOKUP.irregPlural[word];
     if (lookup) {
       // ** words in the lookup are most likely the correct word (and 'others / yourselves' aren't nouns!)
       matchedEntryArr.push(...app.db.getEntriesByExactLemma(lookup));
@@ -3506,10 +2650,10 @@ class GenericSearch {
     if (word.length > 2) {
       let matchArr = [];
       let max = word.length - 1;
-      for (let i of this.lookup.foreign_plurals["_"]) {
+      for (let i of LOOKUP.foreign_plurals["_"]) {
         if (i > max) break;
         const plural = word.slice(-i);
-        matchArr = this.lookup.foreign_plurals[plural];
+        matchArr = LOOKUP.foreign_plurals[plural];
           // console.log("check for foreign plurals:", word.length, max,i,  word, word.slice(0, -i), plural, matchArr)
         if (matchArr?.length){
           const root = word.slice(0, -i);
