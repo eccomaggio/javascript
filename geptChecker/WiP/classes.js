@@ -293,7 +293,6 @@ class EventListeners {
 
 
   setHighlightLevels(levelStatsItems) {
-    // console.log("level stats items:",levelStatsItems)
     levelStatsItems.forEach(el => {
       el.addEventListener("click", function(e) { app.stats.toggleLevelHighlight(e)}, false)
     });
@@ -393,8 +392,6 @@ class UI {
   }
 
   resetLevelInputs() {
-    // const allInputs = app.htm.form.querySelectorAll("input[name='level']");
-    // allInputs.forEach(el => {
     app.htm.form.querySelectorAll("input[name='level']").forEach(el => {
       el.checked = (parseInt(el.value) === -1);
       el.parentElement.classList.toggle("selected_txt", parseInt(el.value) === -1); // * utilizes 'force' option
@@ -420,7 +417,6 @@ class UI {
   }
 
   highlightAwlAsHTML(levelArr, lemma) {
-    // console.log("highlight awl:", lemma, ...levelArr.levelArr, levelArr.hasAwl)
     const result = (app.state.isBESTEP && levelArr.hasAwl) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
     return result;
   }
@@ -430,7 +426,6 @@ class UI {
     let levelText;
     const offlistID = levels.offlistTypeID;
     if (offlistID) {
-      // console.log(">>>",...levels.levelArr)
       levelText = app.db.offlist_subs[offlistID - 100][0];
     }
     else {
@@ -501,7 +496,6 @@ class UI {
 
 class Tools {
   NBSP = String.fromCharCode(160);
-  // SplitHere = "___";
 
   isEmpty(arr) {
     if (typeof arr !== "object") return arr;
@@ -576,8 +570,6 @@ class Tools {
       .split("_")
       .map(el => parseInt(el));
     return expanded.map(el => (isNaN(el)) ? 0 : el);
-    // expanded = expanded.map(el => (isNaN(el)) ? 0 : el);
-    // return expanded;
   }
 }
 
@@ -616,10 +608,8 @@ class WordSearch {
 
   updateKidstheme(e) {
     const selection = e.target;
-    // debug(selection.tagName, selection.value)
     selection.dataset.chosen = selection.value;
     this.search(e);
-    // app.htm.form.submit();
   }
 
   getFormData(e) {
@@ -3552,12 +3542,14 @@ findRootErEstEdIng(word, suffix) {
   let matchedEntryArr = [];
   if (!word.endsWith(suffix)) return matchedEntryArr;
   let root = word.slice(0, -suffix.length);
-  const ult = root.slice(-1);
-  const penult = root.slice(-2, -1)
-  //console.log(root, suffix, ult, penult)
-  if (ult === penult) root = [root.slice(0, -1)];
-  else if (ult === "i") root = [root.slice(0, -1) + "y"];
-  else root = [root, root + "e"];
+  if (root.endsWith("ee")) root = [root];
+  else {
+    const ult = root.slice(-1);
+    const penult = root.slice(-2, -1)
+    if (ult === penult) root = [root.slice(0, -1)];
+    else if (ult === "i") root = [root.slice(0, -1) + "y"];
+    else root = [root, root + "e"];
+  }
   return root;
 }
 
@@ -3720,9 +3712,15 @@ class Token {
       // else throw new TypeError(`Entry.matches for <${this.lemma}> must be an array of Entries.`)
       else console.log(`Entry.matches for <${this.lemma}> must be an array of Entries. ${entryList}`)
     }
+    // * Potential matches trump offlist
+    const hasOfflist = this.matches.some(entry => entry.id >= 0);
+    const hasOnlist = this.matches.some(entry => entry.id < 0);
+    if (hasOfflist && hasOnlist) this.matches = this.matches.filter(entry => entry.id >= 0);
+    // let potentialMatches = this.matches.filter(entry => entry.id >= 0);
+    // console.log(this.matches[0].lemma,  potentialMatches.length,">>>", this.matches.length, potentialMatches.length === this.matches.length, potentialMatches, this.matches)
+    // if (potentialMatches.length !== this.matches.length) this.matches = potentialMatches;
     // * Sort matches by their GEPT level (low to high)
     if (this.matches.length > 1){
-      // this.matches.forEach(m => console.log(">>", this.lemma, m.bestep))
       if (app.state.isBESTEP) this.matches.sort((a,b) => a.bestep[2] - b.bestep[2]);
       else this.matches.sort((a,b) => a.gept - b.gept);
     }
