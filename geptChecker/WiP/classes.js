@@ -1,7 +1,7 @@
 
 class App {
   state;
-  wordlist;
+  // wordlist;
   hasBeenReset = true;
 
   locale = {
@@ -587,7 +587,7 @@ class WordSearch {
 
   search(e) {
     let resultsArr = [];
-    let resultType = "";
+    // let resultType = "";
     let HTMLstringToDisplay = "";
     const data = this.getFormData(e);
     app.ui.isExactMatch = (data.match[0] === "exact");
@@ -596,8 +596,9 @@ class WordSearch {
       HTMLstringToDisplay = this.markStringAsErrorHTML(errorMsg).stringify();
     } else {
       const searchTerms = this.buildSearchTerms(data);
-      [resultsArr, resultType] = this.runSearch(searchTerms);
-      HTMLstringToDisplay = this.formatResultsAsHTML(resultsArr, resultType);
+      // [resultsArr, resultType] = this.runSearch(searchTerms);
+      resultsArr = this.runSearch(searchTerms);
+      HTMLstringToDisplay = this.formatResultsAsHTML(resultsArr, searchTerms.raw_lemma);
     }
     this.displayResults(HTMLstringToDisplay, resultsArr.length);
   }
@@ -683,17 +684,20 @@ class WordSearch {
   runSearch(searchTerms) {
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
     console.log("searchterms:",searchTerms)
-    let [tokenType, matchedEntryArr] = this.getLemmaMatches(searchTerms);
+    // let [tokenType, matchedEntryArr] = this.getLemmaMatches(searchTerms);
+    let [_, matchedEntryArr] = this.getLemmaMatches(searchTerms);
     matchedEntryArr = this.getGlevelMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = this.getPosMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = this.getLevelMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = matchedEntryArr.filter(result => result.id > 0);
-    return [matchedEntryArr, tokenType];
+    // return [matchedEntryArr, tokenType];
+    return matchedEntryArr;
   }
 
   getLemmaMatches(searchTerms) {
     let tokenType;
     let matchedEntryArr = app.db.getEntriesByPartialLemma(searchTerms.lemma);
+    // console.log("get lemma matches:", matchedEntryArr);
     [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, matchedEntryArr);
     matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     return [tokenType, matchedEntryArr];
@@ -754,18 +758,20 @@ class WordSearch {
   }
 
 
-  formatResultsAsHTML(results, resultType) {
+  // formatResultsAsHTML(results, resultType, word) {
+  formatResultsAsHTML(results, word) {
     let resultsAsTags;
     if (app.tools.isEmpty(results)) {
       resultsAsTags = this.markStringAsErrorHTML("Search returned no results.","warning");
     }
     else {
-      const lemmaPrefix = (resultType.length > 1) ? "≈ " : "";
+      // const lemmaPrefix = (resultType.length > 1) ? "≈ " : "";
       let output = [];
       let previousInitial = "";
       let currentInitial = "";
       let i = 0;
       for (const entry of results.sort(this.compareByLemma)) {
+        const lemmaPrefix = (entry.lemma === word) ? "" : "≈ ";
         currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
         if (currentInitial !== previousInitial) {
           output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
@@ -1458,12 +1464,11 @@ addfixes(tokenArr){
     for (let token of tokenArr) {
       // ** ignore compounds for now; they are dealt with separately
       if (token.type === "w") {
-        // let [revisedType, [matchedEntryArr]] = this.lookupWord(token.lemma);
         let [revisedType, matchedEntryArr] = this.lookupWord(token.lemma);
         if (matchedEntryArr.length) {
           token.appendMatches(matchedEntryArr);
-          // token.appendMatches(matchedEntryArr);
           // console.log("##", token.lemma, token, revisedType, matchedEntryArr, matchedEntryArr.length)
+          // TODO: check if this can be removed or not
           this.removeOfflistIfMatchFound(token);  // NOT THE PROBLEM
           if (token.matches.length) token.type = revisedType;
         }
@@ -1523,16 +1528,13 @@ addfixes(tokenArr){
     // console.log("lookup:", word)
     let tokenType = "w";
     let matchedEntryArr = app.db.getEntriesByExactLemma(word);
-    // console.log("1:", matchedEntryArr)
-    if (!matchedEntryArr.length) {
+    // if (!matchedEntryArr.length) {
       [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, matchedEntryArr);
-      // console.log("2:", matchedEntryArr)
       if (!matchedEntryArr.length) {
         matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
       }
-    }
+    // }
     const results = [tokenType, matchedEntryArr];
-    // console.log("lookupword:", word, ...results)
     return results;
   }
 
@@ -3199,37 +3201,64 @@ class GenericSearch {
     ["ly", this.findRootAsArray, this.lookup.ly_subs, ["j", "v"]], // added verbs to allow for 'satisfy-ing-ly' etc.
   ];
 
+    variantChecks = [
+      // [this.checkForEnglishSpelling, "wb"],
+      [this.checkDerivations, "wd"],
+      [this.checkForEnglishSpelling, "wv"],
+      [this.checkAllowedVariants, "wv"],
+      [this.checkNegativePrefix, "wn"],
+    ];
 
   checkAgainstLookups(word, exactMatches) {
     let tokenType = "w";
     let matchedEntryArr = [];
-    if (exactMatches.length) {
-      matchedEntryArr = exactMatches;
-    }
-    else {
-      // TODO: move this to top level of class
-      const checks = [
-        // [this.checkForEnglishSpelling, "wb"],
-        [this.checkDerivations, "wd"],
-        [this.checkForEnglishSpelling, "wv"],
-        [this.checkAllowedVariants, "wv"],
-        [this.checkNegativePrefix, "wn"],
-      ];
-      for (let [checkFunc, type] of checks) {
-        matchedEntryArr = checkFunc.bind(this)(word);
-        if (matchedEntryArr.length) {
-          // console.log(">>", word, checkFunc.name, matchedEntryArr)
-          tokenType = type;
-          break;
-        }
-      }
-    }
+    // [tokenType, matchedEntryArr] = this.checkVariants.bind(this)(word, tokenType, matchedEntryArr);
+    [tokenType, matchedEntryArr] = this.checkVariants(word, tokenType, matchedEntryArr);
+    // if (exactMatches.length) {
+    //   matchedEntryArr = exactMatches;
+    // }
+    // else {
+    //   [tokenType, matchedEntryArr] = this.checkVariants.bind(this)(word, tokenType, matchedEntryArr);
+    //   // for (let [checkFunc, type] of this.variantChecks) {
+    //   //   matchedEntryArr = checkFunc.bind(this)(word);
+    //   //   if (matchedEntryArr.length) {
+    //   //     // console.log(">>", word, checkFunc.name, matchedEntryArr)
+    //   //     tokenType = type;
+    //   //     break;
+    //   //   }
+    //   // }
+    // }
     // console.log("check for offlist:", word, matchedEntryArr)
+    matchedEntryArr = exactMatches.concat(matchedEntryArr);
     if (!matchedEntryArr.length) tokenType = "wo";  // offlist
     // console.log('**check against lookups:', word, tokenType, matchedEntryArr)
     return [tokenType, matchedEntryArr];
   }
 
+  checkVariants(word, tokenType, matchedEntryArr){
+    let localMatchedArr = [];
+    // const variantChecks = [
+    //   // [this.checkForEnglishSpelling, "wb"],
+    //   [this.checkDerivations, "wd"],
+    //   [this.checkForEnglishSpelling, "wv"],
+    //   [this.checkAllowedVariants, "wv"],
+    //   [this.checkNegativePrefix, "wn"],
+    // ];
+    // for (let [checkFunc, type] of variantChecks) {
+    for (let [checkFunc, type] of this.variantChecks) {
+      localMatchedArr = checkFunc.bind(this)(word);
+      // console.log("check variants >", checkFunc.name, type, localMatchedArr.length, localMatchedArr)
+      if (localMatchedArr.length) {
+        // console.log(">>", word, checkFunc.name, matchedEntryArr)
+        tokenType = type;
+        matchedEntryArr = matchedEntryArr.concat(localMatchedArr);
+        break;
+      }
+      // if (localMatchedArr.length) matchedEntryArr = matchedEntryArr.concat(localMatchedArr);
+    }
+    // console.log("check var 2:", localMatchedArr, matchedEntryArr)
+    return [tokenType, matchedEntryArr];
+  }
 
   checkForEnglishSpelling(word) {
     // console.log("checking spelling...")
@@ -3372,7 +3401,8 @@ class GenericSearch {
     // if (this.shared.abbreviations.hasOwnProperty(word)) {
     // if (this.shared.abbreviatedLemmas.includes(word)) {
     if (app.search.shared.abbreviatedLemmas.includes(word)) {
-      const match = this.shared.abbreviations[word];
+      // const match = this.shared.abbreviations[word];
+      const match = app.search.shared.abbreviations[word];
       for (const lemma of match.split(":")) {
         matchedEntryArr.push(...app.db.getEntriesByExactLemma(lemma));
       }
@@ -3717,7 +3747,7 @@ class Token {
     const hasOnlist = this.matches.some(entry => entry.id < 0);
     if (hasOfflist && hasOnlist) this.matches = this.matches.filter(entry => entry.id >= 0);
     // let potentialMatches = this.matches.filter(entry => entry.id >= 0);
-    // console.log(this.matches[0].lemma,  potentialMatches.length,">>>", this.matches.length, potentialMatches.length === this.matches.length, potentialMatches, this.matches)
+    // console.log("append matches",this.matches[0].lemma,  potentialMatches.length,">>>", this.matches.length, potentialMatches.length === this.matches.length, potentialMatches, this.matches)
     // if (potentialMatches.length !== this.matches.length) this.matches = potentialMatches;
     // * Sort matches by their GEPT level (low to high)
     if (this.matches.length > 1){
