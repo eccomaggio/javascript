@@ -897,22 +897,35 @@ class Repeats {
   countReps(tokenArr) {
     const [repsByLemma, repsByTokenID] = this.identifyRepeats(tokenArr);
     for (const i in tokenArr){
-      tokenArr[i].info = this.buildTagInfo(tokenArr[i], repsByLemma, repsByTokenID, i);
-      delete tokenArr[i].tmpRep;
+      const token = tokenArr[i];
+      const info = this.buildTagInfo(token, repsByLemma, repsByTokenID, i);
+      token.info = info;
+      if (token.type.startsWith("w") && info.totalReps > 0) {
+        token.info.thisRep = this.countPrevious(token, tokenArr, i);
+      }
     }
   }
 
+  countPrevious(token, tokenArr, indexOfToken) {
+    let count = 0;
+    const lemma = token.info.repeatedLemma;
+    for (let i=0; i < indexOfToken; i++) {
+      if (tokenArr[i].info.repeatedLemma === lemma) count++;
+    }
+    return count;
+  }
 
   identifyRepeats(tokenArr) {
     const allFrequenciesByLemma = app.stats.allLemmas;
+    const allLemmasByTokenID = app.stats.allLemmasByTokenID;
     let repsByLemma = {};
     for (const lemma of Object.keys(allFrequenciesByLemma)) {
+      // if (allFrequenciesByLemma[lemma][0] && !LOOKUP.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
       if (allFrequenciesByLemma[lemma][0] && !this.shared.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
     }
     this.repsByLemma = repsByLemma;
     const listOfRepeatedLemmas = Object.keys(repsByLemma);
     let repsByTokenID = {};
-    const allLemmasByTokenID = app.stats.allLemmasByTokenID;
     for (const id of Object.keys(allLemmasByTokenID)){
       if (listOfRepeatedLemmas.includes(allLemmasByTokenID[id])) repsByTokenID[id] = allLemmasByTokenID[id];
     }
@@ -922,10 +935,14 @@ class Repeats {
   buildTagInfo(token, repsByLemma, repsByToken, indexOfToken){
     let info = {};
     if (token.type.startsWith("w")){
+      const totalReps = repsByLemma[repsByToken[indexOfToken]]?.[0] || 0;
+      const thisRep = -1;
+      const repeatedLemma = repsByToken[indexOfToken] || "";
+      // console.warn(token)
       info = {
-        totalReps: repsByLemma[repsByToken[indexOfToken]]?.[0] || 0,
-        thisRep: token.tmpRep,
-        repeatedLemma: repsByToken[indexOfToken] || "",
+        totalReps: totalReps,
+        thisRep: thisRep,
+        repeatedLemma: repeatedLemma,
         displayLevel: token.matches[0].gept,
       }
     }
@@ -940,7 +957,7 @@ class Repeats {
 }
 
 class WordStatistics {
-  allLemmas = {};  // * { lemma : [totalFrequency, entryID, GEPTlevel, level]}
+  allLemmas = {};  // * { lemma : [totalFrequency, entryID, GEPTlevel]}
   allLemmasByTokenID = {};
 
   totalWordCount = 0; // includes numbers etc
@@ -955,12 +972,10 @@ class WordStatistics {
       if (!["m", "s", "c", "p", "@"].includes(token?.type[0])) wordCount++;
       const firstEntry = token.matches[0];
       if (firstEntry) {
-        // const lemma = app.db.getEntryById(firstEntry.id).lemma;
-        const lemma = firstEntry.lemma;
+        const lemma = app.db.getEntryById(firstEntry.id).lemma;
         if (token?.type.startsWith("w")) {
           let frequency = 0;
           if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
-          tokenArr[i].tmpRep = frequency;
           allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.gept, firstEntry.level];
           allLemmasByTokenID[i] = lemma;
         }
@@ -979,7 +994,7 @@ class WordStatistics {
     for (const [key, levelsByList] of Object.entries(lemmasByLevel)) {
       for (let [level, lemmaArr] of Object.entries(levelsByList)) {
         if (!app.state.isBESTEP && key === "gept") continue;
-        // level = parseInt(level);
+        level = parseInt(level);
         const lemmaTotalAtThisLevel = lemmaArr.length;
         const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
         let levelText = this.getLevelText(key, level);
@@ -1079,21 +1094,14 @@ class WordStatistics {
 }
 
 class Text {
-
-  tokenArr = [];
-
   refresh(e) {
     if (!app.ui.refreshRequired) return;
     app.ui.signalRefreshNeeded("off");
     let revisedText = this.textGetWithCursor().trim();
     if (revisedText) {
-      // const tokenArr = app.parser.markup(revisedText);
-      // app.repeats.countReps(tokenArr)
-      // this.textBuildHTML(tokenArr);
-      this.tokenArr = app.parser.markup(revisedText);
-      app.stats.logAllWords(this.tokenArr);
-      app.repeats.countReps(this.tokenArr)
-      this.textBuildHTML(this.tokenArr);
+      const tokenArr = app.parser.markup(revisedText);
+      app.repeats.countReps(tokenArr)
+      this.textBuildHTML(tokenArr);
       app.backup.save();
     }
   }
@@ -1143,7 +1151,6 @@ class Text {
     // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
     let htmlString = "";
     let wordIndex = 0;
-    let i = 0;
     for (let token of tokenArr) {
       const firstType = token.type;
       if (firstType === "pe") htmlString += `\n${app.EOL.HTMLtext}`;
@@ -1151,15 +1158,14 @@ class Text {
       else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
       else {
         wordIndex++;
-        const groupedWord = this.buildHTMLword(token, wordIndex, i);
+        const groupedWord = this.buildHTMLword(token, wordIndex);
         htmlString += groupedWord;
       }
-      i++;
     }
     return htmlString;
   }
 
-  buildHTMLword(token, wordIndex, i) {
+  buildHTMLword(token, wordIndex) {
     // console.log(">>>", token.lemma, token.matches)
     // token.matches.forEach( m => console.log("\t", m.bestep));
     // ** expects populated list of matches (therefore requires textLookupSimples)
@@ -1168,6 +1174,7 @@ class Text {
       id: token.matches[0].id,
       type: token.type,
       levelArr: token.matches[0].levelArr,
+      // level: token.matches[0].gept,
       matches: token.matches,
       matchCount: token.matches.length,
       totalReps: token.info.totalReps,
@@ -1186,44 +1193,11 @@ class Text {
       dataReps,
       idLinkingReps
     ] = this.renderRepsInfo(word);
-    // let listOfLinksArr = word.matches.map(entry => `${entry.id}:${word.lemma.trim()}:${word.type}`);
+    let listOfLinksArr = word.matches.map(entry => `${entry.id}:${word.lemma.trim()}:${word.type}`);
     const classes = this.getSpaceSeparatedList([levelClass, relatedWordsClass, repStatusClass, variantClass, limitClass, multiLevelClass]);
-    const displayWord = Tag.tag("span", [`data-entry=${i}`, `class=${classes}`, dataReps, idLinkingReps], [renderedWord]);
+    const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, dataReps, idLinkingReps], [renderedWord]);
     return displayWord.stringify();
   }
-  // buildHTMLword(token, wordIndex) {
-  //   // console.log(">>>", token.lemma, token.matches)
-  //   // token.matches.forEach( m => console.log("\t", m.bestep));
-  //   // ** expects populated list of matches (therefore requires textLookupSimples)
-  //   let word = {
-  //     lemma: token.lemma,
-  //     id: token.matches[0].id,
-  //     type: token.type,
-  //     levelArr: token.matches[0].levelArr,
-  //     // level: token.matches[0].gept,
-  //     matches: token.matches,
-  //     matchCount: token.matches.length,
-  //     totalReps: token.info.totalReps,
-  //     thisRep: token.info.thisRep,
-  //     isMixedLevels: token.isMixedLevels,
-  //   }
-  //   if (!word.matchCount) console.warn(`Unprocessed item (${word.lemma})!!`)
-  //   const renderedWord = app.ui.highlightAwlAsHTML(word.levelArr, word.lemma);
-  //   const variantClass = (word.type.includes("v")) ? " variant" : "";
-  //   const [levelClass,
-  //     limitClass,
-  //     multiLevelClass
-  //   ] = this.renderLevelInfo(word);
-  //   const [relatedWordsClass,
-  //     repStatusClass,
-  //     dataReps,
-  //     idLinkingReps
-  //   ] = this.renderRepsInfo(word);
-  //   let listOfLinksArr = word.matches.map(entry => `${entry.id}:${word.lemma.trim()}:${word.type}`);
-  //   const classes = this.getSpaceSeparatedList([levelClass, relatedWordsClass, repStatusClass, variantClass, limitClass, multiLevelClass]);
-  //   const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, dataReps, idLinkingReps], [renderedWord]);
-  //   return displayWord.stringify();
-  // }
 
   renderRepsInfo(word) {
     let relatedWordsClass = `all_${word.id}`;
@@ -1276,8 +1250,8 @@ class Parser {
     tokenArr = this.lookupCompounds(tokenArr);
     tokenArr = this.lookupSimples(tokenArr);
     tokenArr = this.addfixes(tokenArr);
-    // app.stats.logAllWords(tokenArr);
-    // console.log({tokenArr});
+    app.stats.logAllWords(tokenArr);
+    console.log({tokenArr});
     return tokenArr;
   }
 
@@ -1543,7 +1517,7 @@ addfixes(tokenArr){
     const offlistID = -(app.db.offlistDb.length);
     const newEntry = new Entry(...entryContents, offlistID);
     app.db.offlistDb.push(newEntry);
-    // app.db.offlistIndex++;
+    app.db.offlistIndex++;
     return newEntry;
   }
 
@@ -1595,8 +1569,8 @@ class InformationPanes {
     if (typeof el.classList === 'undefined') return;
     // ** 1) show information text for elements with a 'data-entry' attribute
     if (el.dataset.entry || el.parentElement.dataset.entry) {
-      const tokenID = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
-      app.htm.finalInfoDiv.innerHTML = this.displayEntryInfo(tokenID);
+      const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
+      app.htm.finalInfoDiv.innerHTML = this.displayEntryInfo(ref);
       app.htm.finalInfoDiv.style.display = "flex";
     }
     // ** 2) remove highlighting after a jump to a duplicate
@@ -1617,44 +1591,7 @@ class InformationPanes {
       el.classList.toggle("highlight");
     }
   }
-
-  // displayEntryInfo(refs) {
-  //   /*
-  //   <div id="t2_final_info" style="display: flex;">
-  //     <div class="word-detail level-e">
-  //       <div><span class="dot">E</span> <em>elem (A2)</em><br></div>
-  //       <span><strong>for</strong>: [preposition], 為了、給、(時間、距離)達;</span>
-  //     </div>
-  //     <div class="word-detail level-e">
-  //       <div><span class="dot">E</span> <em>elem (A2)</em><br></div>
-  //       <span><strong>for</strong>: [conjunction], 因為;</span>
-  //     </div>
-  //   </div>
-  //   */
-  //   let html = [];
-  //   for (const ref of refs.split(" ")) {
-  //     const [id, word, tokenType] = ref.split(":");
-  //     const entry = app.db.getEntryById(id);
-  //     const levelClass = "level-" + app.ui.getLevelPrefix(entry.levelArr);
-  //     const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
-  //     const levelTagArr = this.buildHTMLlevel(entry, id, tokenType);
-  //     const levelTag = (entry.gept <= 99)
-  //       ? Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr])
-  //       : "";
-  //     // const pos = ` [${entry.posExpansion}]`;
-  //     const pos =  Tag.tag("i", [], ["[", entry.posExpansion,"]"]);
-  //     let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
-  //     html.push(Tag.tag(
-  //       "div",
-  //       [`class=word-detail ${levelClass}`],
-  //       [levelTag, Tag.tag("span", [], [...lemma, " ", pos, notes, awl_notes])]
-  //     ));
-  //   }
-  //   html = Tag.root(html);
-  //   return html.stringify();
-  // }
-
-  displayEntryInfo(tokenID) {
+  displayEntryInfo(refs) {
     /*
     <div id="t2_final_info" style="display: flex;">
       <div class="word-detail level-e">
@@ -1668,14 +1605,16 @@ class InformationPanes {
     </div>
     */
     let html = [];
-    const token = app.text.tokenArr[tokenID];
-    for (const entry of token.matches) {
+    for (const ref of refs.split(" ")) {
+      const [id, word, tokenType] = ref.split(":");
+      const entry = app.db.getEntryById(id);
       const levelClass = "level-" + app.ui.getLevelPrefix(entry.levelArr);
-      const lemma = this.buildHTMLlemma(entry, token.lemma, token.type);
-      const levelTagArr = this.buildHTMLlevel(entry, token.type);
+      const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
+      const levelTagArr = this.buildHTMLlevel(entry, id, tokenType);
       const levelTag = (entry.gept <= 99)
         ? Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr])
         : "";
+      // const pos = ` [${entry.posExpansion}]`;
       const pos =  Tag.tag("i", [], ["[", entry.posExpansion,"]"]);
       let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
       html.push(Tag.tag(
@@ -1688,8 +1627,8 @@ class InformationPanes {
     return html.stringify();
   }
 
-  // buildHTMLlemma(entry, id, word, tokenType) {
-  buildHTMLlemma(entry, word, tokenType) {
+
+  buildHTMLlemma(entry, id, word, tokenType) {
     let displayLemma;
     if (entry.pos === "unknown") return displayLemma;
     if (tokenType === "wv") {
@@ -1876,7 +1815,7 @@ class State {
 
 class Db {
   name;
-  // factory;
+  factory;
   list;
   toShow;
   levelLimits;
@@ -3432,7 +3371,7 @@ class GenericSearch {
     ]) {
       let result = check(word);
       if (result.length && result[0]) {
-        // console.log(">>", word, check.name, result)
+        console.log(">>", word, check.name, result)
         matchedIDarr.push(...result);
         // console.log(">> search:", ...result,app.db.getEntriesByExactLemma(...result) )
         // matchedIDarr.push(app.db.getEntriesByExactLemma(...result));
