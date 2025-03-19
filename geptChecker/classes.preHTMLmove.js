@@ -3417,7 +3417,6 @@ findRootErEstEdIng(word, suffix) {
   drIer/st, trIed
   slow > slower/st/ing/ed vs linE > liner/ing/d
   */
- // TODO: reintegrate with s_subs?
   let matchedEntryArr = [];
   if (!word.endsWith(suffix)) return matchedEntryArr;
   let root = word.slice(0, -suffix.length);
@@ -3425,12 +3424,10 @@ findRootErEstEdIng(word, suffix) {
   else {
     const ult = root.slice(-1);
     const penult = root.slice(-2, -1)
-    if (ult === penult) root = [root.slice(0, -1), root];
-    // *This catches final sibilants: buzzing, hissing etc.
+    if (ult === penult) root = [root.slice(0, -1)];
     else if (ult === "i") root = [root.slice(0, -1) + "y"];
     else root = [root, root + "e"];
   }
-  console.log("find root:", word, suffix, root)
   return root;
 }
 

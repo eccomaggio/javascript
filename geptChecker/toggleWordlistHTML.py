@@ -59,16 +59,16 @@ wip_directory = Path.cwd() / "WiP"
 assembled_html = "out.html"
 disassembled_html = "out.min.html"
 rx = {
-  "opener_style" : re.compile('(^.*?)<style\s+[^>]*data-title="(.+?)"') ,
-  "close_style" :  re.compile('(^.*?)</style>'),
-  "opener_script" : re.compile('(^.*?)<script\s+[^>]*data-title="(.+?)"'),
-  "close_script" : re.compile('(^.*?)</script>'),
-  "html_open_comment" : re.compile('(^.*?)<!--'),
-  "html_full_comment" : re.compile('(^.*?)<!--.*?-->(.*$)'),
-  "html_close_comment" : re.compile('-->(.*$)'),
-  "style_link" : re.compile('(^.*?)<link\s+?rel="stylesheet"\s+?href="(.+?)"'),
-  "script_link" : re.compile('(^.*?)<script\s+?src="(.+?)"'),
-  "external_link" : re.compile('https?:')
+  "opener_style" : re.compile(r'(^.*?)<style\s+[^>]*data-title="(.+?)"') ,
+  "close_style" :  re.compile(r'(^.*?)</style>'),
+  "opener_script" : re.compile(r'(^.*?)<script\s+[^>]*data-title="(.+?)"'),
+  "close_script" : re.compile(r'(^.*?)</script>'),
+  "html_open_comment" : re.compile(r'(^.*?)<!--'),
+  "html_full_comment" : re.compile(r'(^.*?)<!--.*?-->(.*$)'),
+  "html_close_comment" : re.compile(r'-->(.*$)'),
+  "style_link" : re.compile(r'(^.*?)<link\s+?rel="stylesheet"\s+?href="(.+?)"'),
+  "script_link" : re.compile(r'(^.*?)<script\s+?src="(.+?)"'),
+  "external_link" : re.compile(r'https?:')
 }
 
 
@@ -86,7 +86,7 @@ def get_source_file(source_file_name="wordlistTool.html"):
     # if not source_file_name:
       # source_file_name = "wordlistTool.html"
       tmp_path = Path(wip_directory / disassembled_html)
-      if tmp_path.is_file:
+      if tmp_path.is_file():
         source_file_name = str(tmp_path)
 
 

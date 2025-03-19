@@ -1,7 +1,6 @@
 
 class App {
   state;
-  // wordlist;
   hasBeenReset = true;
 
   locale = {
@@ -167,6 +166,7 @@ class App {
     this.backup = new Backup();
     this.listeners = new EventListeners();
     this.ui = new UI();
+    // this.renderAsHTML = new RenderAsHTML();
     this.search = new GenericSearch(this.shared);
     this.info = new InformationPanes();
     this.word = new WordSearch(this.locale.en);
@@ -179,11 +179,13 @@ class App {
   init() {
     this.state = new State();
     this.cursor = new Cursor(this.shared);
+    this.ui.setupEditing();
     this.limit = new ShowLevelLimit();
     this.db = new Db(this.state.current.db_state);
+    this.renderAsHTML = new RenderAsHTML();
     this.tabs.setTab(this.state.current.tab_state);
     if (!localStorage.getItem("mostRecent")) localStorage.setItem("mostRecent", this.backup.backupIDs[0]);
-    this.ui.setupEditing();
+    // this.ui.setupEditing();
     app.htm.form.reset();
     this.state.updateDbInMenu();
     this.state.setHelp("fromSaved");
@@ -243,7 +245,6 @@ class EventListeners {
   }
 
   addWordInput() {
-    // app.htm.inputLemma.addEventListener("input", debounce(app.word.wordSearch.bind(app.word), 500));
     app.htm.inputLemma.addEventListener("input", debounce(function (e) { app.word.search() }, 500));
     for (const el of document.getElementsByTagName("input")) {
       if (el.type != "text") {
@@ -255,7 +256,6 @@ class EventListeners {
 
 
   addMenu() {
-    // app.htm.clearButton.addEventListener("click", clearTab);
     app.htm.resetButton.addEventListener("click", function (e) { app.reset(e) }, false);
 
     // ## for refresh button + settings menu
@@ -404,24 +404,7 @@ class UI {
   }
 
 
-  getNotesAsHTML(entry) {
-    let note = "";
-    let awl_note = "";
-    if (entry) {
-      note = entry.notesAsText;
-      note = (note) ? `, ${note}` : "";
-      awl_note = entry.awlHeadword;
-      awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
-    }
-    return [note, awl_note];
-  }
-
-  highlightAwlAsHTML(levelArr, lemma) {
-    const result = (app.state.isBESTEP && levelArr.hasAwl) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
-    return result;
-  }
-
-
+  // TODO move these into Tag?
   getLevelPrefix(levels) {
     let levelText;
     const offlistID = levels.offlistTypeID;
@@ -480,8 +463,6 @@ class UI {
     else {
       this.refreshRequired = false;
       this.refreshPermitted = false;
-      // * This delay is required to stop accidental refresh requests during refresh process!
-      // debounce(()=>this.refreshPermitted = true, 1000);
       app.htm.workingDiv.style.backgroundColor = "white";
       app.tabs.htm.textTabTag.classList.remove("to-refresh");
       app.backup.htm.backupSave2.style.display = "none";
@@ -587,25 +568,20 @@ class WordSearch {
 
   search(e) {
     let resultsArr = [];
-    // let resultType = "";
     let HTMLstringToDisplay = "";
     const data = this.getFormData(e);
     app.ui.isExactMatch = (data.match[0] === "exact");
     let errorMsg = this.validateFormData(data);
     if (errorMsg) {
-      HTMLstringToDisplay = this.markStringAsErrorHTML(errorMsg).stringify();
+      HTMLstringToDisplay = app.renderAsHTML.markAsError(errorMsg).stringify();
     } else {
       const searchTerms = this.buildSearchTerms(data);
-      // [resultsArr, resultType] = this.runSearch(searchTerms);
       resultsArr = this.runSearch(searchTerms);
-      HTMLstringToDisplay = this.formatResultsAsHTML(resultsArr, searchTerms.raw_lemma);
+      HTMLstringToDisplay = this.formatResults(resultsArr, searchTerms.raw_lemma);
     }
     this.displayResults(HTMLstringToDisplay, resultsArr.length);
   }
 
-  markStringAsErrorHTML(str, type="error") {
-    return Tag.tag("span", ["class=" + type], [str]);
-  }
 
   updateKidstheme(e) {
     const selection = e.target;
@@ -654,7 +630,6 @@ class WordSearch {
     }
     if (status === 3 && !data["match"].includes("contains")) status = 2;
     const term = data.term.join().split(" ")[0].toLowerCase();
-    // if (term.search(/[^a-z\-\s'\.]/g) > -1) status = 1;
     if (term.search(/[^a-z\-\s'.]/g) > -1) status = 1;
     const errorMsg = [
       "",
@@ -680,24 +655,20 @@ class WordSearch {
   }
 
 
-
   runSearch(searchTerms) {
     searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
     console.log("searchterms:",searchTerms)
-    // let [tokenType, matchedEntryArr] = this.getLemmaMatches(searchTerms);
-    let [_, matchedEntryArr] = this.getLemmaMatches(searchTerms);
+    let [, matchedEntryArr] = this.getLemmaMatches(searchTerms);
     matchedEntryArr = this.getGlevelMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = this.getPosMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = this.getLevelMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = matchedEntryArr.filter(result => result.id > 0);
-    // return [matchedEntryArr, tokenType];
     return matchedEntryArr;
   }
 
   getLemmaMatches(searchTerms) {
     let tokenType;
     let matchedEntryArr = app.db.getEntriesByPartialLemma(searchTerms.lemma);
-    // console.log("get lemma matches:", matchedEntryArr);
     [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, matchedEntryArr);
     matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
     return [tokenType, matchedEntryArr];
@@ -758,57 +729,20 @@ class WordSearch {
   }
 
 
-  // formatResultsAsHTML(results, resultType, word) {
-  formatResultsAsHTML(results, word) {
+  formatResults(results, word) {
     let resultsAsTags;
     if (app.tools.isEmpty(results)) {
-      resultsAsTags = this.markStringAsErrorHTML("Search returned no results.","warning");
+      resultsAsTags = app.renderAsHTML.markAsError("Search returned no results.","warning");
     }
     else {
-      // const lemmaPrefix = (resultType.length > 1) ? "≈ " : "";
-      let output = [];
-      let previousInitial = "";
-      let currentInitial = "";
-      let i = 0;
-      for (const entry of results.sort(this.compareByLemma)) {
-        const lemmaPrefix = (entry.lemma === word) ? "" : "≈ ";
-        currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
-        if (currentInitial !== previousInitial) {
-          output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
-        }
-        const awlWord = app.ui.highlightAwlAsHTML(entry.levelArr, entry.lemma);
-        let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
-        const lemma = Tag.tag("strong", [`class=${class2} all-repeats`], [awlWord]);
-        let pos;
-        if (entry.posExpansion) pos = `[${entry.posExpansion}]`;
-        else {
-          pos = "";
-          console.log("PoS information missing from entry in wordlist:", entry.lemma);
-        }
-        let levelInfo = app.ui.getLevelInfoText(entry);
-        let [note, awl_note] = app.ui.getNotesAsHTML(entry);
-        const col2 = [lemmaPrefix, lemma, ": ", Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [levelInfo]), note, awl_note];
-        output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", "dark"));
-        previousInitial = currentInitial;
-        i++;
-      }
-      resultsAsTags = Tag.tag("table", [], [...output]);
+      results = results.sort(this.compareByLemma);
+      resultsAsTags = app.renderAsHTML.wordSearchResults(word, results);
     }
     return resultsAsTags.stringify();
   }
 
 
-  formatResultsAsTablerows(col1, col2, class1, class2) {
-    class1 = (class1) ? `class=${class1}` : "";
-    class2 = (class2) ? `class=${class2}` : "";
-    return Tag.tag("tr", [], [
-      Tag.tag("td", [class1], [col1]),
-      Tag.tag("td", [class2], [...col2]),
-    ]);
-  }
-
   displayResults(resultsAsHtmlString, resultCount = 0) {
-    // let text = LOOKUP.legends.results;
     let text = this.legends.results;
     if (resultCount) text += ` (${resultCount})`;
     app.htm.resultsLegend.innerHTML = text;
@@ -839,43 +773,15 @@ class Repeats {
     const repeatedLemmas = Object.keys(this.repsByLemma).sort();
     const totalOfRepeatedLemmas = repeatedLemmas.length;
     let repeatsHeader;
-    let listOfRepeats = [];
     if (totalOfRepeatedLemmas) {
-      for (const lemma of repeatedLemmas) {
-        const [totalReps, id] = this.repsByLemma[lemma];
-        const entry = app.db.getEntryById(id);
-        let anchors = [];
-        for (let rep = 1; rep <= totalReps + 1; rep++) {
-          let displayText = rep;
-          let displayClass = "class=anchors";
-          if (rep === 1) {
-            displayText = app.ui.highlightAwlAsHTML(entry.levelArr, lemma);
-            displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelArr)}`;
-          }
-          anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [displayText]));
-        }
-        listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${app.ui.getLevelPrefix(entry.levelArr)}`], [...anchors]));
-      }
-      const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
-      repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
-        Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
-          totalOfRepeatedLemmas,
-          ` significant repeated word${app.tools.pluralNoun(totalOfRepeatedLemmas)}`,
-        ]),
-        // Tag.tag("p", ["class=summary-instructions"], [
-        //   Tag.tag("em", [], ["Click on word / number to jump to that occurrence."])
-        // ]),
-        // Tag.tag("p", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
-        Tag.tag("aside", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
-        Tag.tag("div", ["id=repeats"], [...listOfRepeats])
-      ]);
+      repeatsHeader = app.renderAsHTML.buildRepeats(repeatedLemmas, totalOfRepeatedLemmas);
     }
     else {
-      repeatsHeader = Tag.tag("p", [`id=${app.listeners.detailID}`], [
-        Tag.tag("span", ["id=all_repeats", "class=all-repeats"], ["There are no significant repeated words."])]);
+      repeatsHeader = app.renderAsHTML.reportNoRepeats("There are no significant repeated words.", app.listeners.detailID, "id=all_repeats", "class=all-repeats");
     }
     return repeatsHeader.stringify();
   }
+
 
   displayList(listOfRepeats, levelStatsHTML) {
     app.htm.repeatsList.innerHTML = levelStatsHTML + listOfRepeats;
@@ -897,35 +803,22 @@ class Repeats {
   countReps(tokenArr) {
     const [repsByLemma, repsByTokenID] = this.identifyRepeats(tokenArr);
     for (const i in tokenArr){
-      const token = tokenArr[i];
-      const info = this.buildTagInfo(token, repsByLemma, repsByTokenID, i);
-      token.info = info;
-      if (token.type.startsWith("w") && info.totalReps > 0) {
-        token.info.thisRep = this.countPrevious(token, tokenArr, i);
-      }
+      tokenArr[i].info = this.buildTagInfo(tokenArr[i], repsByLemma, repsByTokenID, i);
+      delete tokenArr[i].tmpRep;
     }
   }
 
-  countPrevious(token, tokenArr, indexOfToken) {
-    let count = 0;
-    const lemma = token.info.repeatedLemma;
-    for (let i=0; i < indexOfToken; i++) {
-      if (tokenArr[i].info.repeatedLemma === lemma) count++;
-    }
-    return count;
-  }
 
   identifyRepeats(tokenArr) {
     const allFrequenciesByLemma = app.stats.allLemmas;
-    const allLemmasByTokenID = app.stats.allLemmasByTokenID;
     let repsByLemma = {};
     for (const lemma of Object.keys(allFrequenciesByLemma)) {
-      // if (allFrequenciesByLemma[lemma][0] && !LOOKUP.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
       if (allFrequenciesByLemma[lemma][0] && !this.shared.repeatableWords.includes(lemma)) repsByLemma[lemma] = allFrequenciesByLemma[lemma];
     }
     this.repsByLemma = repsByLemma;
     const listOfRepeatedLemmas = Object.keys(repsByLemma);
     let repsByTokenID = {};
+    const allLemmasByTokenID = app.stats.allLemmasByTokenID;
     for (const id of Object.keys(allLemmasByTokenID)){
       if (listOfRepeatedLemmas.includes(allLemmasByTokenID[id])) repsByTokenID[id] = allLemmasByTokenID[id];
     }
@@ -935,14 +828,10 @@ class Repeats {
   buildTagInfo(token, repsByLemma, repsByToken, indexOfToken){
     let info = {};
     if (token.type.startsWith("w")){
-      const totalReps = repsByLemma[repsByToken[indexOfToken]]?.[0] || 0;
-      const thisRep = -1;
-      const repeatedLemma = repsByToken[indexOfToken] || "";
-      // console.warn(token)
       info = {
-        totalReps: totalReps,
-        thisRep: thisRep,
-        repeatedLemma: repeatedLemma,
+        totalReps: repsByLemma[repsByToken[indexOfToken]]?.[0] || 0,
+        thisRep: token.tmpRep,
+        repeatedLemma: repsByToken[indexOfToken] || "",
         displayLevel: token.matches[0].gept,
       }
     }
@@ -957,7 +846,7 @@ class Repeats {
 }
 
 class WordStatistics {
-  allLemmas = {};  // * { lemma : [totalFrequency, entryID, GEPTlevel]}
+  allLemmas = {};  // * { lemma : [totalFrequency, entryID, GEPTlevel, level]}
   allLemmasByTokenID = {};
 
   totalWordCount = 0; // includes numbers etc
@@ -972,10 +861,11 @@ class WordStatistics {
       if (!["m", "s", "c", "p", "@"].includes(token?.type[0])) wordCount++;
       const firstEntry = token.matches[0];
       if (firstEntry) {
-        const lemma = app.db.getEntryById(firstEntry.id).lemma;
+        const lemma = firstEntry.lemma;
         if (token?.type.startsWith("w")) {
           let frequency = 0;
           if (allFrequenciesByLemma[lemma]?.[0] >= 0) frequency = allFrequenciesByLemma[lemma][0] + 1;
+          tokenArr[i].tmpRep = frequency;
           allFrequenciesByLemma[lemma] = [frequency, firstEntry.id, firstEntry.gept, firstEntry.level];
           allLemmasByTokenID[i] = lemma;
         }
@@ -994,7 +884,6 @@ class WordStatistics {
     for (const [key, levelsByList] of Object.entries(lemmasByLevel)) {
       for (let [level, lemmaArr] of Object.entries(levelsByList)) {
         if (!app.state.isBESTEP && key === "gept") continue;
-        level = parseInt(level);
         const lemmaTotalAtThisLevel = lemmaArr.length;
         const percentAtThisLevel = Math.round(100 * (lemmaTotalAtThisLevel / this.totalLemmaCount));
         let levelText = this.getLevelText(key, level);
@@ -1002,7 +891,6 @@ class WordStatistics {
         statsForThisLevel.push([level, levelPrefix, levelText, lemmaTotalAtThisLevel, percentAtThisLevel + "%"]);
       }
     }
-    // console.log("stats for this level:",statsForThisLevel)
     return statsForThisLevel;
   }
 
@@ -1016,7 +904,6 @@ class WordStatistics {
 
   getlevelPrefixForCSS(key, level) {
     let levelArr = new Levels();
-    // if (key === "curr") levelArr.levels[app.state.current.db_state] = level;
     if (key === "curr") levelArr.levels[app.db.id] = level;
     else levelArr.levels[0] = level;
     return app.ui.getLevelPrefix(levelArr);
@@ -1028,9 +915,9 @@ class WordStatistics {
   }
 
   compileLemmasByLevel() {
-    // console.log("allLemmas:",this.allLemmas)
     let lemmasByLevel = {gept: {}, curr: {}}  // {level : [lemma, lemma, ...]}
-    for (let [lemma, [freq, id, geptLevel, currLevel]] of Object.entries(this.allLemmas)){
+    // allLemmas = {lemma: [frequency, id, geptlevel, level]}
+    for (let [lemma, [, , geptLevel, currLevel]] of Object.entries(this.allLemmas)){
       currLevel = parseInt(currLevel);
       geptLevel = parseInt(geptLevel);
       if (app.state.isBESTEP) {
@@ -1041,50 +928,12 @@ class WordStatistics {
       }
       else lemmasByLevel["curr"][currLevel] = this.addOrUpdate(lemmasByLevel["curr"], currLevel, lemma);
     }
-    // console.log("lemmas by level", lemmasByLevel)
     return lemmasByLevel;
   }
 
-  buildHTMLlevelStats(tokenArr) {
-    /*
-    <details id="level-details"${toggleOpen}>
-      <summary class="all-repeats">
-        Level statistics:<em> (${separateLemmasCount} headwords)</em>
-      </summary>
-      <div class="level-stats-cols">
-        <p class="level..."></p>
-      </div>
-    </details>
-    */
-    const levelStats = this.getAllLevelStats();
-    let levelStatsHTML = "";
-    if (!this.totalLemmaCount) return levelStatsHTML;
-    let tmpStats = [];
-    for (let [levelID, levelPrefix, levelText, total, percent] of levelStats) {
-      let levelDisplayText = levelText;
-      if (app.state.isKids) {
-        // * to trim kids' theme names to manageable display length
-        const match = /\((.+?)\)/.exec(levelText);
-        if (match) levelDisplayText = match[1];
-      }
-      tmpStats.push(Tag.tag("p", [`class=level-${levelPrefix}`], [levelDisplayText, ": ", total, " (", percent, ")"]));
-    }
-    const toggleOpen = (app.state.current.level_state) ? " open" : "";
-    levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
-      Tag.tag("summary", ["class=all-repeats"], [
-        "Level statistics:",
-        Tag.tag("em", [], [this.totalLemmaCount, " headwords"]),
-      ]),
-      Tag.tag("aside", ["class=summary-instructions"], [ "Click on level to show all words at that level." ]),
-      Tag.tag("div", ["id=level-details-list","class=level-stats-cols"], [...tmpStats])
-    ])
-    ]);
-    return levelStatsHTML.stringify();
-  }
 
   toggleLevelHighlight(e) {
     const targetLevel = e.target.classList[0];
-    // console.log("level stats level:", targetLevel)
     if (targetLevel){
       app.info.toggleHighlight(app.htm.workingDiv.getElementsByClassName(targetLevel));
       app.info.toggleHighlight([e.target]);
@@ -1094,136 +943,28 @@ class WordStatistics {
 }
 
 class Text {
+
+  tokenArr = [];
+
   refresh(e) {
     if (!app.ui.refreshRequired) return;
     app.ui.signalRefreshNeeded("off");
-    let revisedText = this.textGetWithCursor().trim();
+    let revisedText = this.getTextAndCursor().trim();
     if (revisedText) {
-      const tokenArr = app.parser.markup(revisedText);
-      app.repeats.countReps(tokenArr)
-      this.textBuildHTML(tokenArr);
+      this.tokenArr = app.parser.markup(revisedText);
+      app.stats.logAllWords(this.tokenArr);
+      app.repeats.countReps(this.tokenArr)
+      app.renderAsHTML.text(this.tokenArr);
       app.backup.save();
     }
   }
 
-  textGetWithCursor() {
+  getTextAndCursor() {
     let revisedText = app.cursor.insertPlaceholder(app.htm.workingDiv, app.cursor.offset);
     if (revisedText === app.cursor.text) revisedText = "";
     return revisedText;
   }
 
-  render(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
-    app.db.displayDbNameInTab2(this.getWordCountAsHTML(wordCount));
-    app.repeats.displayList(repeatsHTML, levelStatsHTML);
-    this.textDisplayWorking(resultsHTML);
-    app.listeners.addDetailToggle(document.getElementById("level-details"));
-    app.listeners.setHighlightLevels(document.querySelectorAll("#level-details-list > p"));
-  }
-
-  getWordCountAsHTML(wordCount) {
-    const numOfWords = (wordCount > 0)
-      ? Tag.tag("span", ["class=text-right dark"], [
-        "(",
-        wordCount,
-        " word",
-        app.tools.pluralNoun(wordCount),
-        ")",
-        // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
-        Tag.tag("a", ["href=#all_repeats", "class=medium"]),
-      ])
-      : "";
-    return numOfWords;
-  }
-
-  textDisplayWorking(html) {
-    app.htm.workingDiv.innerHTML = html;
-  }
-
-  textBuildHTML(tokenArr) {
-    const repeatsHTML = app.repeats.buildHTMLrepeatList();
-    const levelStatsHTML = app.stats.buildHTMLlevelStats(tokenArr);
-    this.render(this.buildHTMLtext(tokenArr), repeatsHTML, levelStatsHTML, app.stats.totalWordCount);
-    app.cursor.setPos(document.getElementById(app.cursor.id));
-  }
-
-  buildHTMLtext(tokenArr) {
-    let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "wdv", "wvd", "c", "d", "y", "wnd"];
-    // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
-    let htmlString = "";
-    let wordIndex = 0;
-    for (let token of tokenArr) {
-      const firstType = token.type;
-      if (firstType === "pe") htmlString += `\n${app.EOL.HTMLtext}`;
-      else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
-      else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
-      else {
-        wordIndex++;
-        const groupedWord = this.buildHTMLword(token, wordIndex);
-        htmlString += groupedWord;
-      }
-    }
-    return htmlString;
-  }
-
-  buildHTMLword(token, wordIndex) {
-    // console.log(">>>", token.lemma, token.matches)
-    // token.matches.forEach( m => console.log("\t", m.bestep));
-    // ** expects populated list of matches (therefore requires textLookupSimples)
-    let word = {
-      lemma: token.lemma,
-      id: token.matches[0].id,
-      type: token.type,
-      levelArr: token.matches[0].levelArr,
-      // level: token.matches[0].gept,
-      matches: token.matches,
-      matchCount: token.matches.length,
-      totalReps: token.info.totalReps,
-      thisRep: token.info.thisRep,
-      isMixedLevels: token.isMixedLevels,
-    }
-    if (!word.matchCount) console.warn(`Unprocessed item (${word.lemma})!!`)
-    const renderedWord = app.ui.highlightAwlAsHTML(word.levelArr, word.lemma);
-    const variantClass = (word.type.includes("v")) ? " variant" : "";
-    const [levelClass,
-      limitClass,
-      multiLevelClass
-    ] = this.renderLevelInfo(word);
-    const [relatedWordsClass,
-      repStatusClass,
-      dataReps,
-      idLinkingReps
-    ] = this.renderRepsInfo(word);
-    let listOfLinksArr = word.matches.map(entry => `${entry.id}:${word.lemma.trim()}:${word.type}`);
-    const classes = this.getSpaceSeparatedList([levelClass, relatedWordsClass, repStatusClass, variantClass, limitClass, multiLevelClass]);
-    const displayWord = Tag.tag("span", [`data-entry=${listOfLinksArr.join(" ")}`, `class=${classes}`, dataReps, idLinkingReps], [renderedWord]);
-    return displayWord.stringify();
-  }
-
-  renderRepsInfo(word) {
-    let relatedWordsClass = `all_${word.id}`;
-    let [repStatusClass, dataReps, idLinkingReps] = ["", "", ""];
-    if (word.totalReps > 0) {
-      repStatusClass = "duplicate";
-      dataReps = `data-reps=${word.totalReps + 1}`;
-      idLinkingReps = `id=${relatedWordsClass}_${word.thisRep + 1}`;
-    }
-    return [relatedWordsClass, repStatusClass, dataReps, idLinkingReps];
-  }
-
-  renderLevelInfo(word) {
-    // console.log("render >>>", word.lemma,word.id > 0, word, word.levelArr, app.ui.getLevelPrefix(word.levelArr))
-    let levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
-    // if (app.state.isBESTEP && word.levelArr.hasGept && word.levelArr.hasAwl) levelClass += ` level-a${word.levelArr.awl}`;
-    // if (word.levelArr.hasBestep && word.id > 0) levelClass += ` level-a${word.levelArr.awl}`;
-    const limitClass = app.limit.renderAsCSS(levelClass);
-    let multiLevelStatusClass = "";
-    if (word.matchCount > 1) multiLevelStatusClass = (word.isMixedLevels) ? "multi-diff" : "multi-same";
-    return [levelClass, limitClass, multiLevelStatusClass];
-  }
-
-  getSpaceSeparatedList(list) {
-    return list.filter(el => el).join(" ");
-  }
 }
 
 
@@ -1250,8 +991,6 @@ class Parser {
     tokenArr = this.lookupCompounds(tokenArr);
     tokenArr = this.lookupSimples(tokenArr);
     tokenArr = this.addfixes(tokenArr);
-    app.stats.logAllWords(tokenArr);
-    console.log({tokenArr});
     return tokenArr;
   }
 
@@ -1274,7 +1013,6 @@ class Parser {
 
 
   split(text) {
-    // text = text.replaceAll(/(A|P)\.(M)\./ig, "$1qqq$2qqq");           // protect preferred A.M. / P.M.
     text = text.replaceAll(/[AP]\.(M)\./ig, "$1qqq$2qqq");           // protect preferred A.M. / P.M.
     text = text.replaceAll(/(\d)(a|p\.?m\.?\b)/ig, "$1 $2");          // separate 7pm > 7 pm
     const re = new RegExp("(\\w+)(" + app.cursor.text + ")(\\w+)", "g");  // catch cursor
@@ -1374,8 +1112,6 @@ class Parser {
     for (let token of taggedTokenArr) {
       let toAdd = [];
       if (token.type === "d") {
-        // for (let el of Object.keys(LOOKUP.abbreviations)) {
-        // for (let el of Object.keys(this.shared.abbreviations)) {
         for (let el of this.shared.abbreviatedLemmas) {
           const ending = token.lemma.slice(-el.length)
           if (ending === el) {
@@ -1432,17 +1168,6 @@ addfixes(tokenArr){
     return tokenArr;
   }
 
-  // isInWordlist(levelArr) {
-  //   let level;
-  //   if (levelArr?.length) {
-  //     if (app.state.isBESTEP) level = (levelArr[0][0] || levelArr[1][0]);
-  //     // if (app.state.isBESTEP) level = (levelArr[0][0] || levelArr[1][0]);
-  //     // else level = levelArr[app.state.current.db_state][0];
-  //     else level = levelArr[app.db.id][0];
-  //   }
-  //   return level;
-  // }
-
 
   normalizeRawText(text) {
     return text
@@ -1467,12 +1192,8 @@ addfixes(tokenArr){
         let [revisedType, matchedEntryArr] = this.lookupWord(token.lemma);
         if (matchedEntryArr.length) {
           token.appendMatches(matchedEntryArr);
-          // console.log("##", token.lemma, token, revisedType, matchedEntryArr, matchedEntryArr.length)
-          // TODO: check if this can be removed or not
-          this.removeOfflistIfMatchFound(token);  // NOT THE PROBLEM
           if (token.matches.length) token.type = revisedType;
         }
-        // else token.appendMatches(this.markOfflist(token.lemma, "offlist"));
       }
       else if (Object.keys(this.wordlikeTokenTypes).includes(token.type)) {
         token.overwriteMatches(this.markOfflist(token.lemma, this.wordlikeTokenTypes[token.type]));
@@ -1482,9 +1203,7 @@ addfixes(tokenArr){
   }
 
   removeOfflistIfMatchFound(token) {
-    // console.log('remove if...', token)
     if (token.matches.some(el => el.id < 0) && token.matches.some(el => el.id > 0) ) {
-    // if (token.matches.some(el => el.id > 0) ) {
       token.overwriteMatches(token.matches.filter(el => el.id > 0));
     }
     return token;
@@ -1517,7 +1236,6 @@ addfixes(tokenArr){
     const offlistID = -(app.db.offlistDb.length);
     const newEntry = new Entry(...entryContents, offlistID);
     app.db.offlistDb.push(newEntry);
-    app.db.offlistIndex++;
     return newEntry;
   }
 
@@ -1525,40 +1243,16 @@ addfixes(tokenArr){
 
   lookupWord(word) {
     word = word.toLowerCase();
-    // console.log("lookup:", word)
-    let tokenType = "w";
+    // let tokenType = "w";
+    let tokenType;
     let matchedEntryArr = app.db.getEntriesByExactLemma(word);
-    // if (!matchedEntryArr.length) {
-      [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, matchedEntryArr);
-      if (!matchedEntryArr.length) {
-        matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
-      }
-    // }
+    [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(word, matchedEntryArr);
+    if (!matchedEntryArr.length) {
+      matchedEntryArr = [this.markOfflist(word.toLowerCase(), "offlist")];
+    }
     const results = [tokenType, matchedEntryArr];
     return results;
   }
-
-
-//   findBaseForm(word, subs) {
-//     // ** Uses lookup tables to apply spelling rules to return underlying base app.htm.form candidates
-//     let matchedEntryArr = [];
-//     for (const [ending, sub] of subs) {
-//       const root = word.slice(0, -ending.length);
-//       if ((root + ending) === word) {
-//         const candidate = root + sub;
-//         let tmp_match = app.db.getEntriesByExactLemma(candidate);
-//         // * to deal with things like "surpris-ing-ly", "alledg-ed-ly"
-//         if (!tmp_match.length && word.endsWith("ly")) {
-//           let base = app.search.removeObviousSuffixes(root);
-//           tmp_match = app.db.getEntriesByExactLemma(base);
-//           if (!tmp_match.length) tmp_match = app.db.getEntriesByExactLemma(base + "e");
-//         }
-//         if (tmp_match.length) matchedEntryArr.push(...tmp_match);
-//       }
-//     }
-//     return matchedEntryArr;
-//   }
-
 }
 
 
@@ -1569,8 +1263,8 @@ class InformationPanes {
     if (typeof el.classList === 'undefined') return;
     // ** 1) show information text for elements with a 'data-entry' attribute
     if (el.dataset.entry || el.parentElement.dataset.entry) {
-      const ref = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
-      app.htm.finalInfoDiv.innerHTML = this.displayEntryInfo(ref);
+      const tokenID = (el.dataset.entry) ? el.dataset.entry : el.parentElement.dataset.entry;
+      app.htm.finalInfoDiv.innerHTML = this.displayEntryInfo(tokenID);
       app.htm.finalInfoDiv.style.display = "flex";
     }
     // ** 2) remove highlighting after a jump to a duplicate
@@ -1591,7 +1285,9 @@ class InformationPanes {
       el.classList.toggle("highlight");
     }
   }
-  displayEntryInfo(refs) {
+
+
+  displayEntryInfo(tokenID) {
     /*
     <div id="t2_final_info" style="display: flex;">
       <div class="word-detail level-e">
@@ -1605,18 +1301,17 @@ class InformationPanes {
     </div>
     */
     let html = [];
-    for (const ref of refs.split(" ")) {
-      const [id, word, tokenType] = ref.split(":");
-      const entry = app.db.getEntryById(id);
+    const token = app.text.tokenArr[tokenID];
+    for (const entry of token.matches) {
       const levelClass = "level-" + app.ui.getLevelPrefix(entry.levelArr);
-      const lemma = this.buildHTMLlemma(entry, id, word, tokenType);
-      const levelTagArr = this.buildHTMLlevel(entry, id, tokenType);
+      const lemma = this.buildHTMLlemma(entry, token.lemma, token.type);
+      const levelTagArr = this.buildHTMLlevel(entry, token.type);
       const levelTag = (entry.gept <= 99)
         ? Tag.tag("div", [], [this.buildHTMLlevelDot(entry), " ", ...levelTagArr])
         : "";
-      // const pos = ` [${entry.posExpansion}]`;
       const pos =  Tag.tag("i", [], ["[", entry.posExpansion,"]"]);
-      let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
+      // let [notes, awl_notes] = app.ui.getNotesAsHTML(entry);
+      let [notes, awl_notes] = app.renderAsHTML.notes(entry, app.state.isBESTEP);
       html.push(Tag.tag(
         "div",
         [`class=word-detail ${levelClass}`],
@@ -1627,8 +1322,7 @@ class InformationPanes {
     return html.stringify();
   }
 
-
-  buildHTMLlemma(entry, id, word, tokenType) {
+  buildHTMLlemma(entry, word, tokenType) {
     let displayLemma;
     if (entry.pos === "unknown") return displayLemma;
     if (tokenType === "wv") {
@@ -1674,7 +1368,6 @@ class InformationPanes {
     else if (app.state.isGEPT) dotText = this.getGEPTLevelInitial(entry);
     else dotText = entry.level;
     html = (dotText) ? Tag.tag("span", ["class=dot"], [dotText]) : "";
-    // if (app.state.isBESTEP && entry.awl >= 1) html = Tag.root(html, ...this.buildHTMLlevelAWL(entry));
     return html;
   }
 
@@ -1722,7 +1415,6 @@ class State {
       el = e.target;
       mode = "toggle";
     } else {
-      // el = HTM[destination];
       el = app.htm[destination];
       mode = e;
     }
@@ -1815,7 +1507,6 @@ class State {
 
 class Db {
   name;
-  factory;
   list;
   toShow;
   levelLimits;
@@ -1823,7 +1514,6 @@ class Db {
   css;
   compounds;
   offlistDb;
-  // currentDefaults = [];
 
   defaults = [
     {name: "GEPT",
@@ -1956,7 +1646,6 @@ class Db {
   ];
 
 
-
   // ## Computed levels
   offlist_subs = [
     "unknown",
@@ -1968,7 +1657,6 @@ class Db {
   ];
 
 
-  // ## PoS expansions
   pos_expansions = {
     n: 'noun',
     v: 'verb',
@@ -1989,25 +1677,25 @@ class Db {
   constructor() {
     // *format: [lemma, pos, [levels: gept, awl, kids, gz6k, ref2k], [notes: gloss, note, awl-headword]]
     // add in dummy element at index 0 to start count from 1
-    // this.list = this.createDbfromArray([[]].concat(make_db()));
     this.list = this.createDbfromArray([[]].concat(app.tools.expandDb(make_db())));
     this.compounds = this.buildCompoundsDb(this.list);
     this.change(app.state.current.db_state);
     this.geptPrefix = this.defaults[0].prefix;
   }
 
+  // init() {
+  //   this.change(app.state.current.db_state);
+  // }
+
   change(e) {
     let choice = (e.target) ? e.target.value : e;
     app.state.current.db_state = parseInt(choice);
     Entry.resetID();
     this.resetOfflistDb();
-    // this.currentDefaults = this.defaults[app.state.current.db_state];
     const currentDb = this.defaults[app.state.current.db_state];
     for (const key of Object.keys(currentDb)) {
-      // console.log("change db:", key, "=>", currentDb[key])
       this[key] = currentDb[key];
     }
-    // this.compounds = this.buildCompoundsDb(this.db);
     app.ui.resetLevelInputs();
     for (const key in this.css) {
       const property = (key.startsWith("_")) ? `--${key.slice(1)}` : key;
@@ -2015,8 +1703,10 @@ class Db {
     }
     app.limit.loadLimits(this.levelLimits);
     app.limit.setLimits();
-    this.setDbTab2();
-    this.setDbTab1();
+    // this.setDbTab2();
+    // this.setDbTab1();
+    app.renderAsHTML.setDbTab2(this.name);
+    app.renderAsHTML.setDbTab1(this.name, this.toHide, this.toShow);
     app.state.saveItem("db_state", app.state.current.db_state);
   }
 
@@ -2083,44 +1773,42 @@ class Db {
       if (splitWord.length > 1) {
         const newCompound = splitWord.join("");
         compounds[newCompound] = [id, entry.levelArr];
-        // ** to catch A.M. and P.M.
-        // if (/[ap]\.m\./.test(word)) compounds[word] = [id, ];
       }
     }
     return compounds;
   }
 
-  setDbTab1() {
-    this.displayDbNameInTab1();
-    // ** Allows for multiple elements to be toggled
-    for (const el of this.toHide) {
-      el.style.setProperty("display", "none");
-    }
-    for (const el of this.toShow) {
-      el.style.setProperty("display", "block");
-    }
-    app.word.search();
-  }
+  // setDbTab1() {
+  //   this.displayDbNameInTab1();
+  //   // ** Allows for multiple elements to be toggled
+  //   for (const el of this.toHide) {
+  //     el.style.setProperty("display", "none");
+  //   }
+  //   for (const el of this.toShow) {
+  //     el.style.setProperty("display", "block");
+  //   }
+  //   app.word.search();
+  // }
 
-  setDbTab2() {
-    this.displayDbNameInTab2();
-    app.ui.forceUpdateInputDiv();
-  }
+  // setDbTab2() {
+  //   this.displayDbNameInTab2();
+  //   app.ui.forceUpdateInputDiv();
+  // }
 
 
-  displayDbNameInTab1() {
-    document.getElementById('db_name1').textContent = this.name;
-  }
+  // displayDbNameInTab1() {
+  //   document.getElementById('db_name1').textContent = this.name;
+  // }
 
-  displayDbNameInTab2(msg) {
-    if (!msg) msg = "";
-    app.htm.finalLegend.innerHTML = Tag.root("Checking ", Tag.tag("span", ["id=db_name2", "class=dbColor"], [this.name]), " ", msg).stringify();
-    document.getElementById("help-kids").setAttribute("style", (app.state.isKids) ? "display:list-item;" : "display:none;");
-    document.getElementById("help-gept").setAttribute("style", (app.state.isGEPT || app.state.isBESTEP) ? "display:list-item;" : "display:none;");
-    document.getElementById("help-awl").setAttribute("style", (app.state.isBESTEP) ? "display:list-item;" : "display:none;");
-    document.getElementById("help-gz6k").setAttribute("style", (app.state.isGZ6K) ? "display:list-item;" : "display:none;");
-    document.getElementById("help-ref2k").setAttribute("style", (app.state.isREF2K) ? "display:list-item;" : "display:none;");
-  }
+  // displayDbNameInTab2(msg) {
+  //   if (!msg) msg = "";
+  //   app.htm.finalLegend.innerHTML = Tag.root("Checking ", Tag.tag("span", ["id=db_name2", "class=dbColor"], [this.name]), " ", msg).stringify();
+  //   document.getElementById("help-kids").setAttribute("style", (app.state.isKids) ? "display:list-item;" : "display:none;");
+  //   document.getElementById("help-gept").setAttribute("style", (app.state.isGEPT || app.state.isBESTEP) ? "display:list-item;" : "display:none;");
+  //   document.getElementById("help-awl").setAttribute("style", (app.state.isBESTEP) ? "display:list-item;" : "display:none;");
+  //   document.getElementById("help-gz6k").setAttribute("style", (app.state.isGZ6K) ? "display:list-item;" : "display:none;");
+  //   document.getElementById("help-ref2k").setAttribute("style", (app.state.isREF2K) ? "display:list-item;" : "display:none;");
+  // }
 }
 
 class TabController {
@@ -2199,8 +1887,8 @@ class TabController {
   }
 
   resetTabs() {
-    this.clearTab1;
-    this.clearTab2;
+    this.clearTab1();
+    this.clearTab2();
     this.setTab(app.state.current.tab_state);
   }
 }
@@ -2347,8 +2035,6 @@ class Backup {
     restoredContent = app.tools.newlinesToEOLs(restoredContent);
     app.htm.workingDiv.innerText = restoredContent;
     app.ui.forceUpdateInputDiv();
-    // if (swap) localStorage.setItem(id, swap);
-    // if (swap) appStateSaveItem(id, swap);
     if (swap) app.state.saveItem(id, swap);
     this.dialogClose("backup-dlg");
   }
@@ -2421,7 +2107,6 @@ class Cursor {
 
   constructor(sharedLookups) {
     this.shared = sharedLookups;
-    // this.text = LOOKUP.splitHere + this.simpleText + LOOKUP.splitHere;
     this.text = this.shared.splitHere + this.simpleText + this.shared.splitHere;
   }
 
@@ -2496,7 +2181,6 @@ class Cursor {
     if (["Backspace", "Enter"].includes(keypress) || keypress.length === 1) app.ui.signalRefreshNeeded("on");
     this.oldCursorOffset = this.offset;
     this.offset = this.getInfoInEl(app.htm.workingDiv);
-    // if (this.refreshRequired) {
     if (app.ui.refreshPermitted && app.ui.refreshRequired) {
       const tags = document.querySelectorAll(":hover");
       const currTag = tags[tags.length - 1];
@@ -2508,16 +2192,20 @@ class Cursor {
 
 class GenericSearch {
 
-  // shared = {};
-
   lookup = {
     s_subs: {
+      zzes: ["zz", "z"],
+      sses: ["ss", "s"],
+      ches: ["ch"],
+      shes: ["sh"],
       ies: ["y"],
       oes: ["o"],
+      xes: ["x"],
       ves: ["fe", "f"],
-      es: ["e", "*"],
+      // es: ["e", "*"],
+      es: ["e"],
       s: ["*"],
-      _: [3, 2, 1]
+      _: [4,3, 2, 1]
     },
 
     ly_subs: {
@@ -2543,12 +2231,8 @@ class GenericSearch {
       i: ["us", "o"],
       es: ["is"],
       ices: ["ex", "ix"],
-      // ives: ["ife"],
-      // ooves: ["oof"],
-      // arves: ["arf"],
       lves: ["lf"],
       men: ["man"],
-      // _: [1,2,3,4,5],
       _: [1,2,3,4],
     },
 
@@ -2573,7 +2257,6 @@ class GenericSearch {
       children: "child",
       oxen: "ox",
       others: "other",  // ** irregular because it's an adj/pronoun
-      // an: "a"
     },
 
     irregNegVerb: {
@@ -3017,7 +2700,6 @@ class GenericSearch {
       "william",
       "willie",
       "zachary",
-      // ])
     ],
 
     variantWords: {
@@ -3188,11 +2870,9 @@ class GenericSearch {
   constructor(sharedLookups) {
     this.shared = sharedLookups;
     this.shared.abbreviatedLemmas = Object.keys(this.shared.abbreviations);
-    // console.warn("generic search:",this.shared)
   }
 
   suffixChecks = [
-    // ["es", this.findRootAsArray, LOOKUP.s_subs, ["n", "v"]],
     ["s", this.findRootAsArray, this.lookup.s_subs, ["n", "v"]],
     ["ing", this.findRootErEstEdIng, "ing", ["v"]],
     ["ed", this.findRootErEstEdIng, "ed", ["v"]],
@@ -3202,7 +2882,6 @@ class GenericSearch {
   ];
 
     variantChecks = [
-      // [this.checkForEnglishSpelling, "wb"],
       [this.checkDerivations, "wd"],
       [this.checkForEnglishSpelling, "wv"],
       [this.checkAllowedVariants, "wv"],
@@ -3212,56 +2891,27 @@ class GenericSearch {
   checkAgainstLookups(word, exactMatches) {
     let tokenType = "w";
     let matchedEntryArr = [];
-    // [tokenType, matchedEntryArr] = this.checkVariants.bind(this)(word, tokenType, matchedEntryArr);
     [tokenType, matchedEntryArr] = this.checkVariants(word, tokenType, matchedEntryArr);
-    // if (exactMatches.length) {
-    //   matchedEntryArr = exactMatches;
-    // }
-    // else {
-    //   [tokenType, matchedEntryArr] = this.checkVariants.bind(this)(word, tokenType, matchedEntryArr);
-    //   // for (let [checkFunc, type] of this.variantChecks) {
-    //   //   matchedEntryArr = checkFunc.bind(this)(word);
-    //   //   if (matchedEntryArr.length) {
-    //   //     // console.log(">>", word, checkFunc.name, matchedEntryArr)
-    //   //     tokenType = type;
-    //   //     break;
-    //   //   }
-    //   // }
-    // }
-    // console.log("check for offlist:", word, matchedEntryArr)
     matchedEntryArr = exactMatches.concat(matchedEntryArr);
     if (!matchedEntryArr.length) tokenType = "wo";  // offlist
-    // console.log('**check against lookups:', word, tokenType, matchedEntryArr)
     return [tokenType, matchedEntryArr];
   }
 
   checkVariants(word, tokenType, matchedEntryArr){
     let localMatchedArr = [];
-    // const variantChecks = [
-    //   // [this.checkForEnglishSpelling, "wb"],
-    //   [this.checkDerivations, "wd"],
-    //   [this.checkForEnglishSpelling, "wv"],
-    //   [this.checkAllowedVariants, "wv"],
-    //   [this.checkNegativePrefix, "wn"],
-    // ];
-    // for (let [checkFunc, type] of variantChecks) {
     for (let [checkFunc, type] of this.variantChecks) {
       localMatchedArr = checkFunc.bind(this)(word);
-      // console.log("check variants >", checkFunc.name, type, localMatchedArr.length, localMatchedArr)
       if (localMatchedArr.length) {
-        // console.log(">>", word, checkFunc.name, matchedEntryArr)
+        // console.log("checkVariants:", checkFunc.name, ...localMatchedArr)
         tokenType = type;
         matchedEntryArr = matchedEntryArr.concat(localMatchedArr);
         break;
       }
-      // if (localMatchedArr.length) matchedEntryArr = matchedEntryArr.concat(localMatchedArr);
     }
-    // console.log("check var 2:", localMatchedArr, matchedEntryArr)
     return [tokenType, matchedEntryArr];
   }
 
   checkForEnglishSpelling(word) {
-    // console.log("checking spelling...")
     // * returns => [lemma, [ids...], type]
     let matchedEntryArr = this.checkVariantSpellings(word);
     if (!matchedEntryArr.length) matchedEntryArr = this.checkVariantSuffixes(word);
@@ -3270,12 +2920,10 @@ class GenericSearch {
 
 
   checkNegativePrefix(word) {
-    // console.log("...checking for negative prefix")
     let matchedEntryArr = [];
     const prefix = this.hasNegativePrefix(word);
     if (prefix) {
       const base = word.slice(prefix.length);
-      // console.log("base, prefix", base, prefix)
       matchedEntryArr = app.db.getEntriesByExactLemma(base);
       if (!matchedEntryArr.length) matchedEntryArr = this.checkDerivations(base, matchedEntryArr);
     }
@@ -3303,7 +2951,6 @@ class GenericSearch {
       const len = variant.length;
       const root = word.slice(0, -len);
       const suffix = word.slice(-len);
-      // console.log("variant suffixes:", word, root, suffix)
       if (variant === suffix) {
         matchedLemmas.push(root + replacement);
       }
@@ -3329,7 +2976,6 @@ class GenericSearch {
     let matchedEntryArr = [];
     if (this.lookup.notLetterVariant.includes(word)) return matchedEntryArr;
     for (const [letters, replacement] of this.lookup.variantLetters) {
-      // console.log(">>", word, letters, replacement)
       matchedEntryArr = this.subLettersAndCheckForMatches(word, letters, replacement);
       if (matchedEntryArr.length) {
         break;
@@ -3361,8 +3007,6 @@ class GenericSearch {
 
 
   checkAllowedVariants(word, offlistID = 0) {
-    // console.log("...checking allowed variants")
-    // const shouldUpdateOfflistDb = (offlistID !== 0);
     let matchedIDarr = [];
     for (let check of [
       this.checkVariantWords,
@@ -3371,23 +3015,18 @@ class GenericSearch {
     ]) {
       let result = check(word);
       if (result.length && result[0]) {
-        console.log(">>", word, check.name, result)
         matchedIDarr.push(...result);
-        // console.log(">> search:", ...result,app.db.getEntriesByExactLemma(...result) )
-        // matchedIDarr.push(app.db.getEntriesByExactLemma(...result));
         break;
       }
     }
     if (matchedIDarr.length && offlistID !== 0) {
       app.db.offlistDb[-offlistID] = [offlistID, word, "variant", matchedIDarr, ""];
     }
-    // console.log("**** allowed var", matchedIDarr, offlistID)
     return matchedIDarr;
   }
 
 
   checkVariantWords(word) {
-    // const arrayOfPossibleLemmas = app.search.findRootAsArray(word, this.lookup.variantWords);
     let arrayOfPossibleLemmas = app.search.findRootAsArray(word, app.search.lookup.variantWords);
     return arrayOfPossibleLemmas.map(lemma => app.db.getEntriesByExactLemma(lemma)?.[0]);
   }
@@ -3408,7 +3047,6 @@ class GenericSearch {
   checkGenderedNouns(word) {
     let lemma = "";
     let matchedEntryArr = []
-    // for (let key of Object.keys(this.lookup.gendered_nouns)) {
     for (let key of Object.keys(app.search.lookup.gendered_nouns)) {
       const truncated = word.slice(0, key.length)
       const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
@@ -3434,7 +3072,7 @@ class GenericSearch {
     Vpp = robbed gagged passed busied played visited
     Superlatives = "longest hottest prettiest closest soonest"
     Comparatives = "longer hotter prettier closer sooner"
-    Final-s =  families tries potatoes scarves crises boxes dogs
+    Final-s =  families tries potatoes scarves crises boxes dogs buzzes, matches, hisses, rushes, rates
     regular ADVs =  happily clumsily annually finely sensibly sadly automatically
     */
     if (!this.lookup.falseDerivations.includes(word)) {
@@ -3450,6 +3088,7 @@ class GenericSearch {
       ]) {
         const result = guess.bind(this)(word);
         if (result?.length) {
+          // console.log("checkDerivations:", guess.name, ...result)
           localMatches.push(...result);
           break;
         }
@@ -3525,13 +3164,11 @@ class GenericSearch {
         if (i > max) break;
         const plural = word.slice(-i);
         matchArr = this.lookup.foreign_plurals[plural];
-          // console.log("check for foreign plurals:", word.length, max,i,  word, word.slice(0, -i), plural, matchArr)
         if (matchArr?.length){
           const root = word.slice(0, -i);
           for (let possible of matchArr) {
             matchedEntryArr.push(...app.db.getEntriesByExactLemma(root + possible));
           }
-          // break; // * this allows deeper matches, e.g. indices > [es] > ices = ex
         }
       }
     }
@@ -3543,7 +3180,6 @@ checkAllSuffixes(word) {
   let matchedEntryArr = [];
   let arrayOfPossibleLemmas = [];
   for (const [suffix, callback, endings, pos] of this.suffixChecks) {
-    // console.log(">>>>", callback.name, suffix)
     if (word.endsWith(suffix)) {
       arrayOfPossibleLemmas = callback(word, endings);
       if (arrayOfPossibleLemmas.length) {
@@ -3564,6 +3200,7 @@ findRootErEstEdIng(word, suffix) {
   drIer/st, trIed
   slow > slower/st/ing/ed vs linE > liner/ing/d
   */
+ // TODO: reintegrate with s_subs?
   let matchedEntryArr = [];
   if (!word.endsWith(suffix)) return matchedEntryArr;
   let root = word.slice(0, -suffix.length);
@@ -3571,7 +3208,9 @@ findRootErEstEdIng(word, suffix) {
   else {
     const ult = root.slice(-1);
     const penult = root.slice(-2, -1)
-    if (ult === penult) root = [root.slice(0, -1)];
+    // if (ult === penult) root = [root.slice(0, -1)];
+    if (ult === penult) root = [root.slice(0, -1), root];
+    // *This catches final sibilants: buzzing, hissing etc.
     else if (ult === "i") root = [root.slice(0, -1) + "y"];
     else root = [root, root + "e"];
   }
@@ -3585,22 +3224,15 @@ findRootAsArray(word, lookup) {
   for (let i of lookup["_"]) {
     if (i > word.length) continue;
     const root = word.slice(0,-i)
-    // const ending = word.slice(-i);
     matchedEnding = lookup[word.slice(-i)];
-    // console.warn(word, root, word.slice(-i), matchedEnding)
     if (matchedEnding?.length) {
-    // if (matchedEnding) {
       for (let el of matchedEnding) {
-        // TODO: check this doesn't return empty items
         if (el === "*") el = "";
-        // console.warn(word, root, word.slice(-i), root + el, app.db.getEntriesByExactLemma(root+el))
-        // matchedEntryArr.push(...app.db.getEntriesByExactLemma(root + el));
         matchedEntryArr.push(root + el);
       }
       break;
     }
   }
-  // console.log("** find root as arr:", word,matchedEntryArr )
   return matchedEntryArr;
 }
 
@@ -3609,7 +3241,6 @@ findRootAsArray(word, lookup) {
     let matchedEntryArr = [];
     for (const entry of entryList) {
       for (const pos of posArr) {
-        // if (entry && entry.pos?.includes(pos)) {
         if (entry?.pos?.includes(pos)) {
           matchedEntryArr.push(entry);
         }
@@ -3619,6 +3250,309 @@ findRootAsArray(word, lookup) {
   }
 
 }
+
+
+class RenderAsHTML {
+  // TODO: to work, this has to have no dependencies; rewrite so that all processing is done by calling methods
+  // PROBABLY NOT WORTH IT FOR THIS APP as only uses html
+  // getNotesAsHTML(entry) {
+  notes(entry, isBESTEP) {
+    let note = "";
+    let awl_note = "";
+    if (entry) {
+      note = entry.notesAsText;
+      note = (note) ? `, ${note}` : "";
+      awl_note = entry.awlHeadword;
+      // awl_note = (app.state.isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
+      awl_note = (isBESTEP && awl_note) ? Tag.tag("span", ["class=awl-note"], ["(headword: ", Tag.tag("span", ["class=awl-headword"], [awl_note, ")"])]) : "";
+    }
+    return [note, awl_note];
+  }
+
+  // highlightAwlAsHTML(levelArr, lemma) {
+  awlLemma(levelArr, lemma) {
+    const result = (app.state.isBESTEP && levelArr.hasAwl) ? Tag.tag("span", ["class=awl-word"], [lemma]) : lemma;
+    return result;
+  }
+
+  buildRepeats(repeatedLemmas, totalOfRepeatedLemmas){
+      let listOfRepeats = [];
+      let repeatsHeader;
+      for (const lemma of repeatedLemmas) {
+        const [totalReps, id] = app.repeats.repsByLemma[lemma];
+        const entry = app.db.getEntryById(id);
+        let anchors = [];
+        for (let rep = 1; rep <= totalReps + 1; rep++) {
+          let displayText = rep;
+          let displayClass = "class=anchors";
+          if (rep === 1) {
+            // displayText = app.ui.highlightAwlAsHTML(entry.levelArr, lemma);
+            // displayText = app.renderAsHTML.awlLemma(entry.levelArr, lemma);
+            displayText = this.awlLemma(entry.levelArr, lemma);
+            displayClass = `class=level-${app.ui.getLevelPrefix(entry.levelArr)}`;
+          }
+          anchors.push(" ", Tag.tag("a", ["href=#", displayClass, `onclick=app.repeats.jumpToDuplicate('all_${id}_${rep}'); return false;`], [displayText]));
+        }
+        listOfRepeats.push(Tag.tag("p", [`data-entry=${id}`, `class=duplicate all_${id} level-${app.ui.getLevelPrefix(entry.levelArr)}`], [...anchors]));
+      }
+      const toggleOpen = (app.state.current.repeat_state) ? " open" : "";
+      repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
+        Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
+          totalOfRepeatedLemmas,
+          ` significant repeated word${app.tools.pluralNoun(totalOfRepeatedLemmas)}`,
+        ]),
+        Tag.tag("aside", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
+        Tag.tag("div", ["id=repeats"], [...listOfRepeats])
+      ]);
+      return repeatsHeader;
+  }
+
+  formatResultsAsTablerows(col1, col2, class1, class2) {
+    class1 = (class1) ? `class=${class1}` : "";
+    class2 = (class2) ? `class=${class2}` : "";
+    return Tag.tag("tr", [], [
+      Tag.tag("td", [class1], [col1]),
+      Tag.tag("td", [class2], [...col2]),
+    ]);
+  }
+
+  // markStringAsErrorHTML(str, type="error") {
+  markAsError(str, type="error") {
+    return Tag.tag("span", ["class=" + type], [str]);
+  }
+
+  reportNoRepeats(message, paraID, spanID, spanClasses) {
+    return Tag.tag("p", [`id=${paraID}`], [
+      Tag.tag("span", [`id=${spanID}`, `class=${spanClasses}`], [message])]);
+  }
+
+  wordSearchResults(word, results) {
+    let output = [];
+    let previousInitial = "";
+    let currentInitial = "";
+    let i = 0;
+    // for (const entry of results.sort(this.compareByLemma)) {
+    for (const entry of results) {
+      const lemmaPrefix = (entry.lemma === word) ? "" : "≈ ";
+      currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
+      if (currentInitial !== previousInitial) {
+        output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
+      }
+      // const awlWord = app.ui.highlightAwlAsHTML(entry.levelArr, entry.lemma);
+      // const awlWord = app.renderAsHTML.awlLemma(entry.levelArr, entry.lemma);
+      const awlWord = this.awlLemma(entry.levelArr, entry.lemma);
+      let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
+      const lemma = Tag.tag("strong", [`class=${class2} all-repeats`], [awlWord]);
+      let pos;
+      if (entry.posExpansion) pos = `[${entry.posExpansion}]`;
+      else {
+        pos = "";
+        console.log("PoS information missing from entry in wordlist:", entry.lemma);
+      }
+      let levelInfo = app.ui.getLevelInfoText(entry);
+      // let [note, awl_note] = app.ui.getNotesAsHTML(entry);
+      // let [note, awl_note] = app.renderAsHTML.notes(entry);
+      let [note, awl_note] = this.notes(entry);
+      const col2 = [lemmaPrefix, lemma, ": ", Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [levelInfo]), note, awl_note];
+      output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", "dark"));
+      previousInitial = currentInitial;
+      i++;
+    }
+    return Tag.tag("table", [], [...output]);
+  }
+
+
+  getWordCountAsHTML(wordCount) {
+    const numOfWords = (wordCount > 0)
+      ? Tag.tag("span", ["class=text-right dark"], [
+        "(",
+        wordCount,
+        " word",
+        app.tools.pluralNoun(wordCount),
+        ")",
+        // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
+        Tag.tag("a", ["href=#all_repeats", "class=medium"]),
+      ])
+      : "";
+    return numOfWords;
+  }
+
+
+  buildHTMLlevelStats(tokenArr) {
+    /*
+    <details id="level-details"${toggleOpen}>
+      <summary class="all-repeats">
+        Level statistics:<em> (${separateLemmasCount} headwords)</em>
+      </summary>
+      <div class="level-stats-cols">
+        <p class="level..."></p>
+      </div>
+    </details>
+    */
+    const levelStats = app.stats.getAllLevelStats();
+    let levelStatsHTML = "";
+    if (!app.stats.totalLemmaCount) return levelStatsHTML;
+    let tmpStats = [];
+    for (let [levelID, levelPrefix, levelText, total, percent] of levelStats) {
+      let levelDisplayText = levelText;
+      if (app.state.isKids) {
+        // * to trim kids' theme names to manageable display length
+        const match = /\((.+?)\)/.exec(levelText);
+        if (match) levelDisplayText = match[1];
+      }
+      tmpStats.push(Tag.tag("p", [`class=level-${levelPrefix}`], [levelDisplayText, ": ", total, " (", percent, ")"]));
+    }
+    const toggleOpen = (app.state.current.level_state) ? " open" : "";
+    levelStatsHTML = Tag.root([Tag.tag("details", ["id=level-details", toggleOpen], [
+      Tag.tag("summary", ["class=all-repeats"], [
+        "Level statistics:",
+        // Tag.tag("em", [], [this.totalLemmaCount, " headwords"]),
+        Tag.tag("em", [], [app.stats.totalLemmaCount, " headwords"]),
+      ]),
+      Tag.tag("aside", ["class=summary-instructions"], [ "Click on level to show all words at that level." ]),
+      Tag.tag("div", ["id=level-details-list","class=level-stats-cols"], [...tmpStats])
+    ])
+    ]);
+    return levelStatsHTML.stringify();
+  }
+
+  renderMarkup(resultsHTML, repeatsHTML, levelStatsHTML, wordCount) {
+    // app.db.displayDbNameInTab2(this.getWordCountAsHTML(wordCount));
+    // app.db.displayDbNameInTab2(app.renderAsHTML.getWordCountAsHTML(wordCount));
+    this.displayDbNameInTab2(this.getWordCountAsHTML(wordCount));
+    app.repeats.displayList(repeatsHTML, levelStatsHTML);
+    this.textDisplayWorking(resultsHTML);
+    app.listeners.addDetailToggle(document.getElementById("level-details"));
+    app.listeners.setHighlightLevels(document.querySelectorAll("#level-details-list > p"));
+  }
+
+
+  textDisplayWorking(html) {
+    app.htm.workingDiv.innerHTML = html;
+  }
+
+  text(tokenArr) {
+    const repeatsHTML = app.repeats.buildHTMLrepeatList();
+    // const levelStatsHTML = app.stats.buildHTMLlevelStats(tokenArr);
+    // const levelStatsHTML = app.renderAsHTML.buildHTMLlevelStats(tokenArr);
+    const levelStatsHTML = this.buildHTMLlevelStats(tokenArr);
+    this.renderMarkup(this.buildHTMLtext(tokenArr), repeatsHTML, levelStatsHTML, app.stats.totalWordCount);
+    app.cursor.setPos(document.getElementById(app.cursor.id));
+  }
+
+  buildHTMLtext(tokenArr) {
+    let toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "wdv", "wvd", "c", "d", "y", "wnd"];
+    // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
+    let htmlString = "";
+    let wordIndex = 0;
+    let i = 0;
+    for (let token of tokenArr) {
+      const firstType = token.type;
+      if (firstType === "pe") htmlString += `\n${app.EOL.HTMLtext}`;
+      else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
+      else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
+      else {
+        wordIndex++;
+        const groupedWord = this.buildHTMLword(token, wordIndex, i);
+        htmlString += groupedWord;
+      }
+      i++;
+    }
+    return htmlString;
+  }
+
+  buildHTMLword(token, wordIndex, i) {
+    // ** expects populated list of matches (therefore requires textLookupSimples)
+    let word = {
+      lemma: token.lemma,
+      id: token.matches[0].id,
+      type: token.type,
+      levelArr: token.matches[0].levelArr,
+      matches: token.matches,
+      matchCount: token.matches.length,
+      totalReps: token.info.totalReps,
+      thisRep: token.info.thisRep,
+      isMixedLevels: token.isMixedLevels,
+    }
+    if (!word.matchCount) console.warn(`Unprocessed item (${word.lemma})!!`)
+    // const renderedWord = app.ui.highlightAwlAsHTML(word.levelArr, word.lemma);
+    // const renderedWord = app.renderAsHTML.awlLemma(word.levelArr, word.lemma);
+    const renderedWord = this.awlLemma(word.levelArr, word.lemma);
+    const variantClass = (word.type.includes("v")) ? " variant" : "";
+    const [levelClass,
+      limitClass,
+      multiLevelClass
+    ] = this.renderLevelInfo(word);
+    const [relatedWordsClass,
+      repStatusClass,
+      dataReps,
+      idLinkingReps
+    ] = this.renderRepsInfo(word);
+    const classes = this.getSpaceSeparatedList([levelClass, relatedWordsClass, repStatusClass, variantClass, limitClass, multiLevelClass]);
+    const displayWord = Tag.tag("span", [`data-entry=${i}`, `class=${classes}`, dataReps, idLinkingReps], [renderedWord]);
+    return displayWord.stringify();
+  }
+
+  renderRepsInfo(word) {
+    let relatedWordsClass = `all_${word.id}`;
+    let [repStatusClass, dataReps, idLinkingReps] = ["", "", ""];
+    if (word.totalReps > 0) {
+      repStatusClass = "duplicate";
+      dataReps = `data-reps=${word.totalReps + 1}`;
+      idLinkingReps = `id=${relatedWordsClass}_${word.thisRep + 1}`;
+    }
+    return [relatedWordsClass, repStatusClass, dataReps, idLinkingReps];
+  }
+
+  renderLevelInfo(word) {
+    let levelClass = "level-" + app.ui.getLevelPrefix(word.levelArr);
+    const limitClass = app.limit.renderAsCSS(levelClass);
+    let multiLevelStatusClass = "";
+    if (word.matchCount > 1) multiLevelStatusClass = (word.isMixedLevels) ? "multi-diff" : "multi-same";
+    return [levelClass, limitClass, multiLevelStatusClass];
+  }
+
+  getSpaceSeparatedList(list) {
+    return list.filter(el => el).join(" ");
+  }
+
+  setDbTab1(dbName, htmlToHide, htmlToShow) {
+    this.displayDbNameInTab1();
+    // ** Allows for multiple elements to be toggled
+    // for (const el of app.db.toHide) {
+    for (const el of htmlToHide) {
+      el.style.setProperty("display", "none");
+    }
+    // for (const el of app.db.toShow) {
+    for (const el of htmlToShow) {
+      el.style.setProperty("display", "block");
+    }
+    app.word.search();
+  }
+
+  setDbTab2(dbName) {
+    this.displayDbNameInTab2("", dbName);
+    app.ui.forceUpdateInputDiv();
+  }
+
+
+  displayDbNameInTab1(dbName) {
+    // document.getElementById('db_name1').textContent = this.name;
+    document.getElementById('db_name1').textContent = dbName;
+  }
+
+  displayDbNameInTab2(msg, dbName) {
+    if (!msg) msg = "";
+    // app.htm.finalLegend.innerHTML = Tag.root("Checking ", Tag.tag("span", ["id=db_name2", "class=dbColor"], [this.name]), " ", msg).stringify();
+    app.htm.finalLegend.innerHTML = Tag.root("Checking ", Tag.tag("span", ["id=db_name2", "class=dbColor"], [dbName]), " ", msg).stringify();
+    document.getElementById("help-kids").setAttribute("style", (app.state.isKids) ? "display:list-item;" : "display:none;");
+    document.getElementById("help-gept").setAttribute("style", (app.state.isGEPT || app.state.isBESTEP) ? "display:list-item;" : "display:none;");
+    document.getElementById("help-awl").setAttribute("style", (app.state.isBESTEP) ? "display:list-item;" : "display:none;");
+    document.getElementById("help-gz6k").setAttribute("style", (app.state.isGZ6K) ? "display:list-item;" : "display:none;");
+    document.getElementById("help-ref2k").setAttribute("style", (app.state.isREF2K) ? "display:list-item;" : "display:none;");
+  }
+}
+
 
 class Entry {
   static currID = 0;
@@ -3634,7 +3568,6 @@ class Entry {
     if (!lemma) {
       this._lemma = "";
       this._pos = "";
-      // this._levelArr = [];
       this._levels = new Levels();
       this._notes = [];
     }
@@ -3659,7 +3592,6 @@ class Entry {
 
 
   get levelArr() { return this._levels };
-  // get levelArr() { return this.levelArr };
   get gept() { return this._levels.gept };
   get awl() { return this._levels.awl };
   get kids() { return this._levels.kids };
@@ -3682,9 +3614,6 @@ class Entry {
 
 
   get notesAsText() {
-    // const gloss = this._notes[0];
-    // const note = this._notes[1]
-    // let text = (note) ? `${gloss}; ${note}` : gloss;
     let text = (this.note) ? `${this.gloss}; ${this.note}` : this.gloss;
     return text;
   }
@@ -3727,7 +3656,6 @@ class Token {
 
 
   appendMatches(entryList) {
-    // console.warn(entryList)
     // ** function accepts entries as a single Entry or as list of Entries
     // ** i.e. Entry or [Entry] o [Entry, Entry, ...] are all fine
     if (!this.matches) this.matches = [];
@@ -3741,8 +3669,6 @@ class Token {
     const hasOfflist = this.matches.some(entry => entry.id >= 0);
     const hasOnlist = this.matches.some(entry => entry.id < 0);
     if (hasOfflist && hasOnlist) this.matches = this.matches.filter(entry => entry.id >= 0);
-    // let potentialMatches = this.matches.filter(entry => entry.id >= 0);
-    // console.log("append matches",this.matches[0].lemma,  potentialMatches.length,">>>", this.matches.length, potentialMatches.length === this.matches.length, potentialMatches, this.matches)
     // if (potentialMatches.length !== this.matches.length) this.matches = potentialMatches;
     // * Sort matches by their GEPT level (low to high)
     if (this.matches.length > 1){
@@ -3791,8 +3717,9 @@ class Tag {
     let tmpContent = "";
     for (let el of this.content) {
       if (!el) continue;
-      if (typeof el === "number") el = el.toString();
-      tmpContent += (typeof el === "string") ? el : el.stringify();
+      // tmpContent += (el instanceof Tag) ? el.stringify() : el;
+      // ** Tag automatically invokes Tag.stringify() when coerced to a string. (see valueOf())
+      tmpContent += el;
     }
     // ** <root> is used to render a chain of html/text tags; it is not itself rendered
     if (this.name === "root") return [tmpContent];
@@ -3808,6 +3735,10 @@ class Tag {
     return `<${this.name}${tmpAttrs}>${tmpContent}</${this.name}>`;
   }
 
+  valueOf() {
+    // ** override how Tags are coerced into strings: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf#overriding_valueof_for_custom_objects
+    return this.stringify();
+  }
 
   static tag(name, attrs = [], content = []) {
     return new Tag(name, attrs, content);
@@ -3879,14 +3810,9 @@ class Levels {
   get hasKids() { return this.kids > 0 };
   get hasGz6k() { return this.gz6k > 0 };
   get hasRef2k() { return this.ref2k > 0 };
-  // get hasBestep() { return !!(this.gept || this.awl)}
   get hasBestep() { return !!(this.bestep?.[0])}
   get isInCurrentList() {
     return !!this.level;
-    // let result;
-    // if (app.state.isBESTEP) result = !!this.hasBestep;
-    // else result = !!this.level;
-    // return result;
   }
 }
 
