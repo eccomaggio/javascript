@@ -590,6 +590,7 @@ class WordSearch {
       app.ui.isExactMatch = searchTerms.isExactMatch;
       resultsArr = this.runSearch(searchTerms);
     }
+    console.log("search terms:",searchTerms)
     this.displayResults(new ResultType(results.error, resultsArr), searchTerms.raw_lemma);
   }
 
