@@ -580,30 +580,17 @@ class WordSearch {
     this.legends = locale.legends;
   }
 
+
   search(e) {
     let resultsArr = [];
-    let HTMLstringToDisplay = "";
-    const data = this.getFormData(e);
-    app.ui.isExactMatch = (data.match[0] === "exact");
-    let errorMsg = this.validateFormData(data);
-    if (errorMsg) {
-      HTMLstringToDisplay = this.markStringAsErrorHTML(errorMsg).stringify();
-    } else {
-      const searchTerms = this.buildSearchTerms(data);
+    let searchTerms = {};
+    const results = this.validateTerms(this.buildSearchTerms(this.getFormData(e)));
+    if (results.isOK) {
+      searchTerms = results.value;
+      app.ui.isExactMatch = searchTerms.isExactMatch;
       resultsArr = this.runSearch(searchTerms);
-      HTMLstringToDisplay = this.formatResultsAsHTML(resultsArr, searchTerms.raw_lemma);
     }
-    this.displayResults(HTMLstringToDisplay, resultsArr.length);
-  }
-
-  markStringAsErrorHTML(str, type="error") {
-    return Tag.tag("span", ["class=" + type], [str]);
-  }
-
-  updateKidstheme(e) {
-    const selection = e.target;
-    selection.dataset.chosen = selection.value;
-    this.search(e);
+    this.displayResults(new ResultType(results.error, resultsArr), searchTerms.raw_lemma);
   }
 
   getFormData(e) {
@@ -630,35 +617,9 @@ class WordSearch {
     return data;
   }
 
-  validateFormData(data) {
-    let status = 3;
-    /* key for status:
-    0 = contains a valid search term outside of "match"
-    1 = contains a character other than space/apostrophe/hypen
-    2 = contains a non-default match term but no lemma (which match requires)
-    3 = contains nothing beyond the default "match=contains"
-    */
-    for (const el in data) {
-      if (el === "match") continue;
-      if (!app.tools.isEmpty(data[el])) {
-        status = 0;
-        break;
-      }
-    }
-    if (status === 3 && !data["match"].includes("contains")) status = 2;
-    const term = data.term.join().split(" ")[0].toLowerCase();
-    if (term.search(/[^a-z\-\s'.]/g) > -1) status = 1;
-    const errorMsg = [
-      "",
-      "The only non-alphabetic characters allowed are space, apostrophe, and hyphen.",
-      "Please enter at least one search term to restrict the number of results.",
-      "Enter a search term."
-    ][status];
-    return errorMsg;
-  }
 
   buildSearchTerms(data) {
-    let lemma = data.term.join().toLowerCase();
+    let lemma = data.term.join().toLowerCase().trim();
     const matchType = this.MATCHES[data.match];
     let nonGeptLevel = data.level;
     const searchTerms = {
@@ -666,16 +627,32 @@ class WordSearch {
       raw_lemma: lemma,
       glevel: data.glevel,
       level: nonGeptLevel,
-      pos: data.pos.join("|")
+      pos: data.pos.join("|"),
+      isExactMatch: data.match[0] === "exact",
     };
+    // * NB matchType is meaningless without a lemma
+    searchTerms.hasOtherTerms = !!(data.glevel.length + nonGeptLevel.length + data.pos.length);
     return searchTerms;
   }
 
 
+  validateTerms(terms) {
+    let error;
+    if (terms.raw_lemma){
+      error = (terms.raw_lemma.search(/[^a-z\-\s'.]/g) > -1) ? "The only non-alphabetic characters allowed are spaces, apostrophes and hyphens." : "";
+    }
+    else {
+      error = (terms.hasOtherTerms) ? "" : "Please enter a search term.";
+    }
+    // const result = {error: error, value: (error) ? "" : terms }
+    const result = new ResultType(error, terms)
+    // console.log(tmp)
+    return result;
+  }
 
   runSearch(searchTerms) {
-    searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
-    console.log("searchterms:",searchTerms)
+    if (searchTerms.raw_lemma) searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
+    // console.log("searchterms:",searchTerms)
     let [, matchedEntryArr] = this.getLemmaMatches(searchTerms);
     matchedEntryArr = this.getGlevelMatches(searchTerms, matchedEntryArr);
     matchedEntryArr = this.getPosMatches(searchTerms, matchedEntryArr);
@@ -684,13 +661,30 @@ class WordSearch {
     return matchedEntryArr;
   }
 
+
+  markStringAsErrorHTML(str, type="error") {
+    return Tag.tag("span", ["class=" + type], [str]);
+  }
+
+  updateKidstheme(e) {
+    const selection = e.target;
+    selection.dataset.chosen = selection.value;
+    this.search(e);
+  }
+
   getLemmaMatches(searchTerms) {
     let tokenType;
-    let matchedEntryArr = app.db.getEntriesByPartialLemma(searchTerms.lemma);
-    [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, matchedEntryArr);
-    matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
+    let matchedEntryArr;
+    if (searchTerms.raw_lemma) {
+      matchedEntryArr = app.db.getEntriesByPartialLemma(searchTerms.lemma);
+      [tokenType, matchedEntryArr] = app.search.checkAgainstLookups(searchTerms.raw_lemma, matchedEntryArr);
+      matchedEntryArr.push(this.lazyCheckAgainstCompounds(searchTerms.raw_lemma));
+    }
+    else if (searchTerms.hasOtherTerms) matchedEntryArr = app.db.list;
+    else console.log("NO SEARCH TERMS!!!");
     return [tokenType, matchedEntryArr];
   }
+
 
   getGlevelMatches(searchTerms, matchedEntryArr) {
     if (searchTerms.glevel?.length && (app.state.isGEPT || app.state.isBESTEP)) {
@@ -746,41 +740,52 @@ class WordSearch {
     return result;
   }
 
+  displayResults(results, word) {
+    let legendAsText = this.legends.results;
+    let resultsAsHTMLstring;
+    if (results.isError) {
+      resultsAsHTMLstring = this.markStringAsErrorHTML(results.error).stringify();
+    }
+    else {
+      const numberOfMatches = results.value.length;
+      if (numberOfMatches) {
+        legendAsText += ` (${numberOfMatches})`;
+        resultsAsHTMLstring = this.formatResultsAsHTML(results.value, word);
+      }
+      else resultsAsHTMLstring = this.markStringAsErrorHTML("Search returned no results.").stringify();
+    }
+    app.htm.resultsLegend.innerHTML = legendAsText;
+    app.htm.resultsText.innerHTML = resultsAsHTMLstring;
+  }
 
   formatResultsAsHTML(results, word) {
     let resultsAsTags;
-    if (app.tools.isEmpty(results)) {
-      resultsAsTags = this.markStringAsErrorHTML("Search returned no results.","warning");
-    }
-    else {
-      let output = [];
-      let previousInitial = "";
-      let currentInitial = "";
-      let i = 0;
-      for (const entry of results.sort(this.compareByLemma)) {
-        const lemmaPrefix = (entry.lemma === word) ? "" : "≈ ";
-        currentInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
-        if (currentInitial !== previousInitial) {
-          output.push(this.formatResultsAsTablerows(currentInitial.toLocaleUpperCase(), "", "black", ""));
-        }
-        const awlWord = app.ui.highlightAwlAsHTML(entry.levelArr, entry.lemma);
-        let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
-        const lemma = Tag.tag("strong", [`class=${class2} all-repeats`], [awlWord]);
-        let pos;
-        if (entry.posExpansion) pos = `[${entry.posExpansion}]`;
-        else {
-          pos = "";
-          console.log("PoS information missing from entry in wordlist:", entry.lemma);
-        }
-        let levelInfo = app.ui.getLevelInfoText(entry);
-        let [note, awl_note] = app.ui.getNotesAsHTML(entry);
-        const col2 = [lemmaPrefix, lemma, ": ", Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [levelInfo]), note, awl_note];
-        output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", "dark"));
-        previousInitial = currentInitial;
-        i++;
+    let output = [];
+    let initial = "";
+    let i = 0;
+    for (const entry of results.sort(this.compareByLemma)) {
+      let lemmaPrefix = (app.ui.isExactMatch && entry.lemma !== word) ? "≈" : "";
+      const thisInitial = (entry.lemma) ? entry.lemma[0].toLowerCase() : "";
+      if (thisInitial !== initial) {
+        initial = thisInitial;
+        output.push(this.formatResultsAsTablerows(initial.toLocaleUpperCase(), "", "black", ""));
       }
-      resultsAsTags = Tag.tag("table", [], [...output]);
+      const awlWord = app.ui.highlightAwlAsHTML(entry.levelArr, entry.lemma);
+      let class2 = "level-" + app.ui.getLevelPrefix(entry.levelArr);
+      const lemma = Tag.tag("strong", [`class=${class2} all-repeats`], [awlWord]);
+      let pos;
+      if (entry.posExpansion) pos = `[${entry.posExpansion}]`;
+      else {
+        pos = "";
+        console.log("PoS information missing from entry in wordlist:", entry.lemma);
+      }
+      let levelInfo = app.ui.getLevelInfoText(entry);
+      let [note, awlNote] = app.ui.getNotesAsHTML(entry);
+      const col2 = [lemmaPrefix, lemma, ": ", Tag.tag("span", ["class=show-pos"], [pos]), " ", Tag.tag("span", ["class=show-level"], [levelInfo]), note, awlNote];
+      output.push(this.formatResultsAsTablerows(`${i + 1}`, col2, "", "dark"));
+      i++;
     }
+    resultsAsTags = Tag.tag("table", [], [...output]);
     return resultsAsTags.stringify();
   }
 
@@ -794,12 +799,6 @@ class WordSearch {
     ]);
   }
 
-  displayResults(resultsAsHtmlString, resultCount = 0) {
-    let text = this.legends.results;
-    if (resultCount) text += ` (${resultCount})`;
-    app.htm.resultsLegend.innerHTML = text;
-    app.htm.resultsText.innerHTML = resultsAsHtmlString;
-  }
 
   compareByLemma(a, b) {
     const lemmaA = a.lemma.toLowerCase();
@@ -3269,7 +3268,8 @@ class GenericSearch {
       const truncated = word.slice(0, key.length)
       const searchTerm = (app.ui.isExactMatch) ? key : key.slice(0, word.length);
       if (searchTerm === truncated) {
-        lemma = this.lookup.gendered_nouns[key];
+        // lemma = this.lookup.gendered_nouns[key];
+        lemma = app.search.lookup.gendered_nouns[key];
         matchedEntryArr = app.db.getEntriesByExactLemma(lemma)
         break;
       }
@@ -3674,6 +3674,40 @@ class Tag {
     }, []);
 
     return new Tag("root", [], content);
+  }
+}
+
+class ResultType {
+  /*
+  Inspired by Rust/functional languages:
+  if result is successful, 'error' is an empty string & 'value' holds the data
+  if unsuccessful, 'error' holds an error message & 'value' is an empty string
+  NB. this means that Result.error can be used as a boolean
+  */
+  constructor(error, value) {
+    if (typeof error === "string") {
+      this.error = error;
+      this.value = (error) ? "" : value;
+    }
+    else {
+      throw new TypeError("error must be a string");
+    }
+  }
+
+  // get error() {
+  //   return this.error;
+  // }
+
+  // get value() {
+  //   return this.value;
+  // }
+
+  get isOK() {
+    return !this.error;
+  }
+
+  get isError() {
+    return !!this.error;
   }
 }
 
