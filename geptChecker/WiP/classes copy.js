@@ -652,7 +652,7 @@ class WordSearch {
   }
 
   runSearch(searchTerms) {
-    // if (searchTerms.raw_lemma) searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
+    if (searchTerms.raw_lemma) searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
     // console.log("searchterms:",searchTerms)
     let [, matchedEntryArr] = this.getLemmaMatches(searchTerms);
     matchedEntryArr = this.getGlevelMatches(searchTerms, matchedEntryArr);
@@ -662,11 +662,6 @@ class WordSearch {
     return matchedEntryArr;
   }
 
-  // removeNegativeSuffix (word) {
-  //   const negVerbStemIndex = word.indexOf("'");
-  //   const truncatedWord = (negVerbStemIndex > 0) ? word.slice(0, negVerbStemIndex) : word;
-  //   return truncatedWord;
-  // }
 
   markStringAsErrorHTML(str, type="error") {
     return Tag.tag("span", ["class=" + type], [str]);
@@ -679,7 +674,6 @@ class WordSearch {
   }
 
   getLemmaMatches(searchTerms) {
-    console.log("getting lemma matches for terms:", searchTerms.lemma, searchTerms)
     let tokenType;
     let matchedEntryArr;
     if (searchTerms.raw_lemma) {
@@ -728,6 +722,12 @@ class WordSearch {
     return matchedEntryArr;
   }
 
+
+  removeNegativeSuffix (word) {
+    const negVerbStemIndex = word.indexOf("'");
+    const truncatedWord = (negVerbStemIndex > 0) ? word.slice(0, negVerbStemIndex) : word;
+    return truncatedWord;
+  }
 
   lazyCheckAgainstCompounds(word) {
     const tmpWord = word.replace(/-'\./g, "").split(" ").join("");
@@ -1213,7 +1213,7 @@ class Parser {
     app.ui.isExactMatch = true;
     app.db.resetOfflistDb();
     let tokenArr = this.divideIntoTokens(revisedText);
-    console.log(">>early tokens", tokenArr)
+    // console.log(">>early tokens", tokenArr)
     revisedText = null;
     tokenArr = this.lookupCompounds(tokenArr);
     tokenArr = this.lookupSimples(tokenArr);
@@ -1356,16 +1356,15 @@ class Parser {
       else if (token.type === "c" && token.lemma === "'t") {
         // **2 tokens: e.g. "didn" + "'t": remove (pop) first token & add to 2nd lemma to create compound "didn't"
         const lemmaWithContraction = tmpTokenArr.pop().lemma + "'t";
-        // const matchedContraction = app.search.checkContractedNegatives(lemmaWithContraction);
+        const matchedContraction = app.search.checkContractedNegatives(lemmaWithContraction);
         // console.log("*** tok 4:", lemmaWithContraction, matchedContraction)
         let negContraction;
-        negContraction = new Token(lemmaWithContraction, "w", []);
-        // if (matchedContraction.length) {
-        //   negContraction = new Token(lemmaWithContraction, "wn", matchedContraction);
-        // }
-        // else {
-        //   negContraction = new Token(lemmaWithContraction, "wo", [app.parser.markOfflist(lemmaWithContraction, "offlist")]);
-        // }
+        if (matchedContraction.length) {
+          negContraction = new Token(lemmaWithContraction, "wn", matchedContraction);
+        }
+        else {
+          negContraction = new Token(lemmaWithContraction, "wo", [app.parser.markOfflist(lemmaWithContraction, "offlist")]);
+        }
         toAdd.push(negContraction);
       }
       if (!toAdd.length) toAdd.push(token)
@@ -3152,14 +3151,14 @@ class GenericSearch {
     ["ly", this.findRootAsArray, this.lookup.ly_subs, ["j", "v"]], // added verbs to allow for 'satisfy-ing-ly' etc.
   ];
 
-  // variantChecks = [
-  //   [this.checkContractedNegatives, "wn"],
-  //   [this.checkDerivations, "wd"],
-  //   [this.checkAllowedVariants, "wv"],
-  //   [this.checkForEnglishSpelling, "wv"],
-  //   // [this.checkAllowedVariants, "wv"],
-  //   [this.checkNegativePrefix, "wn"],
-  // ];
+  variantChecks = [
+    // [this.checkIrregularNegatives, "wn"],
+    [this.checkDerivations, "wd"],
+    [this.checkAllowedVariants, "wv"],
+    [this.checkForEnglishSpelling, "wv"],
+    // [this.checkAllowedVariants, "wv"],
+    [this.checkNegativePrefix, "wn"],
+  ];
 
   checkAgainstLookups(word, exactMatches) {
     let tokenType = "w";
@@ -3172,14 +3171,7 @@ class GenericSearch {
 
   checkVariants(word, tokenType, matchedEntryArr){
     let localMatchedArr = [];
-    for (let [checkFunc, type] of [
-      [this.checkContractedNegatives, "wn"],
-      [this.checkDerivations, "wd"],
-      [this.checkAllowedVariants, "wv"],
-      [this.checkForEnglishSpelling, "wv"],
-      // [this.checkAllowedVariants, "wv"],
-      [this.checkNegativePrefix, "wn"],
-    ]) {
+    for (let [checkFunc, type] of this.variantChecks) {
       localMatchedArr = checkFunc.bind(this)(word);
       if (localMatchedArr.length) {
         tokenType = type;
@@ -3189,19 +3181,6 @@ class GenericSearch {
     }
     return [tokenType, matchedEntryArr];
   }
-
-  // checkVariants(word, tokenType, matchedEntryArr){
-  //   let localMatchedArr = [];
-  //   for (let [checkFunc, type] of this.variantChecks) {
-  //     localMatchedArr = checkFunc.bind(this)(word);
-  //     if (localMatchedArr.length) {
-  //       tokenType = type;
-  //       matchedEntryArr = matchedEntryArr.concat(localMatchedArr);
-  //       break;
-  //     }
-  //   }
-  //   return [tokenType, matchedEntryArr];
-  // }
 
   checkForEnglishSpelling(word) {
     // * returns => [lemma, [ids...], type]
@@ -3406,7 +3385,7 @@ class GenericSearch {
     let matchedEntryArr = [];
     const lookup = this.lookup.contractedNegatives[word];
     /* assume (e.g. do / have) that if there are two matches, one will be the full verb & one the aux.; return only the aux. If only one match, assume it is an anomalous verb like dare / need, not a full aux., so return the single match. */
-    console.log("neg contractions:", word, lookup)
+    // console.log("neg contractions:", word, lookup)
     if (lookup) {
       const entries = app.db.getEntriesByExactLemma(lookup);
       if (entries.length > 1) {
