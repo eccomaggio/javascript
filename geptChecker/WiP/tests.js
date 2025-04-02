@@ -1,36 +1,27 @@
 class Tests {
-  constructor(lookupTable) {
-    this.lookupTable = lookupTable;
-  }
+  // constructor(lookupTable) {
+  //   this.lookupTable = lookupTable;
+  // }
+
 
   makeSearchTerms(lemma, glevel, level, pos, matchType) {
-    const matchRegex = this.lookupTable[matchType];
-    return {
-      lemma: new RegExp(matchRegex[0] + lemma + matchRegex[1], "i"),
-      raw_lemma: lemma,
-      glevel: glevel,
+    const terms = app.word.buildSearchTerms({
+      term: [lemma],
       level: level,
-      pos: pos,
-      isExactMatch: matchType === "exact",
-      hasOtherTerms: !!(glevel.length + level.length + pos.length),
-    };
+      glevel: glevel,
+      pos: [pos],
+      match: [matchType],
+    });
+    return terms;
   }
-
   testByCount(msg, count, [lemma, glevel, level, pos, matchType="contains"]) {
     const searchTerms = this.makeSearchTerms(lemma, glevel, level, pos, matchType);
     const resultsArr = app.word.runSearch(searchTerms);
     console.log(`** test by count: [${msg}] = ${count === resultsArr.length}`)
   }
 
-  // testByLemma(targetLemma, testLemma, [glevel, level, pos, matchType="contains"]) {
-  //   const searchTerms = this.makeSearchTerms(testLemma, glevel, level, pos, matchType);
-  //   const resultsArr = app.word.runSearch(searchTerms);
-  //   console.log(`** test by lemma: [${testLemma} <- ${targetLemma}] = ${targetLemma === resultsArr[0].lemma}`, resultsArr)
-  // }
-
   testByLemma(msg, lemmaTests, [glevel, level, pos, matchType="contains"]) {
-    // console.log("** test by lemma:")
-    console.log("\n",msg)
+    this.displayTestTitle(msg);
     for (const test of lemmaTests) {
       let [derivedWord, lemma] = test.split("<");
       [derivedWord, lemma] = [derivedWord.trim(), lemma.trim()];
@@ -38,13 +29,42 @@ class Tests {
       const resultsArr = app.word.runSearch(searchTerms);
       const candidates = resultsArr.map(entry => entry.lemma);
       const result = candidates.includes(lemma);
-      if (result) console.log(`\t${derivedWord} <- ${lemma} (\x1B[32;49;1m${result}\x1B[m)`, resultsArr)
-      else console.error(`\t${derivedWord} <- ${lemma} (\x1B[31;49;1m${result}\x1B[m)`, resultsArr)
+      this.displayTestResult(result, `\x1B[1m${derivedWord} \x1B[0m<- ${lemma} (\x1B[32;49;1m${result}\x1B[m)`, resultsArr)
     }
   }
 
-  testRunningText(text, target) {
-    console.log("***>>>***", app.parser.markup(text));
+  testRunningText(text, matches, msg="continuous text") {
+    this.displayTestTitle(msg);
+    const result = app.parser.markup(text);
+    // const contents = result.filter(token=>token?.matches[0]).map(token=>token.matches[0].id);
+    const contents = this.testTokenArray(result);
+    const textMatchesTarget = this.areTheSame(contents, matches);
+    this.displayTestResult(textMatchesTarget, `<${text}> parsed \x1B[1m${(textMatchesTarget) ? "" : "in"}correctly.\x1B[m`, contents)
+    // console.log("***>>>***", contents, matches, this.areTheSame(contents,matches));
+  }
+
+  testTokenArray(tokenArr) {
+    return tokenArr.filter(token=>token?.matches[0]).map(token=>token.matches[0].id);
+  }
+
+  areTheSame(arr1, arr2) {
+    let result = true;
+    if (arr1.length === arr2.length) {
+      for (let i=0; i<arr1.length; i++) {
+        if (arr1[i] !== arr2[i]) result = false;
+      }
+    }
+    else result = false;
+    return result;
+  }
+
+  displayTestResult(isPass, msg, data="") {
+    if (isPass) console.log("\t" + msg, data);
+    else console.error("\t" + msg, data);
+  }
+
+  displayTestTitle(title) {
+    console.log(`\n** \x1B[34;49;10m${title}\x1B[m`);
   }
 
 }
@@ -106,11 +126,6 @@ T.testByLemma(
   basicTerms);
 
 T.testByLemma(
-  "contractions",
-  ["I'm < be", "she'll < will", "we've < have"],
-  basicTerms);
-
-T.testByLemma(
   "irregular plurals",
   ["geese < goose", "mice < mouse", "oxen < ox"],
   basicTerms);
@@ -150,4 +165,9 @@ T.testByLemma(
 //   [""],
 //   basicTerms);
 
-T.testRunningText("I'm coming to a bear.")
+T.testRunningText(
+  "I'm, you'll, she's, we've, they'd, we're",
+  [4374, -1, 10077, -2, 7938, -3, 9827, -4, 9014, -5, 9827, -6],
+  "contractions");
+
+T.testRunningText("I'm colouring; can't stop 20cm.", [4374, -1, 1637, 1219, 8523, -2]);
