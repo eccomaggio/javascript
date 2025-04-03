@@ -581,6 +581,7 @@ class WordSearch {
     if (results.isOK) {
       searchTerms = results.value;
       app.ui.isExactMatch = searchTerms.isExactMatch;
+      console.log("SEARCH TERMS:", searchTerms);
       resultsArr = this.runSearch(searchTerms);
     }
     // console.log("search terms:",searchTerms)
@@ -3119,7 +3120,6 @@ class GenericSearch {
         break;
       }
     }
-    // return [tokenType, matchedEntryArr];
     matchedEntryArr = exactMatches.concat(matchedEntryArr);
     if (!matchedEntryArr.length) tokenType = "wo";  // offlist
     return [tokenType, matchedEntryArr];

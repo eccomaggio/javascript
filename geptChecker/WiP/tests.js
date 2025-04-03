@@ -15,9 +15,12 @@ class Tests {
     return terms;
   }
   testByCount(msg, count, [lemma, glevel, level, pos, matchType="contains"]) {
+    this.displayTestTitle("verify number of matches per search");
     const searchTerms = this.makeSearchTerms(lemma, glevel, level, pos, matchType);
     const resultsArr = app.word.runSearch(searchTerms);
-    console.log(`** test by count: [${msg}] = ${count === resultsArr.length}`)
+    const hasExpectedNumberOfMatches = count === resultsArr.length;
+    // console.log(`** test by count: [${msg}] = ${count === resultsArr.length}`, resultsArr)
+    this.displayTestResult(hasExpectedNumberOfMatches, `\x1B[1m${msg}\x1B[m (\x1B[32;49;1m${hasExpectedNumberOfMatches}\x1B[m)`, resultsArr)
   }
 
   testByLemma(msg, lemmaTests, [glevel, level, pos, matchType="contains"]) {
@@ -71,7 +74,6 @@ class Tests {
 
 const T = new Tests(app.word.MATCHES);
 const basicTerms = [[],[],"","contains"];
-T.testByCount("ADJS at INT level starting 'a'", 43, ["a",[2],[],"j","starts"]);
 T.testByLemma(
   "final -s",
   ["hissed < hiss", "toes<toe", "matches < match", "loaves < loaf", "fixes < fix", "representatives < representative", "lives < life", "buzzes < buzz", "rushes < rush", "rates < rate", "rats < rat"],
@@ -171,3 +173,6 @@ T.testRunningText(
   "contractions");
 
 T.testRunningText("I'm colouring; can't stop 20cm.", [4374, -1, 1637, 1219, 8523, -2]);
+
+T.testByCount("ADJS at INT level starting 'a'", 43, ["a",[2],[],"j","starts"]);
+T.testByCount("all adjs at int level ending with -ed", 25, [["ed"], [2],[], "j", "ends"]);
