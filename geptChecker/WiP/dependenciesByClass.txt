@@ -1,0 +1,179 @@
+class Htm {
+	NONE
+
+class EventListeners {
+	app.cursor.updatePos(e)
+	app.db.change(e)
+	app.htm x2
+	app.info.hoverEffects(e)
+	app.info.hoverEffects(e)
+	app.limit.toggle(e)
+		app.reset(e)
+	app.state x4
+	app.stats.toggleLevelHighlight(e)},
+	app.tools.catchKeyboardCopyEvent(e)
+	app.tools.normalizePastedText(e)},
+	app.tools.normalizeTextForClipboard(e)
+	app.ui.dropdown(e)
+	app.ui.dropdown(e)
+	app.ui.registerLabelClick(e)
+	app.word.search()
+	app.word.updateKidstheme(e)
+
+class UI {
+	* htm, state, db
+	app.db.defaults[dBindex].headings;
+	app.db.geptPrefix;
+	app.db.headings;
+	app.db.offlist_subs[offlistID
+	app.db.prefix;
+	app.htm.form.querySelectorAll("select[name='level']
+	app.state x4
+
+class Tools {
+		app.EOL.text,
+
+class WordSearch {
+	* htm, state, ui, db, search
+	app.db.compounds
+	app.db.getEntriesByPartialLemma(searchTerms.lemma);
+	app.db.list;
+	app.htm.form;
+	app.search.checkAgainstLookups
+	app.state x3
+	app.ui.getLevelInfoText(entry);
+	app.ui.getLevelPrefix(entry.levelArr);
+	app.ui.getNotesAsHTML(entry);
+	app.ui.highlightAwlAsHTML
+	app.ui.isExactMatch
+
+class Repeats {
+	* state, ui, db, tools, listeners
+	app.db.getEntryById(id);
+	app.listeners.detailID
+	app.listeners.detailID
+		app.repeats.jumpToDuplicate('all_${id}_${rep}');
+	app.state x3
+	app.tools.addSIfPlural(totalOfRepeatedLemmas)
+	app.ui.getLevelPrefix(entry.levelArr)
+	app.ui.getLevelPrefix(entry.levelArr)
+	app.ui.highlightAwlAsHTML(entry.levelArr,
+
+class WordStatistics {
+	* htm, state, ui, db
+	app.db.id]
+	app.htm.workingDiv.getElementsByClassName(targetLevel)
+	app.state x5
+	app.ui.getLevelHeading(level,
+	app.ui.getLevelHeading(level);
+	app.ui.getLevelPrefix(levelArr);
+
+class Text {
+	* htm, state, ui, db, cursor, limit, parser, repeats, search
+	app.cursor.HTMLtext;
+	app.cursor.id));
+	app.cursor.insertPlaceholder
+	app.cursor.offset
+	app.cursor.simpleText
+	app.cursor.text
+	app.cursor.text
+	app.db.compounds
+	app.db.getEntriesByExactLemma("have").filter(match
+	app.db.getEntriesByExactLemma(word);
+	app.db.getEntryById(id));
+	app.db.isInOfflistDb(id)
+	app.db.offlistDb.length
+	app.db.offlistDb
+		app.EOL.HTMLtext}`;
+		app.EOL.simpleText
+		app.EOL.text
+	app.htm.workingDiv,
+	app.limit.renderAsCSS(levelClass);
+	app.parser.markup(revisedText);
+	app.repeats.buildHTMLrepeatList();
+	app.search.checkAgainstLookups(word,
+	app.state x3
+	app.stats.buildHTMLlevelStats(tokenArr);
+	app.stats.totalWordCount);
+		app.text.tokenArr[tokenID];
+	app.ui.getLevelInfoText(entry);
+	app.ui.getLevelPrefix(entry.levelArr);
+	app.ui.getLevelPrefix(word.levelArr);
+	app.ui.getNotesAsHTML(entry);
+	app.ui.highlightAwlAsHTML(word.levelArr,
+	app.ui.refreshRequired)
+
+class State {
+	* htm, state, db, tools, limit
+	app.db.isInOfflistDb(parsedId)
+	app.db.list;
+	app.db.offlistDb
+	app.htm x13
+	app.limit.LEVEL_LIMITS
+	app.state x12
+	app.tools.expandDb(make_db())
+
+class TabController {
+	app.state x3
+
+class ShowLevelLimit {
+	app.state x5
+	app.tools.isEmpty(this.activeClassesArr)
+
+class Backup {
+	* htm, state, tools, cursor, text
+	app.cursor.newlinesToPlaintext(
+		app.hasBeenReset)
+	app.htm x7
+	app.state.saveItem(id,
+	app.text.refresh();
+	app.tools.EOLsToNewlines(currentText);
+	app.tools.newlinesToEOLs(restoredContent);
+
+class Cursor {
+	* htm, ui, tabs
+		app.EOL.text);
+	app.htm x3
+	app.tabs.isFirstTab
+	app.ui.refreshPermitted
+	app.ui.refreshRequired
+	app.ui.signalRefreshNeeded("on");
+
+class GenericSearch {
+	* ui, db, tools, parser
+	app.db.getEntriesByExactLemma("a")
+	app.db.getEntriesByExactLemma(base);
+	app.db.getEntriesByExactLemma(lemma)
+	app.db.getEntriesByExactLemma(lemma),
+	app.db.getEntriesByExactLemma(lemma);
+	app.db.getEntriesByExactLemma(lemma)?.[0]
+	app.db.getEntriesByExactLemma(lemma)
+	app.db.getEntriesByExactLemma(lookup),
+	app.db.getEntriesByExactLemma(lookup);
+	app.db.getEntriesByExactLemma(lookup)
+	app.db.getEntriesByExactLemma(root
+	app.db.getEntriesByExactLemma(variant);
+	app.parser.markOfflist(word,
+		app.search.findRootAsArray(word,
+		app.search.lookup.gendered_nouns))
+		app.search.lookup.gendered_nouns[key];
+		app.search.lookup.variantWords);
+		app.search.shared.abbreviatedLemmas.includes(word)
+		app.search.shared.abbreviations[word];
+	app.tools.dedupeSimpleArray(preMatchedIDarr);
+	app.tools.isEmpty(indices)
+	app.tools.isEmpty(matchedLemmas)
+	app.ui.isExactMatch
+
+class Entry {
+	app.db.pos_expansions[el]
+	app.state.isBESTEP
+
+class ResultType {
+	NONE
+
+class Levels {
+	app.db.geptPrefix
+	app.db.prefix
+	app.state x2
+

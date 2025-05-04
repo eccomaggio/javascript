@@ -503,7 +503,7 @@ class Tools {
     return arr;
   }
 
-  pluralNoun(amount) {
+  addSIfPlural(amount) {
     return (amount > 1) ? "s" : "";
   }
 
@@ -569,17 +569,10 @@ class Tools {
 }
 
 class WordSearch {
-  MATCHES = {
-    exact: ["^", "$"],
-    contains: ["", ""],
-    starts: ["^", ".*"],
-    ends: [".*", "$"]
-  };
 
   constructor(locale) {
     this.legends = locale.legends;
   }
-
 
   search(e) {
     let resultsArr = [];
@@ -588,6 +581,7 @@ class WordSearch {
     if (results.isOK) {
       searchTerms = results.value;
       app.ui.isExactMatch = searchTerms.isExactMatch;
+      console.log("SEARCH TERMS:", searchTerms);
       resultsArr = this.runSearch(searchTerms);
     }
     // console.log("search terms:",searchTerms)
@@ -621,7 +615,14 @@ class WordSearch {
 
   buildSearchTerms(data) {
     let lemma = data.term.join().toLowerCase().trim();
-    const matchType = this.MATCHES[data.match];
+    // console.log("***************", lemma)
+    // const matchType = this.MATCHES[data.match];
+    const matchType = {
+      exact: ["^", "$"],
+      contains: ["", ""],
+      starts: ["^", ".*"],
+      ends: [".*", "$"]
+    }[data.match];
     let nonGeptLevel = data.level;
     const searchTerms = {
       lemma: new RegExp(matchType[0] + lemma + matchType[1], "i"),
@@ -652,7 +653,6 @@ class WordSearch {
   }
 
   runSearch(searchTerms) {
-    if (searchTerms.raw_lemma) searchTerms.raw_lemma = this.removeNegativeSuffix(searchTerms.raw_lemma);
     // console.log("searchterms:",searchTerms)
     let [, matchedEntryArr] = this.getLemmaMatches(searchTerms);
     matchedEntryArr = this.getGlevelMatches(searchTerms, matchedEntryArr);
@@ -661,7 +661,6 @@ class WordSearch {
     matchedEntryArr = matchedEntryArr.filter(result => result.id > 0);
     return matchedEntryArr;
   }
-
 
   markStringAsErrorHTML(str, type="error") {
     return Tag.tag("span", ["class=" + type], [str]);
@@ -722,12 +721,6 @@ class WordSearch {
     return matchedEntryArr;
   }
 
-
-  removeNegativeSuffix (word) {
-    const negVerbStemIndex = word.indexOf("'");
-    const truncatedWord = (negVerbStemIndex > 0) ? word.slice(0, negVerbStemIndex) : word;
-    return truncatedWord;
-  }
 
   lazyCheckAgainstCompounds(word) {
     const tmpWord = word.replace(/-'\./g, "").split(" ").join("");
@@ -857,7 +850,7 @@ class Repeats {
       repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
         Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
           totalOfRepeatedLemmas,
-          ` significant repeated word${app.tools.pluralNoun(totalOfRepeatedLemmas)}`,
+          ` significant repeated word${app.tools.addSIfPlural(totalOfRepeatedLemmas)}`,
         ]),
         Tag.tag("aside", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
         Tag.tag("div", ["id=repeats"], [...listOfRepeats])
@@ -1064,8 +1057,6 @@ class WordStatistics {
 class Text {
 
   tokenArr = [];
-  toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "wdv", "wvd", "c", "d", "y", "wnd"];
-  // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
 
   refresh(e) {
     if (!app.ui.refreshRequired) return;
@@ -1100,7 +1091,7 @@ class Text {
         "(",
         wordCount,
         " word",
-        app.tools.pluralNoun(wordCount),
+        app.tools.addSIfPlural(wordCount),
         ")",
         // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
         Tag.tag("a", ["href=#all_repeats", "class=medium"]),
@@ -1121,6 +1112,8 @@ class Text {
   }
 
   buildHTMLtext(tokenArr) {
+    const toWrapInHTML = ["w", "wc", "wv", "wn", "wo", "wd", "wdv", "wvd", "c", "d", "y", "wnd"];
+    // ** word/compound/variant/offlist/derivation, contraction, decimal, y=symbol?
     let htmlString = "";
     let wordIndex = 0;
     let i = 0;
@@ -1128,7 +1121,7 @@ class Text {
       const firstType = token.type;
       if (firstType === "pe") htmlString += `\n${app.EOL.HTMLtext}`;
       else if (firstType === "mc") htmlString += app.cursor.HTMLtext;
-      else if (!this.toWrapInHTML.includes(firstType)) htmlString += token.lemma;
+      else if (!toWrapInHTML.includes(firstType)) htmlString += token.lemma;
       else {
         wordIndex++;
         const groupedWord = this.buildHTMLword(token, wordIndex, i);
@@ -1356,15 +1349,8 @@ class Parser {
       else if (token.type === "c" && token.lemma === "'t") {
         // **2 tokens: e.g. "didn" + "'t": remove (pop) first token & add to 2nd lemma to create compound "didn't"
         const lemmaWithContraction = tmpTokenArr.pop().lemma + "'t";
-        const matchedContraction = app.search.checkContractedNegatives(lemmaWithContraction);
-        // console.log("*** tok 4:", lemmaWithContraction, matchedContraction)
         let negContraction;
-        if (matchedContraction.length) {
-          negContraction = new Token(lemmaWithContraction, "wn", matchedContraction);
-        }
-        else {
-          negContraction = new Token(lemmaWithContraction, "wo", [app.parser.markOfflist(lemmaWithContraction, "offlist")]);
-        }
+        negContraction = new Token(lemmaWithContraction, "w", []);
         toAdd.push(negContraction);
       }
       if (!toAdd.length) toAdd.push(token)
@@ -1484,8 +1470,6 @@ addfixes(tokenArr){
     app.db.offlistDb.push(newEntry);
     return newEntry;
   }
-
-
 
   lookupWord(word) {
     word = word.toLowerCase();
@@ -2499,31 +2483,6 @@ class GenericSearch {
       others: "other",  // ** irregular because it's an adj/pronoun
     },
 
-    // irregNegVerb: {
-      // aren: "be",
-      // couldn: "could",
-      // daren: "dare",
-      // didn: "do",
-      // doesn: "do",
-      // don: "do",
-      // hadn: "have",
-      // hasn: "have",
-      // haven: "have",
-      // isn: "be",
-      // mayn: "may",
-      // mightn: "might",
-      // mustn: "must",
-      // needn: "need",
-      // oughtn: "ought",
-      // shan: "shall",
-      // shouldn: "should",
-      // wasn: "be",
-      // weren: "be",
-      // won: "will",
-      // wouldn: "would",
-      // cannot: "can",
-    // },
-
     contractedNegatives: {
       "aren't": "be",
       "couldn't": "could",
@@ -3142,36 +3101,18 @@ class GenericSearch {
     this.shared.abbreviatedLemmas = Object.keys(this.shared.abbreviations);
   }
 
-  suffixChecks = [
-    ["s", this.findRootAsArray, this.lookup.s_subs, ["n", "v"]],
-    ["ing", this.findRootErEstEdIng, "ing", ["v"]],
-    ["ed", this.findRootErEstEdIng, "ed", ["v", "j"]],
-    ["est", this.findRootErEstEdIng, "est", ["j","b"]],
-    ["er", this.findRootErEstEdIng, "er", ["j", "b"]],
-    ["ly", this.findRootAsArray, this.lookup.ly_subs, ["j", "v"]], // added verbs to allow for 'satisfy-ing-ly' etc.
-  ];
-
-  variantChecks = [
-    // [this.checkIrregularNegatives, "wn"],
-    [this.checkDerivations, "wd"],
-    [this.checkAllowedVariants, "wv"],
-    [this.checkForEnglishSpelling, "wv"],
-    // [this.checkAllowedVariants, "wv"],
-    [this.checkNegativePrefix, "wn"],
-  ];
 
   checkAgainstLookups(word, exactMatches) {
     let tokenType = "w";
     let matchedEntryArr = [];
-    [tokenType, matchedEntryArr] = this.checkVariants(word, tokenType, matchedEntryArr);
-    matchedEntryArr = exactMatches.concat(matchedEntryArr);
-    if (!matchedEntryArr.length) tokenType = "wo";  // offlist
-    return [tokenType, matchedEntryArr];
-  }
-
-  checkVariants(word, tokenType, matchedEntryArr){
     let localMatchedArr = [];
-    for (let [checkFunc, type] of this.variantChecks) {
+    for (let [checkFunc, type] of [
+      [this.checkContractedNegatives, "wn"],
+      [this.checkDerivations, "wd"],
+      [this.checkAllowedVariants, "wv"],
+      [this.checkForEnglishSpelling, "wv"],
+      [this.checkNegativePrefix, "wn"],
+    ]) {
       localMatchedArr = checkFunc.bind(this)(word);
       if (localMatchedArr.length) {
         tokenType = type;
@@ -3179,8 +3120,11 @@ class GenericSearch {
         break;
       }
     }
+    matchedEntryArr = exactMatches.concat(matchedEntryArr);
+    if (!matchedEntryArr.length) tokenType = "wo";  // offlist
     return [tokenType, matchedEntryArr];
   }
+
 
   checkForEnglishSpelling(word) {
     // * returns => [lemma, [ids...], type]
@@ -3383,7 +3327,7 @@ class GenericSearch {
   // checkIrregularNegatives(word) {
   checkContractedNegatives(word) {
     let matchedEntryArr = [];
-    const lookup = this.lookup.contractedNegatives[word];
+    const lookup = this.lookup.contractedNegatives[word] || null;
     /* assume (e.g. do / have) that if there are two matches, one will be the full verb & one the aux.; return only the aux. If only one match, assume it is an anomalous verb like dare / need, not a full aux., so return the single match. */
     // console.log("neg contractions:", word, lookup)
     if (lookup) {
@@ -3442,7 +3386,15 @@ class GenericSearch {
 checkAllSuffixes(word) {
   let matchedEntryArr = [];
   let arrayOfPossibleLemmas = [];
-  for (const [suffix, callback, endings, pos] of this.suffixChecks) {
+  // for (const [suffix, callback, endings, pos] of this.suffixChecks) {
+  for (const [suffix, callback, endings, pos] of [
+    ["s", this.findRootAsArray, this.lookup.s_subs, ["n", "v"]],
+    ["ing", this.findRootErEstEdIng, "ing", ["v"]],
+    ["ed", this.findRootErEstEdIng, "ed", ["v", "j"]],
+    ["est", this.findRootErEstEdIng, "est", ["j","b"]],
+    ["er", this.findRootErEstEdIng, "er", ["j", "b"]],
+    ["ly", this.findRootAsArray, this.lookup.ly_subs, ["j", "v"]], // added verbs to allow for 'satisfy-ing-ly' etc.
+  ]) {
     if (word.endsWith(suffix)) {
       arrayOfPossibleLemmas = callback(word, endings);
       // console.log("check all suffixes:", suffix, arrayOfPossibleLemmas)

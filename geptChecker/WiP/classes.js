@@ -503,7 +503,7 @@ class Tools {
     return arr;
   }
 
-  pluralNoun(amount) {
+  addSIfPlural(amount) {
     return (amount > 1) ? "s" : "";
   }
 
@@ -850,7 +850,7 @@ class Repeats {
       repeatsHeader = Tag.tag("details", [`id=${app.listeners.detailID}`, toggleOpen], [
         Tag.tag("summary", ["id=all_repeats", "class=all-repeats"], [
           totalOfRepeatedLemmas,
-          ` significant repeated word${app.tools.pluralNoun(totalOfRepeatedLemmas)}`,
+          ` significant repeated word${app.tools.addSIfPlural(totalOfRepeatedLemmas)}`,
         ]),
         Tag.tag("aside", ["class=summary-instructions"], [ "Click on word / number to jump to that occurrence." ]),
         Tag.tag("div", ["id=repeats"], [...listOfRepeats])
@@ -1091,7 +1091,7 @@ class Text {
         "(",
         wordCount,
         " word",
-        app.tools.pluralNoun(wordCount),
+        app.tools.addSIfPlural(wordCount),
         ")",
         // tag("a", ["href=#all_repeats", "class=medium"], [" >&#x25BC;"]),
         Tag.tag("a", ["href=#all_repeats", "class=medium"]),
